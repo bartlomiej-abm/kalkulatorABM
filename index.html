@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Kalkulator Wyceny — ABM Sauny</title>
@@ -292,6 +293,138 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
   }
 }
 </style>
+<script>
+// ===== SUPABASE =====
+const SUPA_URL = 'https://uuxnxvzwhvjlcxegtozk.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc';
+let supa = null;
+
+function initSupabase(){
+  try{
+    if(!window.supabase){console.warn('Supabase SDK not loaded');return;}
+    supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    console.log('Supabase connected');
+  }catch(e){
+    console.error('Supabase init error:', e);
+  }
+}
+
+// ===== SYNC: shared settings =====
+async function syncLoad(){
+  if(!supa){showSyncStatus('local','Tryb lokalny (Supabase niedostępny)');return;}
+  try{
+    const {data,error} = await supa.from('shared_settings').select('key,value');
+    if(error)throw error;
+    data.forEach(function(row){
+      if(row.key==='firma' && row.value){
+        try{
+          var fd=row.value;
+          ['firm-name','firm-tel','firm-email','firm-www'].forEach(function(id){
+            var k=id.replace('firm-','');
+            var el=document.getElementById(id);
+            if(el&&fd[k])el.value=fd[k];
+          });
+        }catch(e){}
+      }
+      if(row.key==='logo' && row.value && row.value!=='null'){
+        try{
+          var logoData=typeof row.value==='string'?row.value:JSON.stringify(row.value);
+          if(logoData&&logoData!=='null'){
+            localStorage.setItem('abm_logo',logoData.replace(/^"|"$/g,''));
+          }
+        }catch(e){}
+      }
+      if(row.key==='boaz_ext' && row.value){
+        try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
+      }
+    });
+    showSyncStatus('cloud','Dane załadowane z chmury');
+  }catch(e){
+    showSyncStatus('local','Tryb lokalny (brak połączenia)');
+    console.error('syncLoad error:',e);
+  }
+}
+
+async function syncSaveFirma(){
+  if(!supa)return;
+  try{
+    var fd={name:gs('firm-name'),tel:gs('firm-tel'),email:gs('firm-email'),www:gs('firm-www')};
+    await supa.from('shared_settings').upsert({key:'firma',value:fd,updated_at:new Date().toISOString()});
+  }catch(e){console.error('syncSaveFirma:',e);}
+}
+
+async function syncSaveLogo(logoData){
+  if(!supa)return;
+  try{
+    await supa.from('shared_settings').upsert({key:'logo',value:logoData,updated_at:new Date().toISOString()});
+  }catch(e){console.error('syncSaveLogo:',e);}
+}
+
+async function syncSaveBoazExt(){
+  if(!supa)return;
+  try{
+    await supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()});
+  }catch(e){console.error('syncSaveBoazExt:',e);}
+}
+
+// ===== CLOUD HISTORY =====
+async function saveQuoteCloud(quoteData){
+  if(!supa)return null;
+  try{
+    const {data,error} = await supa.from('quotes').insert({
+      klient:quoteData.klient,
+      opis:quoteData.opis||'',
+      netto:quoteData.netto,
+      brutto:quoteData.brutto,
+      vat:quoteData.vat,
+      typ:quoteData.typ,
+      is_z:quoteData.isZ,
+      data:quoteData,
+      variants:JSON.parse(JSON.stringify(VARIANTS))
+    }).select();
+    if(error)throw error;
+    return data[0];
+  }catch(e){
+    console.error('saveQuoteCloud:',e);
+    return null;
+  }
+}
+
+async function loadQuotesCloud(){
+  if(!supa)return [];
+  try{
+    const {data,error} = await supa.from('quotes')
+      .select('id,created_at,klient,opis,netto,brutto,vat,typ,is_z,data,variants')
+      .order('created_at',{ascending:false})
+      .limit(200);
+    if(error)throw error;
+    return data||[];
+  }catch(e){
+    console.error('loadQuotesCloud:',e);
+    return [];
+  }
+}
+
+async function deleteQuoteCloud(id){
+  if(!supa)return;
+  try{
+    await supa.from('quotes').delete().eq('id',id);
+  }catch(e){console.error('deleteQuoteCloud:',e);}
+}
+
+// ===== STATUS INDICATOR =====
+function showSyncStatus(mode,msg){
+  var el=document.getElementById('sync-status');
+  if(!el)return;
+  if(mode==='cloud'){
+    el.style.background='var(--mbm-pale)';el.style.color='var(--mbm-primary)';
+  }else{
+    el.style.background='#FAEEDA';el.style.color='#633806';
+  }
+  el.textContent=(mode==='cloud'?'☁ ':'⚠ ')+msg;
+  setTimeout(function(){el.textContent='☁ Online — '+SUPA_URL.split('.')[0].split('//')[1];},3000);
+}
+</script>
 </head>
 <body>
 <div class="header">
@@ -742,7 +875,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 <div class="view" id="tab-history">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <div style="font-size:15px;font-weight:500">Historia wycen</div>
-    <button class="btn" style="color:#c00;border-color:#c00" id="btn-clear-hist">Wyczyść historię</button>
+    <button class="btn" style="color:#c00;border-color:#c00" onclick="clearHistory()">Wyczyść historię</button>
   </div>
   <div id="hist-list"><p style="color:#999;font-size:12px">Brak zapisanych wycen.</p></div>
 </div>
@@ -880,16 +1013,6 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 </div>
 
 <script>
-
-// ===== STUBS dla wersji bez Supabase =====
-async function loadQuotesCloud(){return [];}
-async function saveQuoteCloud(data){return null;}
-async function deleteQuoteCloud(id){}
-function showSyncStatus(mode,msg){}
-var supa=null;
-function initSupabase(){}
-async function syncLoad(){}
-
 // ===== DANE =====
 var SN={S:'Saunatech',E:'EKO DREWNO',L:'ELODENA',A:'ABACHI.PL',K:'KUUKS',G:'ALGA',KL:'KingLED',KR:'Kurek',M:'Wpisane'};
 var SC={S:'bS',E:'bE',L:'bL',A:'bA',K:'bK',G:'bG',KL:'bKL',KR:'bKR',M:'bM'};
@@ -1692,7 +1815,7 @@ function loadToCalc(s){
 function loadVariantToCalc(v){
   var s=VARIANTS[v];
   if(!s){alert('Brak zapisanego wariantu '+v);return;}
-  loadStateToCalc(s);
+  loadToCalc(s);
   showTab('calc');
 }
 
@@ -1817,7 +1940,7 @@ async function saveQuote(){
   if(!s||!s.klient){alert('Wpisz imie i nazwisko klienta przed zapisem.');return;}
   try{
     var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
-    var variants_snap2={}; ['A','B','C'].forEach(function(v){if(VARIANTS[v])variants_snap2[v]=JSON.parse(JSON.stringify(VARIANTS[v]));}); var entry={id:Date.now(),date:new Date().toLocaleDateString('pl-PL'),klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,isZ:s.isZ,typ:s.typ,state:JSON.stringify(s),variants:variants_snap2};
+    var variants_snap={}; ['A','B','C'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));}); var entry={id:Date.now(),date:new Date().toLocaleDateString('pl-PL'),klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,isZ:s.isZ,typ:s.typ,state:JSON.stringify(s),variants:variants_snap};
     hist.unshift(entry);if(hist.length>100)hist=hist.slice(0,100);
     localStorage.setItem('abm_history',JSON.stringify(hist));
   }catch(e){}
@@ -1831,85 +1954,137 @@ async function saveQuote(){
   }
 }
 
-function buildHistory(){
-  var container = document.getElementById('hist-list');
-  var hist = [];
-  try { hist = JSON.parse(localStorage.getItem('abm_history') || '[]'); } catch(e){}
+async function buildHistory(){
+  var container=document.getElementById('hist-list');
+  container.innerHTML='<p style="color:var(--mbm-mid);font-size:12px">Wczytywanie...</p>';
 
-  if(hist.length === 0){
-    container.innerHTML = '<p style="color:var(--mbm-mid);font-size:12px">Brak zapisanych wycen.</p>';
+  var rows=[];
+
+  // Try cloud first
+  try{ rows=await loadQuotesCloud(); }catch(ex){ rows=[]; }
+
+  // Fallback to localStorage
+  if(rows.length===0){
+    try{
+      var local=JSON.parse(localStorage.getItem('abm_history')||'[]');
+      rows=local.map(function(e){
+        return{id:e.id,created_at:e.date,klient:e.klient,opis:e.opis||'',
+          netto:e.netto,brutto:e.brutto,vat:e.vat,typ:e.typ,is_z:e.isZ,
+          _local:true,
+          variants:e.variants||null,
+          data:(function(){try{return JSON.parse(e.state||'{}');}catch(x){return e;}})()};
+      });
+    }catch(ex){ rows=[]; }
+  }
+
+  if(rows.length===0){
+    container.innerHTML='<p style="color:var(--mbm-mid);font-size:12px">Brak zapisanych wycen.</p>';
     return;
   }
 
-  container.innerHTML = '';
-  hist.forEach(function(entry){
-    var typName = (entry.typ||'F')==='F' ? 'Fińska' : (entry.typ==='I' ? 'Infrared' : 'Combi');
-    var saunaType = (entry.isZ ? '[Z]' : '[W]') + ' ' + typName;
+  container.innerHTML='';
 
-    var div = document.createElement('div');
-    div.className = 'hist-item';
+  rows.forEach(function(e){
+    var typName=(e.typ||'F')==='F'?'Fińska':(e.typ==='I'?'Infrared':'Combi');
+    var saunaType=(e.is_z||e.isZ?'[Z]':'[W]')+' '+typName;
+    var dateStr=e.created_at?new Date(e.created_at).toLocaleDateString('pl-PL'):'—';
 
-    var left = document.createElement('div');
-    var title = document.createElement('div');
-    title.style.cssText = 'font-weight:500;font-size:14px';
-    title.textContent = entry.klient || '—';
+    var div=document.createElement('div');div.className='hist-item';
 
-    var sub = document.createElement('div');
-    sub.style.cssText = 'font-size:12px;color:var(--mbm-mid);margin-top:2px';
-    sub.textContent = (entry.date||'') + ' | ' + saunaType + (entry.opis ? ' | '+entry.opis : '');
+    var left=document.createElement('div');
+    var t1=document.createElement('div');t1.style.cssText='font-weight:500;font-size:14px';t1.textContent=e.klient||'—';
+    var t2=document.createElement('div');t2.style.cssText='font-size:12px;color:var(--mbm-mid);margin-top:2px';
+    t2.textContent=dateStr+' | '+saunaType+(e.opis?' | '+e.opis:'');
+    var t3=document.createElement('div');t3.style.cssText='font-size:12px;margin-top:3px';
+    t3.innerHTML='<span style="color:var(--mbm-primary);font-weight:500">'+f(e.netto||0)+' zł</span> netto | <span style="font-weight:500">'+f(e.brutto||0)+' zł</span> brutto (VAT '+(e.vat||8)+'%)';
+    left.appendChild(t1);left.appendChild(t2);left.appendChild(t3);
 
-    var prices = document.createElement('div');
-    prices.style.cssText = 'font-size:12px;margin-top:3px';
-    prices.innerHTML = '<span style="color:var(--mbm-primary);font-weight:500">' + f(entry.netto||0) + ' zł</span>'
-      + ' netto | <span style="font-weight:500">' + f(entry.brutto||0) + ' zł</span>'
-      + ' brutto (VAT '+(entry.vat||8)+'%)';
+    var right=document.createElement('div');right.style.cssText='display:flex;gap:6px;align-items:center;flex-shrink:0';
 
-    left.appendChild(title);
-    left.appendChild(sub);
-    left.appendChild(prices);
-
-    var right = document.createElement('div');
-    right.style.cssText = 'display:flex;gap:6px;align-items:center;flex-shrink:0';
-
-    var btnView = document.createElement('button');
-    btnView.className = 'btn';
-    btnView.textContent = 'Podgląd';
-    (function(e){
-      btnView.onclick = function(){
-        var s = null;
-        try { s = JSON.parse(e.state || '{}'); } catch(ex){ s = e; }
-        if(s && s.klient) showQuoteModal(s);
-        else showQuoteModal(e);
+    // PODGLĄD button
+    var btnV=document.createElement('button');btnV.className='btn';btnV.textContent='Podgląd';
+    (function(row){
+      btnV.onclick=function(){
+        var s=row.data||null;
+        if(!s||!s.klient){
+          try{s=JSON.parse(row.state||'{}');}catch(ex){s=row;}
+        }
+        showQuoteModal(s||row);
       };
-    })(entry);
+    })(e);
 
-    var btnDel = document.createElement('button');
-    btnDel.className = 'hist-del';
-    btnDel.textContent = '×';
-    btnDel.title = 'Usuń';
-    (function(eid){
-      btnDel.onclick = function(){
-        if(!confirm('Usunąć tę wycenę?')) return;
-        var h = [];
-        try { h = JSON.parse(localStorage.getItem('abm_history') || '[]'); } catch(ex){}
-        h = h.filter(function(x){ return x.id !== eid; });
-        localStorage.setItem('abm_history', JSON.stringify(h));
+    // WCZYTAJ button
+    var btnL=document.createElement('button');btnL.className='btn grn';btnL.textContent='↩ Wczytaj';
+    (function(row){
+      btnL.onclick=function(){
+        var s=row.data||null;
+        if(!s||!s.klient){try{s=JSON.parse(row.state||'{}');}catch(ex){s=null;}}
+        // Try to get state from nested structure (Supabase format)
+        if(s&&s.state&&s.state.klient){s=s.state;}
+        if(!s||!s.klient){alert('Brak danych wyceny.');return;}
+        loadToCalc(s);
+        // Restore variants if saved
+        var savedVariants=null;
+        try{
+          if(row.variants)savedVariants=typeof row.variants==='string'?JSON.parse(row.variants):(row.variants&&typeof row.variants==='object'?row.variants:null);
+          else if(row.data&&row.data.variants)savedVariants=row.data.variants;
+        }catch(ex){}
+        if(savedVariants){
+          VARIANTS=savedVariants;
+          ['A','B','C'].forEach(function(v){
+            if(!VARIANTS[v])return;
+            var btn=document.getElementById('vbtn-'+v);
+            var inp=document.getElementById('vinp-'+v);
+            if(btn){
+              var sn=VARIANTS[v].variantName||VARIANTS[v].klient||'Wariant '+v;
+              btn.textContent='✓ '+v+': '+sn.split(' ')[0]+' ('+f(VARIANTS[v].netto)+')';
+              btn.style.background='var(--mbm-pale)';
+              btn.style.borderColor='var(--mbm-primary)';
+              btn.style.color='var(--mbm-primary)';
+            }
+            if(inp&&VARIANTS[v].variantName)inp.value=VARIANTS[v].variantName;
+            var loadLink=document.getElementById('vload-'+v);
+            if(loadLink)loadLink.style.display='block';
+          });
+          alert('Wczytano wycenę z '+Object.keys(savedVariants).filter(function(v){return savedVariants[v]!==null;}).length+' wariantami.');
+        } else {
+          alert('Wczytano wycenę (brak zapisanych wariantów — wycena trafiła do kalkulatora).');
+        }
+        showTab('calc');
+      };
+    })(e);
+
+    // USUŃ button
+    var btnD=document.createElement('button');btnD.className='hist-del';btnD.textContent='×';btnD.title='Usuń';
+    (function(row){
+      btnD.onclick=function(){
+        if(!confirm('Usunąć tę wycenę?'))return;
+        // localStorage
+        try{
+          var h=JSON.parse(localStorage.getItem('abm_history')||'[]');
+          h=h.filter(function(x){return String(x.id)!==String(row.id);});
+          localStorage.setItem('abm_history',JSON.stringify(h));
+        }catch(ex){}
+        // cloud
+        if(!row._local && supa){
+          try{supa.from('quotes').delete().eq('id',row.id).then(function(){});}catch(ex){}
+        }
         buildHistory();
       };
-    })(entry.id);
+    })(e);
 
-    right.appendChild(btnView);
-    right.appendChild(btnDel);
-    div.appendChild(left);
-    div.appendChild(right);
+    right.appendChild(btnV);right.appendChild(btnL);right.appendChild(btnD);
+    div.appendChild(left);div.appendChild(right);
     container.appendChild(div);
   });
+
+  if(typeof showSyncStatus==='function') showSyncStatus('cloud','Historia: '+rows.length+' wycen');
 }
 
 
 async function loadQuoteFromCloud(entry,btn){
   if(!entry||!entry.data){alert('Nie mozna wczytac wyceny.');return;}
-  loadStateToCalc(entry.data);
+  loadToCalc(entry.data);
   showTab('calc');
 }
 
@@ -1922,7 +2097,7 @@ async function deleteQuoteFromCloud(entry,btn){
     localStorage.setItem('abm_history',JSON.stringify(hist));
   }catch(ex){}
   // Remove from Supabase (if connected)
-  // (no cloud in this version)
+  if(supa){try{await deleteQuoteCloud(entry.id);}catch(ex){}}
   buildHistory();
 }
 
@@ -1966,11 +2141,17 @@ function deleteQuote(id){
   try{var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');hist=hist.filter(function(e){return e.id!==id;});localStorage.setItem('abm_history',JSON.stringify(hist));buildHistory();}catch(e){}
 }
 
-function clearHistory(){
-  if(!confirm('Usunąć całą historię wycen?')) return;
-  localStorage.removeItem('abm_history');
-  buildHistory();
+async function clearHistory(){
+  if(!confirm('Usunąć całą historię wycen?'))return;
+  try{localStorage.removeItem('abm_history');}catch(e){}
+  if(supa){
+    try{supa.from('quotes').delete().neq('id',0).then(function(){buildHistory();});}
+    catch(ex){buildHistory();}
+  } else {
+    buildHistory();
+  }
 }
+
 
 // ===== CENNIKI =====
 var BOAZ_EXT=[];
@@ -2365,12 +2546,21 @@ mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
 mkSelG('k1m',KONSTR);
 rebP();r();
 initVslots();
-// Wire history clear button
-var _hcBtn = document.getElementById('btn-clear-hist');
-if(_hcBtn) _hcBtn.onclick = clearHistory;
+loadSavedPiecePrices();loadSavedPromPrices();
 // Init Supabase
 initSupabase();
-syncLoad();
+if(supa){
+  showSyncStatus('local','Łączenie z chmurą...');
+  var _syncTimeout=setTimeout(function(){
+    showSyncStatus('local','Przekroczono czas połączenia — tryb lokalny');
+  },8000);
+  syncLoad().then(function(){clearTimeout(_syncTimeout);}).catch(function(){
+    clearTimeout(_syncTimeout);
+    showSyncStatus('local','Błąd połączenia — tryb lokalny');
+  });
+} else {
+  showSyncStatus('local','Tryb lokalny (brak Supabase)');
+}
 
 // Zero clearing on number inputs
 document.addEventListener('focus', function(e){
