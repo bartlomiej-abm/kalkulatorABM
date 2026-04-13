@@ -1,0 +1,3123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kalkulator Wyceny — ABM Sauny</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;font-size:13px;background:#f0ece8;color:#281C18;min-height:100vh}
+:root{
+  --mbm-dark:#281C18;
+  --mbm-primary:#594035;
+  --mbm-mid:#8C7368;
+  --mbm-light:#BFA69B;
+  --mbm-pale:#E2CFC7;
+  --mbm-palest:#f0ece8;
+}
+.header{background:var(--mbm-dark);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;gap:12px}
+.header h1{font-size:14px;font-weight:500;white-space:nowrap}
+.tabs{display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tab{padding:4px 12px;font-size:11px;border:0.5px solid #444;border-radius:5px;cursor:pointer;background:transparent;color:#ccc;white-space:nowrap}
+.tab.on{background:#fff;color:#1a1a1a;font-weight:500}
+.view{display:none;padding:14px 20px;max-width:980px;margin:0 auto}
+.view.on{display:block}
+.top-bar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.btn{padding:5px 11px;font-size:12px;border:0.5px solid #ccc;border-radius:5px;cursor:pointer;background:#fff;color:#333;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.btn.on{background:#E6F1FB;border-color:#185FA5;color:#0C447C;font-weight:500}
+.btn.on8{background:#EAF3DE;border-color:#3B6D11;color:#27500A;font-weight:500}
+.btn.on23{background:#FAEEDA;border-color:#854F0B;color:#633806;font-weight:500}
+.btn.act{background:var(--mbm-primary);color:#fff;border-color:var(--mbm-primary)}
+.btn.act:hover{background:var(--mbm-dark)}
+.btn.grn{background:var(--mbm-mid);color:#fff;border-color:var(--mbm-mid)}
+.sec{background:#fff;border:0.5px solid var(--mbm-pale);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.sh{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:var(--mbm-palest);border-bottom:0.5px solid var(--mbm-pale)}
+.st{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--mbm-primary)}
+.ss{font-size:13px;font-weight:500}
+.sb{padding:10px 12px}
+.grp{background:var(--mbm-palest);border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.gt{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-bottom:5px}
+.row{display:grid;gap:4px;align-items:center;margin-bottom:4px}
+.c5{grid-template-columns:2fr 50px 72px 70px 70px}
+.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+.c3{grid-template-columns:1fr 1fr 1fr}
+.c2{grid-template-columns:1fr 1fr}
+.cf{grid-template-columns:1.8fr 55px 58px 70px 70px}
+.ch{font-size:10px;color:#999;text-align:right}.ch:first-child{text-align:left}
+select,input[type=number],input[type=text]{font-size:12px;-webkit-text-size-adjust:100%;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%}
+input[type=number]{text-align:right}
+input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipulation}
+.dv{font-size:12px;padding:3px 6px;height:26px;background:#f8f8f7;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;white-space:nowrap}
+.dv.hi{background:#EAF3DE;color:#27500A;font-weight:500}
+.sub{font-size:11px;color:#999;margin-bottom:2px}
+.lbl{font-size:12px;color:#555}
+.bdg{font-size:10px;padding:1px 6px;border-radius:3px;font-weight:500;display:inline-flex;align-items:center;height:20px;white-space:nowrap}
+.bS{background:#E6F1FB;color:#0C447C}.bE{background:#EAF3DE;color:#27500A}
+.bL{background:#FAEEDA;color:#633806}.bA{background:#EEEDFE;color:#3C3489}
+.bK{background:#FCEBEB;color:#791F1F}.bG{background:#EEEDFE;color:#3C3489}.bKL{background:#FEF3E2;color:#8B4F00}.bKR{background:#E2F0FE;color:#004B8B}.bM{background:#f1efe8;color:#555}
+.alrt{padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:8px;display:none}
+.alrt.w{background:#FAEEDA;color:#633806;border:0.5px solid #EF9F27}
+.alrt.o{background:var(--mbm-pale);color:var(--mbm-primary);border:0.5px solid var(--mbm-light)}
+.pinfo{font-size:11px;color:#666;margin-top:3px;padding:3px 8px;background:#f8f8f7;border-radius:5px;border:0.5px solid #e0e0de}
+.tot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.tc{background:var(--mbm-palest);border-radius:8px;padding:10px 12px;border:0.5px solid var(--mbm-pale)}
+.tl{font-size:10px;color:#666;margin-bottom:3px}
+.tv{font-size:17px;font-weight:500}
+.tv.ok{color:var(--mbm-primary)}.tv.warn{color:#633806}.tv.bad{color:#791F1F}
+/* KLIENT */
+.cl-wrap{max-width:740px;margin:0 auto}
+.cl-card{border:0.5px solid #ddd;border-radius:10px;overflow:hidden;background:#fff}
+.cl-hd{background:var(--mbm-dark);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px}
+.cl-hd-logo{max-height:70px;max-width:200px;object-fit:contain;margin:0 auto;display:block}
+.cl-hd-text h2{font-size:15px;font-weight:500;margin-bottom:2px}
+.cl-hd-text p{font-size:12px;color:#aaa}
+.cl-sec-hd{padding:7px 16px;background:#1a1a1a;color:#fff;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em}
+.cl-row{display:grid;grid-template-columns:1fr 120px 70px;padding:6px 16px;border-bottom:0.5px solid #f0f0f0;font-size:12px;align-items:center;gap:8px}
+.cl-row-hd{display:grid;grid-template-columns:1fr 120px 70px;padding:4px 16px;background:#f8f8f7;border-bottom:0.5px solid #e8e8e8;font-size:10px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:.04em}
+.cl-val{text-align:right;font-weight:500;font-size:12px;color:#333}
+.cl-yn{text-align:center}
+.yn{font-size:11px;padding:2px 8px;border-radius:4px;display:inline-block}
+.yn-y{background:var(--mbm-pale);color:var(--mbm-primary)}.yn-n{background:#f5f5f5;color:#aaa}
+.cl-subtotal{padding:8px 16px;background:var(--mbm-pale);color:var(--mbm-dark);display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid #c8daf0}
+.cl-total{padding:12px 20px;background:var(--mbm-dark);display:flex;justify-content:space-between;align-items:center}
+.cl-total-b{padding:12px 20px;background:var(--mbm-primary);display:flex;justify-content:space-between;align-items:center}
+/* WARIANTY */
+.var-btns{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.var-btn{padding:4px 14px;font-size:12px;border:0.5px solid #ccc;border-radius:5px;cursor:pointer;background:#fff;color:#333}
+.var-btn.saved{background:var(--mbm-pale);border-color:var(--mbm-primary);color:var(--mbm-primary)}
+.var-btn.active{background:#E6F1FB;border-color:#185FA5;color:#0C447C;font-weight:500}
+.var-clear{font-size:11px;color:#ccc;background:none;border:none;cursor:pointer;padding:2px 6px}
+.var-clear:hover{color:#c00}
+/* Widok wariantów obok siebie */
+.variants-wrap{max-width:100%;overflow-x:auto;margin:0 auto}
+.variants-grid{display:grid;gap:0;width:100%}
+.variants-grid.v1{grid-template-columns:1fr;max-width:600px;margin:0 auto}
+.variants-grid.v2{grid-template-columns:1fr 1fr}
+.variants-grid.v3{grid-template-columns:1fr 1fr 1fr}
+.vcard{border:0.5px solid var(--mbm-light);border-radius:0;background:#fff;overflow:hidden}
+.vcard:first-child{border-radius:10px 0 0 10px}
+.vcard:last-child{border-radius:0 10px 10px 0}
+.vcard:only-child{border-radius:10px}
+.vcard+.vcard{border-left:none}
+.v-hd{background:var(--mbm-dark);color:#fff;padding:8px 10px}
+.v-hd h3{font-size:13px;font-weight:500;margin-bottom:1px}
+.v-hd p{font-size:11px;color:#aaa}
+.v-sec-hd{padding:4px 8px;background:var(--mbm-primary);color:#fff;font-size:8px;font-weight:500;text-transform:uppercase;letter-spacing:.08em}
+.v-row{display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-bottom:0.5px solid #f0f0f0;font-size:10px;gap:4px}
+.v-row-yn{padding:3px 8px;border-bottom:0.5px solid #f0f0f0;font-size:10px;display:flex;justify-content:space-between}
+.v-label{color:#555;flex:1}
+.v-val{font-weight:500;color:#333;text-align:right;font-size:11px}
+.v-yn{font-size:10px;padding:1px 6px;border-radius:3px}
+.v-yn-y{background:var(--mbm-pale);color:var(--mbm-primary)}
+.v-yn-n{background:#f5f5f5;color:#bbb}
+.v-subtotal{padding:7px 12px;background:var(--mbm-pale);display:flex;justify-content:space-between;font-size:12px}
+.v-total{padding:10px 14px;background:var(--mbm-dark);display:flex;justify-content:space-between}
+.v-total-b{padding:10px 14px;background:var(--mbm-primary);display:flex;justify-content:space-between}
+/* ACTUAL COSTS */
+.act-table{width:100%;border-collapse:collapse;font-size:12px}
+.act-table th{background:var(--mbm-dark);color:#fff;padding:6px 8px;text-align:left;font-size:11px}
+.act-table td{padding:5px 8px;border-bottom:0.5px solid #eee;vertical-align:middle}
+.act-table tr:hover td{background:var(--mbm-palest)}
+.act-cat{background:var(--mbm-primary)!important;color:#fff;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.act-input{width:70px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px;background:#fff}
+.act-ok{color:#27500A;font-weight:500}
+.act-over{color:#791F1F;font-weight:500}
+.act-under{color:#633806;font-weight:500}
+.act-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.act-sc{background:#fff;border:0.5px solid var(--mbm-pale);border-radius:8px;padding:10px 12px}
+.act-sl{font-size:10px;color:var(--mbm-mid);margin-bottom:3px}
+.act-sv{font-size:16px;font-weight:500}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.on{display:flex}
+.modal-box{background:#fff;border-radius:12px;max-width:700px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-hd{background:var(--mbm-dark);color:#fff;padding:14px 20px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0}
+.modal-hd h3{font-size:15px;font-weight:500}
+.modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.modal-close:hover{color:var(--mbm-pale)}
+.modal-body{padding:16px 20px}
+.modal-sec{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:var(--mbm-primary);padding:5px 12px;margin:0 -20px;margin-bottom:4px}
+.modal-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid #f0f0f0;font-size:13px}
+.modal-row:last-child{border-bottom:none}
+.modal-label{color:#555}
+.modal-val{font-weight:500;color:var(--mbm-dark);text-align:right}
+.modal-price{font-weight:500;color:var(--mbm-primary)}
+.modal-nie{color:#bbb;font-size:12px}
+.modal-total{background:var(--mbm-dark);color:#fff;padding:12px 20px;border-radius:0 0 12px 12px;display:flex;justify-content:space-between;align-items:center}
+.modal-footer{padding:12px 20px;display:flex;gap:8px;border-top:0.5px solid #eee}
+/* VSLOT */
+.vslot{display:flex;align-items:center;gap:3px}
+.vslot-input{font-size:11px;padding:3px 7px;height:26px;border:0.5px solid var(--mbm-light);border-radius:4px 0 0 4px;background:#fff;color:var(--mbm-dark);width:110px;font-family:inherit}
+.vslot-input::placeholder{color:var(--mbm-light)}
+.vslot-btn{font-size:11px;padding:3px 8px;height:26px;border:0.5px solid var(--mbm-light);border-left:none;border-radius:0 4px 4px 0;cursor:pointer;background:#fff;color:var(--mbm-mid);font-family:inherit;white-space:nowrap}
+.vslot-btn:hover{background:var(--mbm-pale)}
+.vslot-btn.saved{background:var(--mbm-pale);color:var(--mbm-primary);border-color:var(--mbm-primary);font-weight:500}
+/* HISTORIA */
+.hist-item{background:#fff;border:0.5px solid #e0e0de;border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.hist-item:hover{background:#f8f8f7}
+.hist-del{color:#ccc;font-size:16px;border:none;background:none;cursor:pointer;padding:2px 6px}
+.hist-del:hover{color:#c00}
+/* CENNIKI */
+.price-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+.price-table th{background:#1a1a1a;color:#fff;padding:6px 8px;text-align:left;font-size:11px}
+.price-table td{padding:5px 8px;border-bottom:0.5px solid #eee;vertical-align:middle}
+.price-table input{height:24px;font-size:12px;text-align:right;border:0.5px solid #ddd;border-radius:4px;padding:2px 6px;width:90px}
+.price-table .cat-row{background:#f0f0ee;font-weight:500;font-size:11px;color:#666}
+/* ZAMÓWIENIA */
+.ord-table{width:100%;border-collapse:collapse;font-size:12px}
+.ord-table th{background:#1a1a1a;color:#fff;padding:6px 10px;text-align:left}
+.ord-table td{padding:6px 10px;border-bottom:0.5px solid #eee}
+.ord-cat{background:#f0f0ee!important;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#666}
+/* LOGO UPLOAD */
+.logo-zone{border:2px dashed #ddd;border-radius:8px;padding:20px;text-align:center;cursor:pointer;color:#999;font-size:12px}
+.logo-zone:hover{border-color:#aaa;background:#fafafa}
+@page{size:A4 landscape;margin:8mm}
+
+/* ============================================================
+   MOBILE RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px){
+
+  /* Header */
+  .header{padding:8px 12px;gap:6px;flex-wrap:nowrap}
+  .header h1{font-size:12px;white-space:nowrap}
+  .tabs{gap:2px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .tab{padding:4px 8px;font-size:10px;white-space:nowrap;flex-shrink:0}
+
+  /* Views */
+  .view{padding:10px 12px}
+
+  /* Top bar */
+  .top-bar{gap:4px}
+  .top-bar .btn{padding:5px 8px;font-size:11px}
+  #bW,#bZ,#bF,#bI,#bC{flex:1;text-align:center}
+
+  /* Variant bar */
+  .vslot-input{width:80px}
+  .vslot-btn{font-size:10px;padding:3px 6px}
+
+  /* Section headers */
+  .sh{flex-wrap:wrap;gap:4px}
+  .ss{font-size:12px}
+  .st{font-size:9px}
+
+  /* Grids — wszystko single column na mobile */
+  .c5,.c4,.c3,.c2,.cf{grid-template-columns:1fr!important}
+  .c5 .ch{display:none}
+
+  /* Dla pól z etykietą koszt/sprzedaz — pokaż w row */
+  .c5 .dv,.cf .dv{height:auto;min-height:24px}
+
+  /* Pola formularza */
+  select,input[type=number],input[type=text]{height:36px;font-size:14px}
+
+  /* Summary tots */
+  .tot{grid-template-columns:1fr 1fr!important}
+  .tv{font-size:14px}
+
+  /* Sekcja marż — 2 kolumny */
+  div[style*="repeat(5,1fr)"]{display:grid;grid-template-columns:1fr 1fr!important}
+
+  /* Promienniki — 2 kolumny */
+  div[style*="repeat(3,1fr)"]{display:grid;grid-template-columns:1fr 1fr!important}
+
+  /* Historia wycen */
+  .hist-item{flex-direction:column;align-items:flex-start;gap:8px}
+  .hist-item > div:last-child{align-self:flex-end}
+
+  /* Modal */
+  .modal-overlay{padding:8px}
+  .modal-box{max-height:95vh;border-radius:8px}
+  .modal-hd{padding:12px 14px;border-radius:8px 8px 0 0}
+
+  /* Widok klienta — single column na mobile */
+  .variants-grid.v2,.variants-grid.v3{grid-template-columns:1fr!important}
+  .vcard:first-child{border-radius:10px 10px 0 0}
+  .vcard:last-child{border-radius:0 0 10px 10px}
+  .vcard+.vcard{border-left:0.5px solid var(--mbm-light);border-top:none}
+
+  /* Price tables */
+  .price-table{font-size:11px}
+  .price-table td{padding:4px 6px}
+  .price-table input{width:70px}
+  .price-table select{width:100px;font-size:10px}
+
+  /* Grp headers */
+  .grp{padding:6px 8px}
+  .gt{font-size:9px}
+  .sub{font-size:10px}
+
+  /* Sekcja promienników */
+  div[id="gpProm"] > div[style*="grid-template-columns: repeat(3"]{
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Sterownik */
+  .c3.row .dv{font-size:11px}
+
+  /* LED profil */
+  #profauto{transform:scale(1.2)}
+
+  /* Kalkulator sekcje */
+  .sec{margin-bottom:6px}
+  .sb{padding:8px 10px}
+}
+
+/* Bardzo małe ekrany */
+@media (max-width: 380px){
+  .header h1{display:none}
+  .tabs{width:100%}
+  .tab{flex:1;font-size:9px;padding:3px 4px}
+  .tot{grid-template-columns:1fr!important}
+  .top-bar .btn{font-size:10px;padding:4px 6px}
+}
+
+/* Tablet portrait */
+@media (min-width: 769px) and (max-width: 1024px){
+  .c5{grid-template-columns:2fr 60px 80px 80px 80px}
+  .variants-grid.v3{grid-template-columns:1fr 1fr!important}
+}
+
+@media print{
+  .header,.top-bar,.tabs,.cl-btns{display:none!important}
+  body{background:#fff}.view{padding:0;max-width:none!important}
+  .variants-wrap{overflow:visible!important;max-width:none!important}
+  .variants-grid{min-width:0!important;width:100%!important}
+  .cl-card{border:1px solid #ccc}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+  .v-hd,.v-sec-hd,.v-total,.v-total-b,.v-subtotal,.cl-sec-hd,.cl-total,.cl-total-b{
+    -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important
+  }
+}
+</style>
+<script>
+// ===== SUPABASE =====
+const SUPA_URL = 'https://uuxnxvzwhvjlcxegtozk.supabase.co';
+const SUPA_KEY = 'sb_publishable_o8Uk_Sm-vyL9U2F22em6zg_Px-rwdjX';
+let supa = null;
+
+function initSupabase(){
+  try{
+    supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    console.log('Supabase connected');
+  }catch(e){
+    console.error('Supabase init error:', e);
+  }
+}
+
+// ===== SYNC: shared settings =====
+async function syncLoad(){
+  if(!supa)return;
+  try{
+    const {data,error} = await supa.from('shared_settings').select('key,value');
+    if(error)throw error;
+    data.forEach(function(row){
+      if(row.key==='firma' && row.value){
+        try{
+          var fd=row.value;
+          ['firm-name','firm-tel','firm-email','firm-www'].forEach(function(id){
+            var k=id.replace('firm-','');
+            var el=document.getElementById(id);
+            if(el&&fd[k])el.value=fd[k];
+          });
+        }catch(e){}
+      }
+      if(row.key==='logo' && row.value && row.value!=='null'){
+        try{
+          var logoData=typeof row.value==='string'?row.value:JSON.stringify(row.value);
+          if(logoData&&logoData!=='null'){
+            localStorage.setItem('abm_logo',logoData.replace(/^"|"$/g,''));
+          }
+        }catch(e){}
+      }
+      if(row.key==='boaz_ext' && row.value){
+        try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
+      }
+    });
+    showSyncStatus('cloud','Dane załadowane z chmury');
+  }catch(e){
+    showSyncStatus('local','Tryb lokalny (brak połączenia)');
+    console.error('syncLoad error:',e);
+  }
+}
+
+async function syncSaveFirma(){
+  if(!supa)return;
+  try{
+    var fd={name:gs('firm-name'),tel:gs('firm-tel'),email:gs('firm-email'),www:gs('firm-www')};
+    await supa.from('shared_settings').upsert({key:'firma',value:fd,updated_at:new Date().toISOString()});
+  }catch(e){console.error('syncSaveFirma:',e);}
+}
+
+async function syncSaveLogo(logoData){
+  if(!supa)return;
+  try{
+    await supa.from('shared_settings').upsert({key:'logo',value:logoData,updated_at:new Date().toISOString()});
+  }catch(e){console.error('syncSaveLogo:',e);}
+}
+
+async function syncSaveBoazExt(){
+  if(!supa)return;
+  try{
+    await supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()});
+  }catch(e){console.error('syncSaveBoazExt:',e);}
+}
+
+// ===== CLOUD HISTORY =====
+async function saveQuoteCloud(quoteData){
+  if(!supa)return null;
+  try{
+    const {data,error} = await supa.from('quotes').insert({
+      klient:quoteData.klient,
+      opis:quoteData.opis||'',
+      netto:quoteData.netto,
+      brutto:quoteData.brutto,
+      vat:quoteData.vat,
+      typ:quoteData.typ,
+      is_z:quoteData.isZ,
+      data:quoteData,
+      variants:JSON.parse(JSON.stringify(VARIANTS))
+    }).select();
+    if(error)throw error;
+    return data[0];
+  }catch(e){
+    console.error('saveQuoteCloud:',e);
+    return null;
+  }
+}
+
+async function loadQuotesCloud(){
+  if(!supa)return [];
+  try{
+    const {data,error} = await supa.from('quotes')
+      .select('id,created_at,klient,opis,netto,brutto,vat,typ,is_z,data,variants')
+      .order('created_at',{ascending:false})
+      .limit(200);
+    if(error)throw error;
+    return data||[];
+  }catch(e){
+    console.error('loadQuotesCloud:',e);
+    return [];
+  }
+}
+
+async function deleteQuoteCloud(id){
+  if(!supa)return;
+  try{
+    await supa.from('quotes').delete().eq('id',id);
+  }catch(e){console.error('deleteQuoteCloud:',e);}
+}
+
+// ===== STATUS INDICATOR =====
+function showSyncStatus(mode,msg){
+  var el=document.getElementById('sync-status');
+  if(!el)return;
+  if(mode==='cloud'){
+    el.style.background='var(--mbm-pale)';el.style.color='var(--mbm-primary)';
+  }else{
+    el.style.background='#FAEEDA';el.style.color='#633806';
+  }
+  el.textContent=(mode==='cloud'?'☁ ':'⚠ ')+msg;
+  setTimeout(function(){el.textContent='☁ Online — '+SUPA_URL.split('.')[0].split('//')[1];},3000);
+}
+</script>
+</head>
+<body>
+<div class="header">
+  <h1>ABM Sauny — Kalkulator</h1>
+  <div id="sync-status" style="font-size:11px;padding:3px 10px;border-radius:4px;background:var(--mbm-pale);color:var(--mbm-primary)">☁ Łączenie...</div>
+  <div class="tabs">
+    <button class="tab on" onclick="showTab('calc')">Kalkulator</button>
+    <button class="tab" onclick="showTab('client')">Widok klienta</button>
+    <button class="tab" onclick="showTab('order')">Lista materiałów</button>
+    <button class="tab" onclick="showTab('actual')">Koszty rzeczywiste</button>
+    <button class="tab" onclick="showTab('history')">Historia wycen</button>
+    <button class="tab" onclick="showTab('prices')">Edytuj cenniki</button>
+    <button class="tab" onclick="showTab('settings')">Ustawienia</button>
+  </div>
+</div>
+
+<!-- ===== KALKULATOR ===== -->
+<div class="view on" id="tab-calc">
+  <div class="top-bar">
+    <button class="btn on" id="bW" onclick="setWZ('W')">Wewnętrzna [W]</button>
+    <button class="btn" id="bZ" onclick="setWZ('Z')">Zewnętrzna [Z]</button>
+    <button class="btn on" id="bF" onclick="setTyp('F')">Fińska</button>
+    <button class="btn" id="bI" onclick="setTyp('I')">Infrared</button>
+    <button class="btn" id="bC" onclick="setTyp('C')">Combi</button>
+    <button class="btn on8" id="bV8" onclick="setVAT(8)">VAT 8%</button>
+    <button class="btn" id="bV23" onclick="setVAT(23)">VAT 23%</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;padding:10px 14px;background:var(--mbm-palest);border-radius:8px;border:0.5px solid var(--mbm-pale)">
+    <span style="font-size:11px;color:var(--mbm-mid);font-weight:500;letter-spacing:.04em;text-transform:uppercase">Warianty:</span>
+    <div id="vslot-A" class="vslot"></div>
+    <div id="vslot-B" class="vslot"></div>
+    <div id="vslot-C" class="vslot"></div>
+    <button onclick="clearVariants()" style="font-size:11px;color:var(--mbm-mid);background:none;border:0.5px solid var(--mbm-light);border-radius:4px;padding:3px 8px;cursor:pointer;font-family:inherit">✕ Wyczyść</button>
+    <span style="flex:1"></span>
+    <button class="btn grn" onclick="saveQuote()">💾 Zapisz wycenę</button>
+    <button class="btn act" onclick="showTab('client')">Widok klienta →</button>
+  </div>
+
+  <div class="sec"><div class="sb">
+    <div class="c4 row">
+      <div><div class="sub">Klient</div><input type="text" id="klient" placeholder="Jan Kowalski" oninput="r()"></div>
+      <div><div class="sub">Opis / wymiary</div><input type="text" id="opis" placeholder="np. 230x200 cm" oninput="r()"></div>
+      <div><div class="sub">Min. marża (zł)</div><input type="number" id="minm" value="12000" onchange="r()"></div>
+      <div><div class="sub">Kurs EUR</div><input type="number" id="eur" value="4.4" step="0.05" min="1" onchange="rebP();r()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-items:center;margin-top:4px;margin-bottom:4px">
+      <div><div class="sub">Marża konstr./wykończ.</div><select id="mk" onchange="r()"><option value="1.5">50%</option><option value="1.6">60%</option><option value="1.7">70%</option><option value="1.8">80%</option><option value="1.9">90%</option><option value="2.0" selected>100%</option></select></div>
+      <div><div class="sub">Marża szkło/premium</div><select id="mp" onchange="r()"><option value="1.3">30%</option><option value="1.4">40%</option><option value="1.5">50%</option></select></div>
+      <div><div class="sub">Marża grzanie</div><select id="mg" onchange="r()"><option value="1.25">25%</option><option value="1.3">30%</option><option value="1.4" selected>40%</option><option value="1.5">50%</option></select></div>
+      <div><div class="sub">Marża LED/audio</div><select id="ml" onchange="r()"><option value="1.3">30%</option><option value="1.4" selected>40%</option><option value="1.5">50%</option></select></div>
+      <div><div class="sub">Marża wypos. dodatkowe</div><select id="md" onchange="r()"><option value="1.3">30%</option><option value="1.4">40%</option><option value="1.5" selected>50%</option><option value="1.6">60%</option><option value="1.7">70%</option><option value="1.8">80%</option></select></div>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">1. Wykończenie sauny</span><span class="ss" id="sm1">0 zł</span></div><div class="sb">
+    <div class="grp"><div class="gt">Boazeria wewnętrzna</div>
+      <div class="c5 row" style="margin-bottom:2px"><span class="ch">Materiał</span><span class="ch">szt.</span><span class="ch">dostawca</span><span class="ch">koszt</span><span class="ch">sprzedaż</span></div>
+      <div class="c5 row"><select id="b1m" onchange="uM('b1')"></select><input type="number" id="b1q" value="0" min="0" onchange="r()"><span class="bdg bM" id="b1s">—</span><span class="dv" id="b1k">0 zł</span><span class="dv hi" id="b1p">0 zł</span></div>
+      <div class="c5 row"><select id="b2m" onchange="uM('b2')"></select><input type="number" id="b2q" value="0" min="0" onchange="r()"><span class="bdg bM" id="b2s">—</span><span class="dv" id="b2k">0 zł</span><span class="dv hi" id="b2p">0 zł</span></div>
+    </div>
+    <div class="grp" id="gpZab"><div class="gt">Zabudowa nad sauną [W] — ta sama boazeria</div>
+      <div class="c5 row"><select id="zb1m" onchange="uM('zb1')"></select><input type="number" id="zb1q" value="0" min="0" onchange="r()"><span class="bdg bM" id="zb1s">—</span><span class="dv" id="zb1k">0 zł</span><span class="dv hi" id="zb1p">0 zł</span></div>
+    </div>
+    <div class="grp" id="gpBZ" style="display:none">
+      <div class="gt">Boazeria zewnętrzna / obicie [Z]</div>
+      <div class="c5 row" style="margin-bottom:2px"><span class="ch">Materiał</span><span class="ch">szt.</span><span class="ch">dost.</span><span class="ch">koszt</span><span class="ch">sprzedaż</span></div>
+      <div class="c5 row">
+        <select id="bz-sel" onchange="onBZSel()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a"></select>
+        <input type="number" id="bzq" value="0" min="0" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;text-align:right">
+        <span class="bdg bM" id="bz-sup">—</span>
+        <span class="dv" id="bzk">0 zł</span>
+        <span class="dv hi" id="bzpp">0 zł</span>
+      </div>
+      <div style="margin-top:4px;display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:#999">lub wpisz cenę ręcznie:</span>
+        <input type="number" id="bzp" value="0" min="0" placeholder="zł/szt" onchange="r()" style="width:90px;font-size:12px;padding:3px 6px;height:24px;border:0.5px solid #ddd;border-radius:4px;text-align:right">
+        <input type="text" id="bzn" placeholder="Nazwa materiału" style="flex:1;font-size:12px;padding:3px 6px;height:24px;border:0.5px solid #ddd;border-radius:4px">
+      </div>
+      <div style="font-size:11px;color:#999;margin-top:4px">Dodaj materiały w zakładce <strong>Edytuj cenniki → Boazeria zewnętrzna</strong></div>
+    </div>
+    <div class="grp"><div class="gt">Ławki + oparcia + rama</div>
+      <div class="c5 row"><select id="l1m" onchange="uM('l1')"></select><input type="number" id="l1q" value="0" min="0" onchange="r()"><span class="bdg bM" id="l1s">—</span><span class="dv" id="l1k">0 zł</span><span class="dv hi" id="l1p">0 zł</span></div>
+      <div class="c5 row"><select id="l2m" onchange="uM('l2')"></select><input type="number" id="l2q" value="0" min="0" onchange="r()"><span class="bdg bM" id="l2s">—</span><span class="dv" id="l2k">0 zł</span><span class="dv hi" id="l2p">0 zł</span></div>
+    </div>
+    <div class="grp"><div class="gt">Kątowniki</div>
+      <div class="c5 row"><span class="lbl">Kątownik (szt. × <input type="number" id="kat-cena" value="30" min="0" style="width:50px;display:inline;height:20px;padding:1px 4px;font-size:11px;border:0.5px solid var(--mbm-light);border-radius:3px" onchange="r()"> zł)</span><input type="number" id="katq" value="6" min="0" onchange="r()"><span></span><span class="dv" id="katk">0 zł</span><span class="dv hi" id="katp">0 zł</span></div>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">2. Konstrukcja nośna</span><span class="ss" id="sm2">0 zł</span></div><div class="sb">
+    <div class="grp"><div class="gt">Drewno konstrukcyjne</div>
+      <div class="c5 row"><select id="k1m" onchange="uM('k1')"></select><input type="number" id="k1q" value="0" min="0" onchange="r()"><span class="bdg bM" id="k1s">—</span><span class="dv" id="k1k">0 zł</span><span class="dv hi" id="k1p">0 zł</span></div>
+      <div id="rowBSH" style="display:none" class="cf row"><span class="lbl">BSH 100×100 (mb × 36,25 zł)</span><input type="number" id="bshq" value="0" min="0" onchange="r()"><span></span><span class="dv" id="bshk">0 zł</span><span class="dv hi" id="bshp">0 zł</span></div>
+      <div id="rowCNC" style="display:none" class="cf row"><span class="lbl">Usługa CNC (szt. × 700 zł)</span><input type="number" id="cncq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="cnck">0 zł</span><span class="dv hi" id="cncp">0 zł</span></div>
+    </div>
+    <div class="grp"><div class="gt">Izolacja i folia</div>
+      <div class="cf row"><span class="lbl">Folia paraizolacyjna (rolki × 4 zł)</span><input type="number" id="folq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="folk">0 zł</span><span class="dv hi" id="folp">0 zł</span></div>
+      <div class="cf row"><span class="lbl">Taśma do folii para (szt. × 20 zł)</span><input type="number" id="tasq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="task">0 zł</span><span class="dv hi" id="tasp">0 zł</span></div>
+      <div class="cf row"><span class="lbl" id="wellb">[W] Wełna 40mm (m² × 8,50 zł)</span><input type="number" id="welq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="welk">0 zł</span><span class="dv hi" id="welp">0 zł</span></div>
+    </div>
+    <div class="grp"><div class="gt">Wentylacja i kable</div>
+      <div class="cf row"><span class="lbl">Anemostat (szt. × cena zł)</span><input type="number" id="anoq" value="2" min="0" onchange="r()"><input type="number" id="anop" value="150" min="0" onchange="r()"><span class="dv" id="anok">0 zł</span><span class="dv hi" id="anop2">0 zł</span></div>
+      <div class="cf row"><span class="lbl">Kabel piec (mb × 20 zł)</span><input type="number" id="kabq" value="10" min="0" onchange="r()"><span></span><span class="dv" id="kabk">0 zł</span><span class="dv hi" id="kabp">0 zł</span></div>
+    </div>
+    <div class="grp" id="gpDach" style="display:none"><div class="gt">Dach, podłoga i fundament [Z]</div>
+      <div class="cf row"><span class="lbl">Dach — materiał (m² × 60 zł)</span><input type="number" id="dachq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dachk">0 zł</span><span class="dv hi" id="dachp">0 zł</span></div>
+      <div class="cf row"><span class="lbl">Dach — robocizna (m² × 110 zł)</span><input type="number" id="dacrq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dacrk">0 zł</span><span class="dv" style="color:#aaa">—</span></div>
+      <div class="cf row"><span class="lbl">Rynny (kpl. × 1322 zł)</span><input type="number" id="rynq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="rynk">0 zł</span><span class="dv hi" id="rynp">0 zł</span></div>
+      <div class="cf row"><span class="lbl">Podłoga zewnętrzna (m² × 140 zł)</span><input type="number" id="podq" value="4" min="0" onchange="r()"><span></span><span class="dv" id="podk">0 zł</span><span class="dv hi" id="podp">0 zł</span></div>
+      <div class="cf row"><span class="lbl">Płyta betonowa (szt. × 221,65 zł)</span><input type="number" id="plyq" value="2" min="0" onchange="r()"><span></span><span class="dv" id="plyk">0 zł</span><span class="dv hi" id="plyp">0 zł</span></div>
+      <div class="cf row"><span class="lbl">Styrodur 100mm XPS (m² × 49,40 zł)</span><input type="number" id="styq" value="0" min="0" onchange="r()"><span></span><span class="dv" id="styk">0 zł</span><span class="dv hi" id="styp">0 zł</span></div>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">3. Szklenie</span><span class="ss" id="sm3">0 zł</span><select id="ms" onchange="r()" style="font-size:11px;padding:2px 6px;height:22px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#333"><option value="1.5">marża 50%</option><option value="1.6">marża 60%</option><option value="1.7">marża 70%</option><option value="1.8">marża 80%</option><option value="1.9">marża 90%</option><option value="2.0" selected>marża 100%</option></select></div><div class="sb">
+    <div class="c4 row">
+      <div><div class="sub">Typ szkła</div><select id="szkt" onchange="r()"><option value="160">Float (160 zł/m²)</option><option value="265">Grafitowe (265 zł/m²)</option><option value="265">Brązowe (265 zł/m²)</option><option value="700">Okno dwukomorowe (700 zł/m²)</option></select></div>
+      <div><div class="sub">Powierzchnia (m²)</div><input type="number" id="szkm" value="3.6" step="0.1" min="0" onchange="r()"></div>
+      <div><div class="sub">Szlifowanie (mb × 10 zł)</div><input type="number" id="szlq" value="16" min="0" onchange="r()"></div>
+      <div><div class="sub">Otwory zawiasy (× 40 zł)</div><input type="number" id="otwq" value="4" min="0" onchange="r()"></div>
+      <div><div class="sub">Otwory (szt. × 10 zł)</div><input type="number" id="otwq2" value="0" min="0" onchange="r()"></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+      <span class="lbl">Koszt:</span><span class="dv" id="szkk" style="min-width:75px">0 zł</span>
+      <span class="lbl">Sprzedaż:</span><span class="dv hi" id="szkp" style="min-width:75px">0 zł</span>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">4. Wyposażenie premium</span><span class="ss" id="sm4">0 zł</span></div><div class="sb">
+    <div class="c4 row">
+      <div><div class="sub">Zawiasy (szt. × 240 zł)</div><input type="number" id="zawq" value="2" min="0" onchange="r()"></div>
+      <div><div class="sub">Antaba / klamka</div><select id="klm" onchange="r()"><option value="150">Made by ABM (150)</option><option value="479">ANTABA (479)</option><option value="0">Bez</option></select></div>
+      <div><div class="sub">Drzwi do sauny</div><select id="drz" onchange="r()" style="display:none"><option value="0" selected>Bez</option></select><span style="font-size:11px;color:var(--mbm-mid)">—</span></div>
+      <div><div class="sub">Ściana dekoracyjna</div><select id="scd" onchange="r()"><option value="0">Bez</option><option value="1000">Ściana z kamienia (1000)</option></select></div>
+    </div>
+    <div id="rowDrzwZ" style="display:none;margin-top:4px">
+      <div class="sub" style="margin-bottom:2px">Drzwi wejściowe zewnętrzne [Z]</div>
+      <select id="drzwz" onchange="r()" style="width:50%"><option value="0">Bez</option><option value="2000">Aluminiowe (2000)</option></select>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+      <span class="lbl">Koszt:</span><span class="dv" id="prmk" style="min-width:75px">0 zł</span>
+      <span class="lbl">Sprzedaż:</span><span class="dv hi" id="prmp" style="min-width:75px">0 zł</span>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">5. Ogrzewanie — serce sauny</span><span class="ss" id="sm5">0 zł</span></div><div class="sb">
+    <div class="grp" id="gpPiec"><div class="gt">Piec</div>
+      <div class="c2 row">
+        <div><div class="sub">Model pieca</div><select id="psel" onchange="onPS()" style="width:100%"></select><div id="pinfo" class="pinfo" style="display:none"></div></div>
+        <div><div class="sub">Cena zakupu (zł)</div><input type="number" id="piec" value="0" min="0" onchange="r()"></div>
+      </div>
+      <div class="c3 row" style="margin-top:4px">
+        <div><div class="sub">Kamienie Diabez (paczki × 50 zł)</div><input type="number" id="kamd" value="0" min="0" onchange="r()"></div>
+        <div><div class="sub">Kamienie szare okrągłe (× 130 zł)</div><input type="number" id="kams" value="0" min="0" onchange="r()"></div>
+        <div><div class="sub">Osłona na piec (zł)</div><input type="number" id="osl" value="0" min="0" onchange="r()"></div>
+      </div>
+    </div>
+    <div class="grp" id="gpProm" style="display:none"><div class="gt">Promienniki VitalSun</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;grid-column:span 3">350W</div>
+        <div>
+          <div class="sub">Model</div>
+          <select id="pr3m" onchange="onProm()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+            <option value="0|0">Bez</option>
+            <option value="660|350">Vitae 350W — STANDARD (660 zł)</option>
+            <option value="900|350">Glass 350W — PREMIUM (900 zł)</option>
+          </select>
+        </div>
+        <div><div class="sub">Ilość (szt.)</div><input type="number" id="pr3" value="0" min="0" onchange="r()"></div>
+        <div><div class="sub">Koszt jedn.</div><span class="dv" id="pr3c" style="display:flex">—</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;grid-column:span 3">500W</div>
+        <div>
+          <div class="sub">Model</div>
+          <select id="pr5m" onchange="onProm()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+            <option value="0|0">Bez</option>
+            <option value="710|500">Vitae 500W — STANDARD (710 zł)</option>
+            <option value="960|500">Glass 500W — PREMIUM (960 zł)</option>
+          </select>
+        </div>
+        <div><div class="sub">Ilość (szt.)</div><input type="number" id="pr5" value="0" min="0" onchange="r()"></div>
+        <div><div class="sub">Koszt jedn.</div><span class="dv" id="pr5c" style="display:flex">—</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;grid-column:span 3">750W</div>
+        <div>
+          <div class="sub">Model</div>
+          <select id="pr7m" onchange="onProm()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+            <option value="0|0">Bez</option>
+            <option value="765|750">Vitae 750W — STANDARD (765 zł)</option>
+            <option value="960|750">Glass 750W — PREMIUM (960 zł)</option>
+          </select>
+        </div>
+        <div><div class="sub">Ilość (szt.)</div><input type="number" id="pr7" value="0" min="0" onchange="r()"></div>
+        <div><div class="sub">Koszt jedn.</div><span class="dv" id="pr7c" style="display:flex">—</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--mbm-mid);margin-top:3px">Łączna moc: <strong id="mocsum">0 W</strong></div>
+    </div>
+    <div class="grp"><div class="gt">Sterownik FFES</div>
+      <div class="c3 row">
+        <div>
+          <div class="sub">Seria sterownika</div>
+          <select id="ster-ser" onchange="onSterSer()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+            <option value="Z">Seria Z</option>
+            <option value="Cmini">Seria C mini</option>
+            <option value="C">Seria C</option>
+          </select>
+        </div>
+        <div style="grid-column:span 2">
+          <div class="sub">Model sterownika</div>
+          <select id="ster" onchange="onSterModel()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+            <option value="0|0">Bez sterownika</option>
+            <optgroup label="Fińska (sucha)">
+              <option value="01|1050|1150|1522.5">01 — sucha, piec do 9 kW</option>
+              <option value="02|1176|1281|1648.5">02 — sucha, piec do 15 kW</option>
+              <option value="03|1627.5|1732.5|2100">03 — sucha, piec do 22 kW</option>
+              <option value="04|1890|1995|2362.5">04 — sucha, piec do 30 kW</option>
+              <option value="05|2467.5|2572.5|2940">05 — sucha, piec do 45 kW</option>
+              <option value="06|3045|3150|3517.5">06 — sucha, piec do 60 kW</option>
+              <option value="07|3412.5|3517.5|3990">07 — sucha, piec do 75 kW</option>
+              <option value="08|3780|3885|4357.5">08 — sucha, piec do 90 kW</option>
+            </optgroup>
+            <optgroup label="Infrared (promienniki)">
+              <option value="10|1050|1155|1522.5">10 — infrared, prom. do 9 kW</option>
+              <option value="20|1176|1281|1648.5">20 — infrared, prom. do 15 kW</option>
+              <option value="30|1627.5|1732.5|2100">30 — infrared, prom. do 22 kW</option>
+              <option value="40|1890|1995|2362.5">40 — infrared, prom. do 30 kW</option>
+            </optgroup>
+            <optgroup label="Combi (piec + promienniki)">
+              <option value="11|1260|1365|1732.5">11 — prom.3kW + piec 9 kW</option>
+              <option value="12|1386|1491|1858.5">12 — prom.3kW + piec 15 kW</option>
+              <option value="13|1837.5|1942.5|2310">13 — prom.9kW + piec 22 kW</option>
+              <option value="14|2100|2205|2572.5">14 — prom.9kW + piec 30 kW</option>
+              <option value="21|1333.5|1438.5|1806">21 — prom.15kW + piec 9 kW</option>
+              <option value="22|1459.5|1564.5|1932">22 — prom.15kW + piec 15 kW</option>
+              <option value="23|1911|2016|2331">23 — prom.15kW + piec 22 kW</option>
+              <option value="24|2173.5|2278.5|2646">24 — prom.15kW + piec 30 kW</option>
+              <option value="31|1785|1890|2257.5">31 — prom.22kW + piec 9 kW</option>
+              <option value="32|1911|2016|2383.5">32 — prom.22kW + piec 15 kW</option>
+              <option value="33|2362.5|2467.5|2835">33 — prom.22kW + piec 22 kW</option>
+              <option value="34|2625|2730|3097.5">34 — prom.22kW + piec 30 kW</option>
+              <option value="41|2047.5|2152.5|2520">41 — prom.30kW + piec 9 kW</option>
+              <option value="42|2173.5|2278.5|2646">42 — prom.30kW + piec 45 kW</option>
+              <option value="43|2625|2730|3097.5">43 — prom.30kW + piec 22 kW</option>
+              <option value="44|2887.5|2992.5|3360">44 — prom.30kW + piec 30 kW</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--mbm-mid);margin-top:3px;padding:3px 8px;background:#fff;border-radius:4px;border:0.5px solid var(--mbm-pale)" id="ster-price-info">Wybierz model sterownika</div>
+      <div class="c2 row" style="margin-top:6px">
+        <div>
+          <div class="sub">Dodatki do sterownika</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:4px">
+            <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="awifi" onchange="r()"> WiFi XX-W (400 zł)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="abt" onchange="r()"> Bluetooth XX-B (300 zł)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="asty" onchange="r()"> Cichy sty. X1/X2 (100 zł)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="asty3" onchange="r()"> Cichy sty. X3 (250 zł)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="aaw" onchange="r()"> Awaryjne wyłącz. (600 zł)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="apbez" onchange="r()"> Przycisk bezp. (220 zł)</label>
+          </div>
+        </div>
+        <div>
+          <div class="sub">Cena sterownika (auto)</div>
+          <input type="number" id="ster-val" value="0" min="0" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%;text-align:right">
+          <div class="sub" style="margin-top:4px">Cena z modułami (auto)</div>
+          <span class="dv hi" id="ster-total" style="display:flex;min-width:80px">0 zł</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+        <span class="lbl">Koszt grzania:</span><span class="dv" id="grzk" style="min-width:75px">0 zł</span>
+        <span class="lbl">Sprzedaż:</span><span class="dv hi" id="grzp" style="min-width:75px">0 zł</span>
+      </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">6. Oświetlenie LED</span><span class="ss" id="sm6">0 zł</span></div><div class="sb">
+    <div class="c4 row">
+      <div><div class="sub">Taśma LED</div><select id="ledt" onchange="r()"><option value="0">Bez oświetlenia</option><option value="41.9">Taśma LED COB 6500K 480 LED 10W 900lm IP65 (24V) — 41,90/mb</option><option value="34.9">Taśma LED 4000K 120 SMD 2835 10W 950lm IP54 (24V) — 34,90/mb</option><option value="67">Taśma LED COB RGBCCT (RGB+CCT) 5w1 840 LED 16W IP65 (24V) — 67,00/mb</option><option value="49.86">Taśma LED RGBW +4000K 60 SMD 19W LAKIEROWANA IP54 — 49,86/mb</option><option value="89.2">NEONICA Sauna PRO RGB 600 24V IP68 5m SERIA PROFESJONALNA — 89,20/mb</option><option value="53.5">NEONICA Sauna PRO 600 24V IP68 5m SERIA PROFESJONALNA — 53,50/mb</option></select></div>
+      <div><div class="sub">Ilość (mb/szt.)</div><input type="number" id="ledq" value="10" min="0" onchange="r()"></div>
+      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()"><option value="0">Bez zasilacza</option><option value="44.9">IP67 24V 1A 24W — 44,90</option><option value="63.9">IP67 24V 1.5A 36W — 63,90</option><option value="69.9">IP67 24V 1.875A 45W — 69,90</option><option value="75.9">IP67 24V 2.5A 60W — 75,90</option><option value="89.0">IP67 24V 3.33A 80W — 89,00</option><option value="117.0">IP67 24V 4.17A 100W — 117,00</option><option value="169.0">XLG MEAN WELL IP67 24V 6.25A 150W — 169,00</option><option value="230.0">XLG MEAN WELL IP67 24V 8.33A 200W — 230,00</option><option value="249.0">ELG MEAN WELL IP67 24V 10A 240W — 249,00</option><option value="309.0">XLG MEAN WELL IP67 24V 312W 13A — 309,00</option></select></div>
+      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option><option value="135">V4 4-kan. (135)</option><option value="159">WT5 WiFi (159)</option><option value="250">Moduł+ster. (250)</option></select></div>
+    </div>
+    <div class="c2 row" style="margin-top:4px">
+      <div><div class="sub">Umiejscowienie LED</div>
+        <select id="led-miejsce" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+          <option value="">— nie określono —</option>
+          <option value="Za oparciem">Za oparciem</option>
+          <option value="Pod ławką (rozświetla podłogę)">Pod ławką (rozświetla podłogę)</option>
+          <option value="W ławce (rozświetla ławkę od środka)">W ławce (rozświetla ławkę od środka)</option>
+        </select>
+      </div>
+      <div><div class="sub">Barwa LED</div>
+        <select id="led-barwa" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
+          <option value="">— nie określono —</option>
+          <option value="RGBW">RGBW</option>
+          <option value="LED Ciepłe">LED Ciepłe</option>
+          <option value="LED Neutralne">LED Neutralne</option>
+          <option value="LED Zimne">LED Zimne</option>
+        </select>
+      </div>
+    </div>
+    <div class="c3 row" style="margin-top:4px">
+      <div><div class="sub">Profil LED (mb × 12,45 zł)</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="profq" value="10" min="0" onchange="r()" style="flex:1">
+          <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="profauto" onchange="r()" checked> auto</label>
+        </div>
+      </div>
+      <div><div class="sub">Koszt profilu</div><span class="dv" id="profk" style="display:flex;min-width:70px">0 zł</span></div>
+      <div><div class="sub">Sprzedaż profilu</div><span class="dv hi" id="profp" style="display:flex;min-width:70px">0 zł</span></div>
+    </div>
+    <div class="c3 row" style="margin-top:4px">
+      <div><div class="sub">Kabel LED (mb × 7,90 zł)</div>
+        <input type="number" id="kabq-led" value="0" min="0" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%;text-align:right">
+      </div>
+      <div><div class="sub">Koszt kabla</div><span class="dv" id="ledc-k" style="display:flex;min-width:70px">0 zł</span></div>
+      <div><div class="sub">Sprzedaż kabla</div><span class="dv hi" id="ledc-p" style="display:flex;min-width:70px">0 zł</span></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+      <span class="lbl">Koszt:</span><span class="dv" id="ledk" style="min-width:75px">0 zł</span>
+      <span class="lbl">Sprzedaż:</span><span class="dv hi" id="ledp" style="min-width:75px">0 zł</span>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">7. Audio</span><span class="ss" id="sm7">0 zł</span></div><div class="sb">
+    <div class="c2 row">
+      <div><div class="sub">Głośniki</div><select id="audt" onchange="r()"><option value="0">Bez nagłośnienia</option><option value="320">2× TONSIL standard (320)</option><option value="799">2× BOSE Premium (799)</option></select></div>
+      <div><div class="sub">Kontroler BT</div><select id="btkt" onchange="r()"><option value="0">Bez</option><option value="399">Kontroler BT (399)</option></select></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+      <span class="lbl">Koszt:</span><span class="dv" id="audk" style="min-width:75px">0 zł</span>
+      <span class="lbl">Sprzedaż:</span><span class="dv hi" id="audp" style="min-width:75px">0 zł</span>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">8. Wyposażenie dodatkowe</span><span class="ss" id="sm9">0 zł</span></div><div class="sb">
+    <div class="c4 row">
+      <div><div class="sub">Ściana solna (zł)</div><input type="number" id="sol-c" value="0" min="0" onchange="r()"></div>
+      <div><div class="sub">Aromaterapia (zł)</div><input type="number" id="arom-c" value="0" min="0" onchange="r()"></div>
+      <div><div class="sub">Cebrzyk i chochla (zł)</div><input type="number" id="akc-c" value="0" min="0" onchange="r()"></div>
+      <div><div class="sub">Klepsydra (zł)</div><input type="number" id="klep-c" value="0" min="0" onchange="r()"></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+      <span class="lbl">Koszt:</span><span class="dv" id="dod-k" style="min-width:75px">0 zł</span>
+      <span class="lbl">Sprzedaż:</span><span class="dv hi" id="dod-p" style="min-width:75px">0 zł</span>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sh"><span class="st">9. Projekt i logistyka</span><span class="ss" id="sm8">0 zł</span></div><div class="sb">
+    <div class="c4 row">
+      <div><div class="sub">Transport i montaż (zł)</div><input type="number" id="trn" value="5000" min="0" onchange="r()"></div>
+      <div><div class="sub">Dostawa drewna (zł)</div><input type="number" id="dos" value="600" min="0" onchange="r()"></div>
+      <div><div class="sub">Projekt 2D / wizualizacja</div><input type="number" id="prj" value="1200" min="0" onchange="r()"></div>
+      <div><div class="sub">Roboczogodziny (h × 60 zł)</div><input type="number" id="gdz" value="30" min="0" onchange="r()"></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
+      <span class="lbl">Niekontrolowane wydatki:</span>
+      <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mbm-mid)"><input type="checkbox" id="nkw-auto" checked onchange="r()"> auto (10% kosztów)</label>
+      <input type="number" id="nkw" value="0" min="0" onchange="r()" style="width:90px;font-size:12px;padding:2px 6px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px;text-align:right">
+    </div>
+  </div></div>
+
+  <div id="alrt" class="alrt"></div>
+  <div class="tot" style="grid-template-columns:repeat(5,1fr)">
+    <div class="tc"><div class="tl">Koszt materiałów</div><div class="tv" id="tkos">0 zł</div></div>
+    <div class="tc"><div class="tl">Zysk na materiałach</div><div class="tv" id="tzys">0 zł</div></div>
+    <div class="tc"><div class="tl">Marża</div><div class="tv" id="tmar" style="color:var(--mbm-primary)">0%</div></div>
+    <div class="tc"><div class="tl">Cena netto</div><div class="tv" id="tnet">0 zł</div></div>
+    <div class="tc"><div class="tl" id="tbrtlbl">Cena brutto (8% VAT)</div><div class="tv" id="tbrt">0 zł</div></div>
+  </div>
+</div>
+
+<!-- ===== WIDOK KLIENTA ===== -->
+<div class="view" id="tab-client">
+  <div style="max-width:100%;margin:0 auto;padding:0 4px">
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap" class="cl-btns">
+      <button class="btn act" onclick="printPDF()">🖨️ Zapisz PDF (poziomo)</button>
+      <button id="lang-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleLang()">EN</button>
+      <button id="curr-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleCurr()">€ EUR</button>
+      <button class="btn grn" onclick="saveQuote()">💾 Zapisz wycenę</button>
+      <button class="btn" onclick="showTab('calc')">← Wróć</button>
+      <span style="font-size:11px;color:#999;margin-left:8px">Aktywne warianty: <span id="active-variants-label">—</span></span>
+    </div>
+    <div class="variants-wrap">
+      <div id="variants-grid" class="variants-grid v1">
+        <!-- filled by buildClient() -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LISTA MATERIAŁÓW ===== -->
+<div class="view" id="tab-order">
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn act" onclick="exportCSV()">📥 Eksportuj CSV</button>
+    <button class="btn act" onclick="printPDF()">🖨️ Drukuj</button>
+    <button class="btn" onclick="showTab('calc')">← Wróć</button>
+  </div>
+  <div class="sec"><div class="sh"><span class="st">Lista materiałów do zamówienia</span><span class="ss" id="ord-title">—</span></div>
+    <div class="sb" id="ord-body"><p style="color:#999;font-size:12px">Uzupełnij kalkulator żeby wygenerować listę.</p></div>
+  </div>
+</div>
+
+<!-- ===== KOSZTY RZECZYWISTE ===== -->
+<div class="view" id="tab-actual">
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+    <div style="font-size:15px;font-weight:500">Koszty rzeczywiste projektu</div>
+    <button class="btn grn" onclick="saveActual()">💾 Zapisz projekt</button>
+    <button class="btn act" onclick="exportActualCSV()">📥 Eksportuj CSV</button>
+    <button class="btn" onclick="showTab('order')">← Lista materiałów</button>
+  </div>
+
+  <!-- HISTORIA KOSZTÓW -->
+  <div class="sec" style="margin-bottom:12px">
+    <div class="sh" style="cursor:pointer" onclick="toggleActualHistory()">
+      <span class="st">Historia zapisanych projektów</span>
+      <span style="font-size:11px;color:var(--mbm-mid)" id="actual-hist-toggle">▸ rozwiń</span>
+    </div>
+    <div id="actual-hist-wrap" style="display:none">
+      <div class="sb" id="actual-hist-list">
+        <p style="font-size:12px;color:var(--mbm-mid)">Brak zapisanych projektów.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <div style="font-size:13px;font-weight:500">Aktywny projekt: <span id="act-active-name" style="color:var(--mbm-primary)">—</span></div>
+    <button class="btn" style="color:#c00;border-color:#c00;font-size:11px" onclick="clearActual()">✕ Wyczyść wartości</button>
+    <input type="text" id="act-save-name" placeholder="Nazwa projektu (np. Kowalski - sauna)" style="flex:1;min-width:160px;font-size:12px;padding:3px 8px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px">
+  </div>
+  <p style="font-size:12px;color:var(--mbm-mid);margin-bottom:12px">
+    Wpisz faktycznie zakupione ilości i ceny, wpisz nazwę projektu i kliknij "Zapisz projekt".
+  </p>
+  <div class="act-summary">
+    <div class="act-sc"><div class="act-sl">Koszt wyceny</div><div class="act-sv" id="act-est">—</div></div>
+    <div class="act-sc"><div class="act-sl">Koszt rzeczywisty</div><div class="act-sv" id="act-real">—</div></div>
+    <div class="act-sc"><div class="act-sl">Różnica (±)</div><div class="act-sv" id="act-diff">—</div></div>
+    <div class="act-sc"><div class="act-sl">Odchylenie</div><div class="act-sv" id="act-pct">—</div></div>
+  </div>
+  <div class="sec">
+    <div class="sh"><span class="st">Porównanie materiałów</span><span class="ss" id="act-title">—</span></div>
+    <div class="sb" id="act-body"><p style="color:#999;font-size:12px">Uzupełnij kalkulator i wygeneruj listę materiałów najpierw.</p></div>
+  </div>
+</div>
+
+<!-- ===== HISTORIA ===== -->
+<div class="view" id="tab-history">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:15px;font-weight:500">Historia wycen</div>
+    <button class="btn" style="color:#c00;border-color:#c00" onclick="clearHistory()">Wyczyść historię</button>
+  </div>
+  <div id="hist-list"><p style="color:#999;font-size:12px">Brak zapisanych wycen.</p></div>
+</div>
+
+<!-- ===== EDYTUJ CENNIKI ===== -->
+<div class="view" id="tab-prices">
+  <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div style="font-size:15px;font-weight:500">Edytuj cenniki materiałów</div>
+    <button class="btn grn" onclick="savePrices()">💾 Zapisz zmiany</button>
+    <button class="btn" onclick="resetPrices()">↺ Przywróć domyślne</button>
+  </div>
+  <p style="font-size:12px;color:#666;margin-bottom:12px">Zmień ceny, dodaj nowe materiały lub usuń zbędne. Kliknij "Zapisz zmiany" żeby zastosować.</p>
+
+  <!-- DODAJ NOWY MATERIAŁ -->
+  <div class="sec" style="border:1.5px dashed #3B6D11">
+    <div class="sh" style="background:#EAF3DE"><span class="st" style="color:#27500A">➕ Dodaj nowy materiał</span></div>
+    <div class="sb">
+      <div class="c4 row" style="margin-bottom:6px">
+        <div><div class="sub">Cennik (lista)</div>
+          <select id="add-cat" onchange="toggleAddPieceRow()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+            <option value="boaz">Boazeria wewnętrzna</option>
+            <option value="boaz-ext">Boazeria zewnętrzna / obicie</option>
+            <option value="deski">Ławki i deski</option>
+            <option value="konstr">Drewno konstrukcyjne</option>
+            <option value="glass">Szklenie</option>
+            <option value="led">Oświetlenie LED</option>
+            <option value="piece">Piece</option>
+          </select>
+        </div>
+        <div><div class="sub">Grupa / gatunek drewna</div>
+          <input type="text" id="add-group" placeholder="np. Boazeria zewnętrzna" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+        </div>
+        <div><div class="sub">Nazwa materiału</div>
+          <input type="text" id="add-name" placeholder="np. Modrzew 14x96mm 2,10m" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+        </div>
+        <div><div class="sub">Cena (zł)</div>
+          <input type="number" id="add-price" value="0" min="0" step="0.01" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%;text-align:right">
+        </div>
+      </div>
+      <div id="add-piece-row" style="display:none;margin-bottom:6px">
+        <div class="c4 row">
+          <div><div class="sub">Seria / model (np. HUUM DROP)</div><input type="text" id="add-group2" placeholder="np. HUUM DROP" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%"></div>
+          <div><div class="sub">Cena EUR (hurtowa netto)</div><input type="number" id="add-eur" value="0" min="0" step="0.01" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%;text-align:right"></div>
+        </div>
+      </div>
+      <div class="c4 row">
+        <div><div class="sub">Dostawca</div>
+          <select id="add-sup" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+            <option value="S">Saunatech</option>
+            <option value="E">EKO DREWNO</option>
+            <option value="L">ELODENA</option>
+            <option value="A">ABACHI.PL</option>
+            <option value="K">KUUKS</option>
+            <option value="G">ALGA</option>
+            <option value="KL">KingLED</option>
+            <option value="KR">Kurek</option>
+            <option value="M">Wpisane ręcznie</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn grn" onclick="addMaterial()" style="height:26px;margin-top:auto">✔ Dodaj do listy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('boaz')"><span class="st">Boazeria wewnętrzna</span><span style="font-size:11px;color:#666" id="count-boaz"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-boaz">▸ rozwiń</span></div><div id="price-boaz-wrap" style="display:none"><div class="sb"><div id="price-boaz"></div></div></div></div>
+  <div class="sec"><div class="sh"><span class="st" style="color:#633806">Boazeria zewnętrzna / obicie [Z]</span><span style="font-size:11px;color:#666" id="count-boaz-ext"></span></div><div class="sb"><div id="price-boaz-ext"><p style="font-size:12px;color:#999;padding:6px 0">Brak pozycji. Dodaj materiały powyżej wybierając "Boazeria zewnętrzna / obicie".</p></div></div></div>
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('deski')"><span class="st">Ławki i deski</span><span style="font-size:11px;color:#666" id="count-deski"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-deski">▸ rozwiń</span></div><div id="price-deski-wrap" style="display:none"><div class="sb"><div id="price-deski"></div></div></div></div>
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('konstr')"><span class="st">Drewno konstrukcyjne</span><span style="font-size:11px;color:#666" id="count-konstr"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-konstr">▸ rozwiń</span></div><div id="price-konstr-wrap" style="display:none"><div class="sb"><div id="price-konstr"></div></div></div></div>
+
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('glass')"><span class="st">Szklenie — ceny bazowe</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-glass">▸ rozwiń</span></div>
+  <div id="price-glass" style="display:none"><div class="sb">
+    <table class="price-table"><thead><tr><th>Rodzaj szkła</th><th>Cena (zł/m²)</th></tr></thead><tbody>
+    <tr><td>Float</td><td><input type="number" id="p-glass-float" value="160" min="0" onchange="savePricesQuiet()" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td>Grafitowe</td><td><input type="number" id="p-glass-grf" value="265" min="0" onchange="syncGlassPrice('grf',this.value)" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td>Brązowe</td><td><input type="number" id="p-glass-brn" value="265" min="0" onchange="syncGlassPrice('brn',this.value)" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td>Okno dwukomorowe</td><td><input type="number" id="p-glass-okno" value="700" min="0" onchange="savePricesQuiet()" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    </tbody></table>
+    <p style="font-size:11px;color:var(--mbm-mid);margin-top:6px">Dostawca: <strong>Kurek</strong> | Szlifowanie = 10 zł/mb | Otwory zawiasy = 40 zł/szt. | Otwory = 10 zł/szt.</p>
+  </div></div></div>
+
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('led')"><span class="st">Oświetlenie LED — taśmy i zasilacze</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-led">▸ rozwiń</span></div>
+  <div id="price-led" style="display:none"><div class="sb">
+    <p style="font-size:12px;color:var(--mbm-mid);margin-bottom:8px">Dostawca taśm i zasilaczy: <strong>KingLED</strong> | Ceny zapisują się automatycznie po zmianie.</p>
+    <div id="price-led-body"></div>
+  </div></div></div>
+
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('prom')"><span class="st">Promienniki VitalSun — ceny</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-prom">▸ rozwiń</span></div>
+  <div id="price-prom" style="display:none"><div class="sb">
+    <p style="font-size:12px;color:var(--mbm-mid);margin-bottom:8px">Dostawca: <strong>FFES</strong> | Edytuj ceny bazowe promienników. Zmiany odświeżają dropdown natychmiast.</p>
+    <table class="price-table"><thead><tr><th>Model</th><th>Seria</th><th>Moc</th><th>Cena (zł)</th></tr></thead><tbody>
+    <tr><td style="font-size:12px">VitalSun Vitae</td><td><span style="font-size:10px;background:var(--mbm-pale);color:var(--mbm-primary);padding:1px 6px;border-radius:3px;font-weight:500">STANDARD</span></td><td>350W</td><td><input type="number" id="pp-v3" value="660" min="0" onchange="updatePromPrices()" style="width:80px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td style="font-size:12px">VitalSun Vitae</td><td><span style="font-size:10px;background:var(--mbm-pale);color:var(--mbm-primary);padding:1px 6px;border-radius:3px;font-weight:500">STANDARD</span></td><td>500W</td><td><input type="number" id="pp-v5" value="710" min="0" onchange="updatePromPrices()" style="width:80px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td style="font-size:12px">VitalSun Vitae</td><td><span style="font-size:10px;background:var(--mbm-pale);color:var(--mbm-primary);padding:1px 6px;border-radius:3px;font-weight:500">STANDARD</span></td><td>750W</td><td><input type="number" id="pp-v7" value="765" min="0" onchange="updatePromPrices()" style="width:80px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td style="font-size:12px">VitalSun Glass</td><td><span style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 6px;border-radius:3px;font-weight:500">PREMIUM</span></td><td>350W</td><td><input type="number" id="pp-g3" value="900" min="0" onchange="updatePromPrices()" style="width:80px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td style="font-size:12px">VitalSun Glass</td><td><span style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 6px;border-radius:3px;font-weight:500">PREMIUM</span></td><td>500W</td><td><input type="number" id="pp-g5" value="960" min="0" onchange="updatePromPrices()" style="width:80px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td style="font-size:12px">VitalSun Glass</td><td><span style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 6px;border-radius:3px;font-weight:500">PREMIUM</span></td><td>750W</td><td><input type="number" id="pp-g7" value="960" min="0" onchange="updatePromPrices()" style="width:80px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    </tbody></table>
+  </div></div></div>
+
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('piece')"><span class="st">Piece — kursy EUR i ceny</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-piece">▸ rozwiń</span></div>
+  <div id="price-piece" style="display:none"><div class="sb">
+    <p style="font-size:12px;color:var(--mbm-mid);margin-bottom:8px">Kurs EUR jest ustawiany w kalkulatorze. Poniżej możesz edytować bazowe ceny EUR dla każdego pieca.</p>
+    <div id="price-piece-body"></div>
+  </div></div></div>
+
+</div>
+
+<!-- ===== USTAWIENIA ===== -->
+<div class="view" id="tab-settings">
+  <div style="font-size:15px;font-weight:500;margin-bottom:14px">Ustawienia</div>
+  <div class="sec"><div class="sh"><span class="st">Logo firmy</span></div><div class="sb">
+    <p style="font-size:12px;color:#666;margin-bottom:10px">Logo pojawi się na każdej ofercie dla klienta. Raz wgrane — zapamiętane na stałe w przeglądarce.</p>
+    <div id="logo-preview" style="margin-bottom:10px;display:none">
+      <img id="logo-img" style="max-height:60px;border:0.5px solid #ddd;border-radius:6px;padding:6px;background:#fff">
+      <button class="btn" style="margin-left:8px;color:#c00" onclick="removeLogo()">Usuń logo</button>
+    </div>
+    <div class="logo-zone" onclick="document.getElementById('logo-file').click()">
+      Kliknij żeby wgrać logo (PNG, JPG, SVG)<br>
+      <span style="font-size:11px;color:#bbb">Zalecany rozmiar: ok. 300×80 px</span>
+    </div>
+    <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="uploadLogo(event)">
+  </div></div>
+  <div class="sec"><div class="sh"><span class="st">Dane firmy w stopce oferty</span></div><div class="sb">
+    <div class="c2 row">
+      <div><div class="sub">Nazwa firmy</div><input type="text" id="firm-name" placeholder="ABM Sauny" oninput="saveFirmData()"></div>
+      <div><div class="sub">Telefon</div><input type="text" id="firm-tel" placeholder="+48 000 000 000" oninput="saveFirmData()"></div>
+    </div>
+    <div class="c2 row" style="margin-top:4px">
+      <div><div class="sub">E-mail</div><input type="text" id="firm-email" placeholder="kontakt@abmsauny.pl" oninput="saveFirmData()"></div>
+      <div><div class="sub">Strona www</div><input type="text" id="firm-www" placeholder="www.abmsauny.pl" oninput="saveFirmData()"></div>
+    </div>
+  </div></div>
+</div>
+
+<script>
+// ===== DANE =====
+var SN={S:'Saunatech',E:'EKO DREWNO',L:'ELODENA',A:'ABACHI.PL',K:'KUUKS',G:'ALGA',KL:'KingLED',KR:'Kurek',M:'Wpisane'};
+var SC={S:'bS',E:'bE',L:'bL',A:'bA',K:'bK',G:'bG',KL:'bKL',KR:'bKR',M:'bM'};
+
+var DEFAULT_BOAZ=[
+  {g:'Abachi',n:'Abachi lamelka 21x95mm x 2100',p:39.99,s:'A'},
+  {g:'Abachi',n:'Abachi STS 16x120mm x 2100mm',p:40.32,s:'A'},
+  {g:'Abachi',n:'THERMO Abachi lamelka 21x95mm',p:43.89,s:'A'},
+  {g:'Abachi',n:'THERMO Abachi STS 15x120mm x 2100mm',p:37.8,s:'A'},
+  {g:'Abachi',n:'THERMO Abachi STS 15x120mm x 2700mm',p:48.6,s:'A'},
+  {g:'Cedr kanadyjski',n:'Cedr 15x140 180cm',p:211.5,s:'S'},
+  {g:'Cedr kanadyjski',n:'Cedr 15x140 210cm',p:243,s:'S'},
+  {g:'Cedr kanadyjski',n:'Cedr 15x140 245cm',p:283.5,s:'S'},
+  {g:'Cedr kanadyjski',n:'CEDR KANAD. Soft Line 11x94mm 2,13m',p:81.55,s:'E'},
+  {g:'Cedr kanadyjski',n:'CEDR KANAD. Soft Line 11x94mm 2,44m',p:93.78,s:'E'},
+  {g:'Cedr kanadyjski',n:'Cedr kanadyjski WRC STP 14x96mm x 2,13',p:73.6,s:'A'},
+  {g:'Cedr kanadyjski',n:'Cedr kanadyjski WRC STP 14x96mm x 2,44',p:84.32,s:'A'},
+  {g:'Jodła kanadyjska (hemlock)',n:'Hemlock jodla kanad. 15x90 2000mm',p:57.8,s:'S'},
+  {g:'Jodła kanadyjska (hemlock)',n:'HEMLOCK Soft Line 12,5x94mm 2,13m',p:60.51,s:'E'},
+  {g:'Jodła kanadyjska (hemlock)',n:'Hemlock STS 14x96 x 2130mm',p:48.05,s:'A'},
+  {g:'Olcha',n:'15x120 Olcha UTS A 2,10',p:41.46,s:'G'},
+  {g:'Olcha',n:'15x90 Olcha UTS A 2,10m',p:26,s:'G'},
+  {g:'Olcha',n:'15x90 Olcha UTS A 2,40m',p:30,s:'G'},
+  {g:'Olcha',n:'15x90 Olcha UTS A 3,00m',p:37.2,s:'G'},
+  {g:'Olcha',n:'Olcha 1-groove 15x90 210cm',p:44.1,s:'S'},
+  {g:'Olcha',n:'Olcha 15x120 180cm',p:53.46,s:'S'},
+  {g:'Olcha',n:'Olcha 15x120 240cm',p:69.66,s:'S'},
+  {g:'Olcha',n:'Olcha 15x120 270cm',p:78.57,s:'S'},
+  {g:'Olcha',n:'Olcha 15x70 1900mm',p:23.49,s:'S'},
+  {g:'Olcha',n:'Olcha 15x90 2100mm',p:44.55,s:'S'},
+  {g:'Olcha',n:'Olcha 2-groove 15x70 270cm',p:43.2,s:'S'},
+  {g:'Olcha',n:'Olcha STP A 15x90 270cm',p:52.65,s:'S'},
+  {g:'Olcha',n:'Olcha STP AB+ 15x90 240cm',p:29.16,s:'S'},
+  {g:'Olcha',n:'Olcha STS4 12x89x2100mm',p:19.3,s:'E'},
+  {g:'Olcha',n:'Olcha STS4 12x89x2400mm',p:23,s:'E'},
+  {g:'Osika',n:'Osika 1-groove 15x90 180cm',p:42.3,s:'S'},
+  {g:'Osika',n:'Osika 15x120 240cm',p:57.31,s:'A'},
+  {g:'Osika',n:'Osika 15x120 270cm',p:64.48,s:'A'},
+  {g:'Osika',n:'OSIKA 15x90 190cm',p:36.45,s:'S'},
+  {g:'Osika',n:'Osika 15x90 270cm',p:43.12,s:'K'},
+  {g:'Osika',n:'OSIKA 15x90(80) mm 2,10m',p:33.5,s:'K'},
+  {g:'Osika',n:'OSIKA 15x90(80) mm 2,40m',p:38.4,s:'K'},
+  {g:'Osika',n:'Osika 2-groove 15x70 210cm',p:39.6,s:'S'},
+  {g:'Osika',n:'Osika 2-groove 15x70 270cm',p:48.6,s:'S'},
+  {g:'Osika',n:'Osika STS 15x120 180cm',p:42.99,s:'A'},
+  {g:'Osika',n:'Osika STS 15x120 210cm',p:50.15,s:'A'},
+  {g:'Osika',n:'Osika STS4 12x65x1800mm',p:12.5,s:'E'},
+  {g:'Osika',n:'Osika STS4 12x65x2100mm',p:14.5,s:'E'},
+  {g:'Swierek',n:'SWIEREK SKAND. 14x96mm 2,10m',p:11.08,s:'A'},
+  {g:'Swierek',n:'SWIEREK SKAND. 14x96mm 2,40m',p:12.7,s:'A'},
+  {g:'Swierek',n:'SWIEREK SKAND. 14x96mm 2,70m',p:14.26,s:'A'},
+  {g:'Termo Olcha',n:'Termo Olcha STS4 15x110x2400mm',p:56,s:'E'},
+  {g:'Termo Olcha',n:'Termo Olcha STS4 15x62x1800mm',p:20.2,s:'E'},
+  {g:'Termo Olcha',n:'Termo Olcha STS4 15x84x2100mm',p:33.9,s:'E'},
+  {g:'Termo Olcha',n:'Termo Olcha STS4 15x84x2400mm',p:40,s:'E'},
+  {g:'Termo Olcha',n:'Termo-olcha 15x120 210cm',p:63.99,s:'S'},
+  {g:'Termo Olcha',n:'Termo-olcha 15x120 240cm',p:73.71,s:'S'},
+  {g:'Termo Olcha',n:'Termo-olcha 15x120 270cm',p:68.85,s:'S'},
+  {g:'Termo Olcha',n:'Termo-olcha 15x90 210cm',p:47.79,s:'S'},
+  {g:'Termo Olcha',n:'Termo-olcha 15x90 240cm',p:55.08,s:'S'},
+  {g:'Termo Olcha',n:'Termo-sosna 17x90 180cm',p:28.8,s:'S'},
+  {g:'Termo Olcha',n:'Termo-sosna 17x90 210cm',p:33.3,s:'S'},
+  {g:'Termoosika',n:'TERMOOSIKA 15x90 2400mm',p:49.3,s:'K'},
+  {g:'Termoosika',n:'TERMOOSIKA S4S 21x90mm 2,40m',p:69.1,s:'E'},
+  {g:'Termoosika',n:'TERMOOSIKA S4S 21x90mm 2,70m',p:77.73,s:'E'},
+  {g:'Termoosika',n:'TERMOOSIKA Soft Line 15x90 2,10m',p:43.15,s:'K'},
+  {g:'Termoosika',n:'TERMOOSIKA Soft Line 15x90 2,70m',p:55.5,s:'K'},
+  {g:'Termoosika',n:'TERMOOSIKA STS 15x120mm x 2,10',p:60.5,s:'A'},
+  {g:'Termoosika',n:'TERMOOSIKA STS 15x120mm x 2,40',p:68.9,s:'A'},
+  {g:'Termoosika',n:'TERMOOSIKA STS4 12x83x1600mm',p:16,s:'E'},
+  {g:'Termoosika',n:'TERMOOSIKA STS4 12x83x1800mm',p:17.5,s:'E'},
+  {g:'Termoosika',n:'TERMOOSIKA STS4 15x84x2100mm',p:34,s:'E'},
+  {g:'Termoosika',n:'TERMOOSIKA STS4 15x84x2400mm',p:39,s:'E'}
+];
+var DEFAULT_DESKI=[
+  {g:'Abachi',n:'Abachi 24x80 200cm',p:32,s:'A'},
+  {g:'Abachi',n:'Abachi 24x80 245cm',p:39.2,s:'A'},
+  {g:'Abachi',n:'Abachi 24x80 300cm',p:48,s:'A'},
+  {g:'Abachi termo',n:'Abachi termo 22x95mm x1,80',p:54,s:'E'},
+  {g:'Abachi termo',n:'Abachi termo 22x95mm x2,10',p:63,s:'E'},
+  {g:'Abachi termo',n:'Abachi termo 22x95mm x2,70',p:81,s:'E'},
+  {g:'Olcha',n:'Olcha 28x120 210cm',p:104.4,s:'S'},
+  {g:'Olcha',n:'Olcha 28x120 240cm',p:71.7,s:'S'},
+  {g:'Olcha',n:'Olcha 28x140 210cm',p:113.4,s:'S'},
+  {g:'Olcha',n:'Olcha S4S A 28x90 2100mm',p:46.2,s:'L'},
+  {g:'Olcha',n:'Olcha S4S A 28x90 2400mm',p:57.6,s:'L'},
+  {g:'Olcha',n:'Olcha SHP 27x88x2100mm',p:47.5,s:'L'},
+  {g:'Olcha',n:'Olcha SHP 27x88x2400mm',p:54.5,s:'L'},
+  {g:'Osika',n:'Osika 28x120 210cm',p:95.4,s:'A'},
+  {g:'Osika',n:'Osika 28x90 180cm',p:41.4,s:'A'},
+  {g:'Osika',n:'Osika 28x90 210cm',p:46,s:'A'},
+  {g:'Osika',n:'Osika 28x90 270cm',p:68.4,s:'A'},
+  {g:'Termo Olcha',n:'Termo Olcha SHP 27x88x2100mm',p:54,s:'L'},
+  {g:'Termo Olcha',n:'Termo-olcha 28x118 240cm',p:126,s:'S'},
+  {g:'Termo Olcha',n:'Termo-olcha 28x88 240cm',p:91.8,s:'S'},
+  {g:'Termoosika',n:'Termo Osika 28x90mm 2,10m',p:54.6,s:'A'},
+  {g:'Termoosika',n:'Termo Osika 28x90mm 2,40m',p:62.4,s:'A'},
+  {g:'Termoosika',n:'Termo Osika 28x90mm 2,70m',p:70.32,s:'A'}
+];
+var DEFAULT_KONSTR=[
+  {g:'45x45',n:'Drewno konstr. 45x45mm 3,30m',p:10.72,s:'E'},{g:'45x45',n:'Drewno konstr. 45x45mm 4,50m',p:14.6,s:'E'},{g:'45x45',n:'Kantowka 47x47x2400mm',p:11.6,s:'L'},
+  {g:'C24 45x95',n:'Drewno C24 45x95mm 3,30m',p:22.16,s:'E'},{g:'C24 45x95',n:'Drewno C24 45x95mm 3,60m',p:24.17,s:'E'},{g:'C24 45x95',n:'Drewno C24 45x95mm 4,20m',p:28.2,s:'E'},{g:'C24 45x95',n:'Drewno C24 45x95mm 5,40m',p:36.26,s:'E'},
+  {g:'C24 45x70',n:'Drewno C24 45x70mm 4,20m',p:20.78,s:'E'},{g:'C24 45x70',n:'Drewno C24 45x70mm 5,40m',p:26.72,s:'E'},
+  {g:'KVH',n:'Drewno KVH 40x60mm swierek 5,00m',p:24.48,s:'E'},{g:'KVH',n:'Drewno KVH 40x80mm swierek 5,00m',p:32.64,s:'E'}
+];
+var PIECE=[
+  {g:'HUUM DROP',n:'HUUM DROP 4 (4,5 kW)',eur:315},{g:'HUUM DROP',n:'HUUM DROP 6 (6 kW)',eur:352.5},{g:'HUUM DROP',n:'HUUM DROP 7 (7 kW)',eur:382.5},{g:'HUUM DROP',n:'HUUM DROP 9 (9 kW)',eur:408.75},
+  {g:'HUUM STEEL',n:'HUUM STEEL 6 (6 kW)',eur:535},{g:'HUUM STEEL',n:'HUUM STEEL 9 (9 kW)',eur:585},{g:'HUUM STEEL',n:'HUUM STEEL 12 (12 kW)',eur:635},{g:'HUUM STEEL',n:'HUUM STEEL 15 (15 kW)',eur:695},
+  {g:'HUUM CLIFF',n:'HUUM CLIFF 6 (6 kW)',eur:620},{g:'HUUM CLIFF',n:'HUUM CLIFF 9 (9 kW)',eur:670},{g:'HUUM CLIFF',n:'HUUM CLIFF 12 (12 kW)',eur:720},{g:'HUUM CLIFF',n:'HUUM CLIFF 15 (15 kW)',eur:780},
+  {g:'HUUM HIVE',n:'HUUM HIVE Mini 6 (6 kW)',eur:561},{g:'HUUM HIVE',n:'HUUM HIVE Mini 9 (9 kW)',eur:609},{g:'HUUM HIVE',n:'HUUM HIVE mini 11 (11 kW)',eur:638.5},{g:'HUUM HIVE',n:'HUUM HIVE 16 (16 kW)',eur:890},{g:'HUUM HIVE',n:'HUUM HIVE 21 (21 kW)',eur:1050},
+  {g:'Harvia Vega',n:'Harvia Vega BC45 (4,5 kW)',eur:201.89},{g:'Harvia Vega',n:'Harvia Vega BC60 (6 kW)',eur:212.52},{g:'Harvia Vega',n:'Harvia Vega BC80 (8 kW)',eur:231.65},{g:'Harvia Vega',n:'Harvia Vega BC90 (9 kW)',eur:235.9},
+  {g:'Harvia Vega',n:'Harvia Vega Combi BC60SE (6 kW)',eur:411.14},{g:'Harvia Vega',n:'Harvia Vega Combi BC90SE (9 kW)',eur:426.85},
+  {g:'Harvia Cilindro',n:'Harvia Cilindro PC66 (6,6 kW)',eur:334.36},{g:'Harvia Cilindro',n:'Harvia Cilindro PC70 (6,8 kW)',eur:265.14},{g:'Harvia Cilindro',n:'Harvia Cilindro PC90 (9 kW)',eur:310.22},
+  {g:'Harvia The Wall',n:'Harvia The Wall SW45 (4,5 kW)',eur:255.73},{g:'Harvia The Wall',n:'Harvia The Wall SW60 (6 kW)',eur:262.82},{g:'Harvia The Wall',n:'Harvia The Wall SW90 (9 kW)',eur:307.45},
+  {g:'Harvia Glow',n:'Harvia Glow TRT70 (6,8 kW)',eur:371.17},{g:'Harvia Glow',n:'Harvia Glow TRT90 (9 kW)',eur:421.14},{g:'Harvia Glow',n:'Harvia Glow Corner TRC70 (6,8 kW)',eur:409.72},{g:'Harvia Glow',n:'Harvia Glow Corner TRC90 (9 kW)',eur:452.54},
+  {g:'Harvia Virta',n:'Harvia Virta HL70 black (6 kW)',eur:690.69},{g:'Harvia Virta',n:'Harvia Virta HL90 black (9 kW)',eur:736.74},
+  {g:'EOS Classic',n:'EOS Picco W 3,0 kW',eur:389.78},{g:'EOS Classic',n:'EOS Picco W 3,5 kW',eur:395.43},{g:'EOS Classic',n:'EOS Filius W 4,5 kW',eur:508.58},{g:'EOS Classic',n:'EOS Filius W 6,0 kW',eur:519.89},{g:'EOS Classic',n:'EOS Filius W 7,5 kW',eur:536.86},
+  {g:'EOS Classic',n:'EOS ThermoTec W 6,0 kW',eur:367.15},{g:'EOS Classic',n:'EOS ThermoTec W 7,5 kW',eur:395.43},{g:'EOS Classic',n:'EOS ThermoTec W 9,0 kW',eur:423.72},
+  {g:'EOS Classic',n:'EOS Gracil W 6,0 kW',eur:678.29},{g:'EOS Classic',n:'EOS Gracil W 7,5 kW',eur:689.61},{g:'EOS Classic',n:'EOS Gracil W 9,0 kW',eur:706.58},
+  {g:'EOS Classic',n:'EOS Euro 6,0 kW',eur:565.15},{g:'EOS Classic',n:'EOS Euro 7,5 kW',eur:587.78},{g:'EOS Classic',n:'EOS Euro 9,0 kW',eur:604.75},
+  {g:'EOS Classic',n:'EOS FinnRock 7,5 kW',eur:1074.29},{g:'EOS Classic',n:'EOS FinnRock 9,0 kW',eur:1085.61},{g:'EOS Classic',n:'EOS FinnRock 12,0 kW',eur:1130.86},
+  {g:'EOS Classic',n:'EOS BlackRock 12,0 kW',eur:1640},{g:'EOS Classic',n:'EOS BlackRock 15,0 kW',eur:1696.58},
+  {g:'EOS Classic',n:'EOS Herkules S25 7,5 kW',eur:1102.58},{g:'EOS Classic',n:'EOS Herkules S60 9,0 kW',eur:1526.86},{g:'EOS Classic',n:'EOS Herkules S60 12,0 kW',eur:1583.43},
+  {g:'EOS Classic',n:'EOS Invisio Mini 3,0 kW',eur:876.29},{g:'EOS Classic',n:'EOS Invisio Mini 6,0 kW',eur:989.44},
+  {g:'EOS Classic',n:'EOS Cubo 2 7,5 kW',eur:1074.29},{g:'EOS Classic',n:'EOS Cubo 2 9,0 kW',eur:1091.26}
+];
+
+// Aktywne cenniki (z localStorage lub domyślne)
+var BOAZ,DESKI,KONSTR;
+
+function loadPrices(){
+  try{
+    var b=localStorage.getItem('abm_boaz');
+    var be=localStorage.getItem('abm_boaz_ext');
+    var d=localStorage.getItem('abm_deski');
+    var k=localStorage.getItem('abm_konstr');
+    BOAZ=b?JSON.parse(b):JSON.parse(JSON.stringify(DEFAULT_BOAZ));
+    BOAZ_EXT=be?JSON.parse(be):[];
+    DESKI=d?JSON.parse(d):JSON.parse(JSON.stringify(DEFAULT_DESKI));
+    KONSTR=k?JSON.parse(k):JSON.parse(JSON.stringify(DEFAULT_KONSTR));
+  }catch(e){BOAZ=JSON.parse(JSON.stringify(DEFAULT_BOAZ));BOAZ_EXT=[];DESKI=JSON.parse(JSON.stringify(DEFAULT_DESKI));KONSTR=JSON.parse(JSON.stringify(DEFAULT_KONSTR));}
+}
+
+var isZ=false,typ='F',vat=8,STATE={};
+
+function showTab(t){
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('tab-'+t).classList.add('on');
+  var map={calc:0,client:1,order:2,history:3,prices:4,settings:5,actual:6};
+  var tabs=document.querySelectorAll('.tab');
+  if(tabs[map[t]])tabs[map[t]].classList.add('on');
+  if(t==='client'){buildClient();}
+  if(t==='order'){buildOrder();}
+  if(t==='history'){buildHistory();}
+  if(t==='actual'){buildActual(true);}
+  if(t==='prices'){buildPriceTables();}
+  if(t==='settings'){loadSettings();}
+}
+
+function mkSelG(id,cat){
+  var el=document.getElementById(id);if(!el)return;
+  el.innerHTML='';
+  var o0=document.createElement('option');o0.value='0';o0.dataset.s='M';o0.textContent='-- wybierz --';el.appendChild(o0);
+  var lastG='';
+  cat.forEach(function(i){
+    if(i.g!==lastG){
+      var og=document.createElement('optgroup');
+      og.label='▸ '+i.g.toUpperCase();
+      og.style.cssText='font-weight:700;color:#281C18';
+      el.appendChild(og);lastG=i.g;
+    }
+    var o=document.createElement('option');o.value=String(i.p);o.dataset.s=i.s||'M';o.dataset.g=i.g;
+    var supName=SN[i.s||'M']||i.s||'';
+    o.textContent='   ['+supName+'] '+i.n+' — '+i.p+' zl';
+    el.appendChild(o);
+  });
+}
+
+function mkSelBZ(){
+  // Fill boazeria zewnetrzna dropdown in calculator
+  var el=document.getElementById('bz-sel');
+  if(!el)return;
+  el.innerHTML='';
+  if(!BOAZ_EXT||BOAZ_EXT.length===0){
+    var o=document.createElement('option');o.value='0';o.textContent='-- brak cennika (wpisz recznie) --';el.appendChild(o);
+    return;
+  }
+  var o0=document.createElement('option');o0.value='0';o0.textContent='-- wybierz --';el.appendChild(o0);
+  var lastG='';
+  BOAZ_EXT.forEach(function(i){
+    if(i.g!==lastG){var og=document.createElement('optgroup');og.label=i.g;el.appendChild(og);lastG=i.g;}
+    var o=document.createElement('option');o.value=String(i.p);o.dataset.s=i.s||'M';o.dataset.g=i.g;
+    o.textContent=i.n+' ('+i.p+' zl)';el.appendChild(o);
+  });
+}
+
+function onBZSel(){
+  var sel=document.getElementById('bz-sel');
+  if(!sel)return;
+  var p=parseFloat(sel.value)||0;
+  var s=sel.selectedOptions[0]?sel.selectedOptions[0].dataset.s||'M':'M';
+  var ni=document.getElementById('bzq');
+  var pi=document.getElementById('bzp');
+  var si=document.getElementById('bz-sup');
+  if(p>0){if(pi)pi.value=p;}
+  if(si){si.className='bdg '+(SC[s]||'bM');si.textContent=SN[s]||s;}
+  r();
+}
+
+function rebP(){
+  var kurs=parseFloat(document.getElementById('eur').value)||4.4;
+  var sel=document.getElementById('psel');sel.innerHTML='';
+  var o0=document.createElement('option');o0.value='0';o0.textContent='-- wybierz piec --';sel.appendChild(o0);
+  var om=document.createElement('option');om.value='-1';om.textContent='Inny model -- wpisz cene recznie';sel.appendChild(om);
+  var lastG='';
+  PIECE.forEach(function(it){
+    if(it.g!==lastG){var og=document.createElement('optgroup');og.label=it.g;sel.appendChild(og);lastG=it.g;}
+    var o=document.createElement('option');var pln=Math.round(it.eur*kurs);
+    o.value=String(pln);o.dataset.eur=String(it.eur);o.dataset.name=it.n;
+    o.textContent=it.n+' -- '+pln.toLocaleString('pl')+' zl';sel.appendChild(o);
+  });
+}
+
+function onPS(){
+  var sel=document.getElementById('psel');var v=parseFloat(sel.value)||0;
+  var info=document.getElementById('pinfo');var ci=document.getElementById('piec');
+  if(v>0){ci.value=String(v);var ev=parseFloat(sel.selectedOptions[0].dataset.eur)||0;
+    if(ev>0){info.style.display='block';info.textContent=ev.toFixed(2)+' EUR x '+gv('eur')+' zl/EUR = '+v.toLocaleString('pl')+' zl';}
+    else info.style.display='none';
+  }else info.style.display='none';
+  r();
+}
+
+function uM(pfx){
+  var sel=document.getElementById(pfx+'m');if(!sel)return;
+  var s=sel.selectedOptions[0].dataset.s||'M';
+  var b=document.getElementById(pfx+'s');
+  if(b){b.className='bdg '+(SC[s]||'bM');b.textContent=SN[s]||s;}
+  r();
+}
+
+function setWZ(t){
+  isZ=(t==='Z');
+  document.getElementById('bW').className='btn'+(isZ?'':' on');
+  document.getElementById('bZ').className='btn'+(isZ?' on':'');
+  document.getElementById('gpBZ').style.display=isZ?'block':'none';
+  document.getElementById('gpZab').style.display=isZ?'none':'block';
+  document.getElementById('gpDach').style.display=isZ?'block':'none';
+  document.getElementById('rowBSH').style.display=isZ?'block':'none';
+  document.getElementById('rowCNC').style.display=isZ?'block':'none';
+  document.getElementById('rowDrzwZ').style.display=isZ?'block':'none';
+  var wl=document.getElementById('wellb');
+  if(wl)wl.textContent=isZ?'[Z] Welna 100mm (m2 x 23,00 zl)':'[W] Welna 40mm (m2 x 8,50 zl)';
+  setVAT(isZ?23:8);r();
+}
+
+function setTyp(t){
+  typ=t;['F','I','C'].forEach(function(x){document.getElementById('b'+x).className='btn'+(t===x?' on':'');});
+  document.getElementById('gpPiec').style.display=(t!=='I')?'block':'none';
+  document.getElementById('gpProm').style.display=(t!=='F')?'block':'none';
+  r();
+}
+
+function setVAT(v){
+  vat=v;
+  document.getElementById('bV8').className='btn'+(v===8?' on8':'');
+  document.getElementById('bV23').className='btn'+(v===23?' on23':'');
+  var bl=document.getElementById('tbrtlbl');if(bl)bl.textContent='Cena brutto ('+v+'% VAT)';r();
+}
+
+function gv(id){var el=document.getElementById(id);return el?parseFloat(el.value)||0:0;}
+function ck(id){var el=document.getElementById(id);return el?el.checked:false;}
+function f(v){return Math.round(v).toLocaleString('pl')+' zl';}
+function se(id,t){var el=document.getElementById(id);if(el)el.textContent=t;}
+function selVal(id){var el=document.getElementById(id);return el&&el.selectedOptions[0]?parseFloat(el.selectedOptions[0].value)||0:0;}
+function selTxt(id){var el=document.getElementById(id);return el&&el.selectedOptions[0]?el.selectedOptions[0].textContent:'';}
+function getG(id){var el=document.getElementById(id);return el&&el.selectedOptions[0]?el.selectedOptions[0].dataset.g||'':'';}
+
+function onSterSer(){onSterModel();}
+
+function onSterModel(){
+  var sel=document.getElementById('ster');
+  var ser=document.getElementById('ster-ser');
+  if(!sel||!ser)return;
+  var parts=(sel.value||'0|0').split('|');
+  var model=parts[0];
+  var prices={Z:parseFloat(parts[1])||0,Cmini:parseFloat(parts[2])||0,C:parseFloat(parts[3])||0};
+  var serVal=ser.value||'Z';
+  var price=prices[serVal]||0;
+  var vi=document.getElementById('ster-val');
+  if(vi)vi.value=String(price);
+  var info=document.getElementById('ster-price-info');
+  if(info){
+    if(model==='0')info.textContent='Bez sterownika';
+    else info.textContent='Model '+model+' Seria '+serVal+': Z='+prices.Z+' zł | C mini='+prices.Cmini+' zł | C='+prices.C+' zł';
+  }
+  r();
+}
+
+function onProm(){
+  ['3','5','7'].forEach(function(w){
+    var sel=document.getElementById('pr'+w+'m');
+    if(!sel)return;
+    var parts=(sel.value||'0|0').split('|');
+    var cena=parseFloat(parts[0])||0;
+    var sp=document.getElementById('pr'+w+'c');
+    if(sp)sp.textContent=cena>0?cena.toLocaleString('pl')+' zł':'—';
+  });
+  r();
+}
+
+var _loading=false;
+function r(){
+  if(_loading)return;
+  var mK=gv('mk'),mP=gv('mp'),mG=gv('mg'),mL=gv('ml');
+  function mr(pfx,mar){var p=gv(pfx+'m'),q=gv(pfx+'q'),k=p*q,sp=k*mar;se(pfx+'k',f(k));se(pfx+'p',f(sp));return{k:k,sp:sp,q:q,name:selTxt(pfx+'m'),g:getG(pfx+'m')};}
+  var b1=mr('b1',mK),b2=mr('b2',mK);
+  var zb1=isZ?{k:0,sp:0,q:0,name:'',g:''}:mr('zb1',mK);
+  var l1=mr('l1',mK),l2=mr('l2',mK),k1=mr('k1',mK);
+  var bzK=isZ?(gv('bzq')*gv('bzp')):0,bzP=bzK*mK;
+  if(isZ){se('bzk',f(bzK));se('bzpp',f(bzP));}
+  var katC=gv('kat-cena')||30;var katK=gv('katq')*katC,katP=katK*mK;se('katk',f(katK));se('katp',f(katP));
+  var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+katP;se('sm1',f(s1));
+  var folK=gv('folq')*4,folP=folK*mK,tasK=gv('tasq')*20,tasP=tasK*mK;
+  var welC=isZ?23.0:8.5,welK=gv('welq')*welC,welP=welK*mK;
+  se('folk',f(folK));se('folp',f(folP));se('task',f(tasK));se('tasp',f(tasP));se('welk',f(welK));se('welp',f(welP));
+  var anoK=gv('anoq')*gv('anop'),anoP=anoK*mK,kabK=gv('kabq')*20,kabP=kabK*mK;
+  se('anok',f(anoK));se('anop2',f(anoP));se('kabk',f(kabK));se('kabp',f(kabP));
+  var bshK=isZ?gv('bshq')*36.25:0,bshP=bshK*mK,cncK=isZ?gv('cncq')*700:0,cncP=cncK*mK;
+  se('bshk',f(bshK));se('bshp',f(bshP));se('cnck',f(cncK));se('cncp',f(cncP));
+  var dachSp=0,zewnLogist=0;
+  if(isZ){var dM=gv('dachq')*60,dR=gv('dacrq')*110,ryK=gv('rynq')*1322,poK=gv('podq')*140,plK=gv('plyq')*221.65,stK=gv('styq')*49.4;
+    se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
+    se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
+    dachSp=(dM+ryK+poK+plK+stK)*mK;zewnLogist=dR;}
+  var s2=k1.sp+bshP+cncP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
+  var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
+  se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
+  var prmK=gv('zawq')*240+gv('klm')+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
+  se('prmk',f(prmK));se('prmp',f(prmP));se('sm4',f(prmP));
+  var piecK=(typ!=='I')?(gv('piec')+gv('kamd')*50+gv('kams')*130+gv('osl')):0;
+  var p3cena=parseFloat((document.getElementById('pr3m')?.value||'660|350').split('|')[0])||660;
+  var p5cena=parseFloat((document.getElementById('pr5m')?.value||'710|500').split('|')[0])||710;
+  var p7cena=parseFloat((document.getElementById('pr7m')?.value||'765|750').split('|')[0])||765;
+  var promK=(typ!=='F')?(gv('pr3')*p3cena+gv('pr5')*p5cena+gv('pr7')*p7cena):0;
+  var p3moc=parseFloat((document.getElementById('pr3m')?.value||'0|350').split('|')[1])||350;
+  var p5moc=parseFloat((document.getElementById('pr5m')?.value||'0|500').split('|')[1])||500;
+  var p7moc=parseFloat((document.getElementById('pr7m')?.value||'0|750').split('|')[1])||750;
+  var moc=(typ!=='F')?(gv('pr3')*p3moc+gv('pr5')*p5moc+gv('pr7')*p7moc):0;se('mocsum',moc+' W');
+  var sterBase=gv('ster-val');
+  var sterModuly=(ck('awifi')?400:0)+(ck('abt')?300:0)+(ck('asty')?100:0)+(ck('asty3')?250:0)+(ck('aaw')?600:0)+(ck('apbez')?220:0);
+  var sterK=sterBase+sterModuly;
+  se('ster-total',f(sterK));
+  var grzK=piecK+promK+sterK,grzP=grzK*mG;se('grzk',f(grzK));se('grzp',f(grzP));se('sm5',f(grzP));
+  var ledQ=gv('ledq');
+  if(ck('profauto')){var pi=document.getElementById('profq');if(pi)pi.value=ledQ;}
+  var profQ=gv('profq'),profK=profQ*12.45,profP=profK*mL;
+  se('profk',f(profK));se('profp',f(profP));
+  var kabLedK=gv('kabq-led')*7.9,kabLedP=kabLedK*mL;
+  se('ledc-k',f(kabLedK));se('ledc-p',f(kabLedP));
+  var ledMat=ledQ*gv('ledt')+gv('zast')+gv('lstt'),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
+  se('ledk',f(ledK));se('ledp',f(ledP));se('sm6',f(ledP));
+  var audK=gv('audt')+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
+  var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
+  se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
+  var logist=gv('trn')+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
+  var totalSp=s1+s2+szkP+prmP+grzP+ledP+audP+dodP;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
+  if(zysk<minM&&totalK>0)dol=minM-zysk;
+  var nkwAuto=document.getElementById('nkw-auto');
+  var nkw=nkwAuto&&nkwAuto.checked?Math.round(totalK*0.10):(gv('nkw')||0);
+  if(nkwAuto&&nkwAuto.checked){var ni=document.getElementById('nkw');if(ni)ni.value=nkw;}
+  var nettoBase=totalSp+logist+dol;
+  var netto=nettoBase+nkw,brutto=netto*(1+vat/100);
+  var marza=totalK>0?Math.round((zysk+dol)/netto*100):0;se('tmar',marza+'%');se('tkos',f(totalK));var zy=document.getElementById('tzys');
+  if(zy){zy.textContent=f(zysk+dol);zy.className='tv '+(zysk+dol>=minM?'ok':zysk+dol>=minM*0.5?'warn':'bad');}
+  se('tnet',f(netto));se('tbrt',f(brutto));
+  var al=document.getElementById('alrt');
+  if(dol>0&&totalK>0){al.style.display='block';al.className='alrt w';al.innerHTML='Zysk '+f(zysk)+' ponizej minimum '+f(minM)+'. Doliczono <strong>'+f(dol)+'</strong>.';}
+  else if(totalK>0){al.style.display='block';al.className='alrt o';al.textContent='Zysk '+f(zysk+dol)+' powyzej minimum '+f(minM)+' ✓';}
+  else al.style.display='none';
+  STATE={isZ:isZ,typ:typ,vat:vat,b1:b1,b2:b2,zb1:zb1,l1:l1,l2:l2,k1:k1,
+    bzn:gs('bzn'),bzq:gv('bzq'),bzp:gv('bzp'),katq:gv('katq'),
+    bshq:gv('bshq'),cncq:gv('cncq'),folq:gv('folq'),tasq:gv('tasq'),welq:gv('welq'),
+    anoq:gv('anoq'),anop:gv('anop'),kabq:gv('kabq'),
+    dachq:gv('dachq'),dacrq:gv('dacrq'),rynq:gv('rynq'),podq:gv('podq'),plyq:gv('plyq'),styq:gv('styq'),
+    szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),
+    zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),drzwi:selTxt('drz'),drzwiVal:gv('drz'),
+    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
+    piec:{name:selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
+    kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
+    pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),pr3m:document.getElementById('pr3m')?.value||'660|350',pr5m:document.getElementById('pr5m')?.value||'710|500',pr7m:document.getElementById('pr7m')?.value||'765|750',moc:moc,
+    ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),aw:ck('aaw'),
+    ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:gs('led-miejsce'),ledBarwa:gs('led-barwa'),
+    audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
+    solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
+    transport:gv('trn'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
+    klient:gs('klient'),opis:gs('opis'),mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,cenaSaunyOverride:0,
+    netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,nkw:nkw,logist:logist,
+    s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP
+  };
+}
+
+// ===== WIDOK KLIENTA =====
+var VARIANTS = {A:null, B:null, C:null};
+
+function initVslots(){
+  ['A','B','C'].forEach(function(v){
+    var slot=document.getElementById('vslot-'+v);
+    if(!slot)return;
+    var wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:2px';
+
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center';
+
+    var inp=document.createElement('input');
+    inp.type='text';inp.className='vslot-input';
+    inp.placeholder='Nazwa wariantu '+v;inp.id='vinp-'+v;
+
+    var btn=document.createElement('button');
+    btn.className='vslot-btn';btn.id='vbtn-'+v;
+    btn.textContent='Zapisz '+v;
+    btn.onclick=function(){saveVariant(v);};
+
+    row.appendChild(inp);row.appendChild(btn);
+
+    var loadLink=document.createElement('button');
+    loadLink.id='vload-'+v;
+    loadLink.style.cssText='display:none;font-size:10px;background:none;border:none;color:var(--mbm-mid);cursor:pointer;padding:0 2px;text-align:left;font-family:inherit;text-decoration:underline';
+    loadLink.textContent='↩ wczytaj do kalkulatora';
+    loadLink.onclick=function(){loadVariantToCalc(v);};
+
+    wrap.appendChild(row);wrap.appendChild(loadLink);
+    slot.appendChild(wrap);
+  });
+}
+
+function saveVariant(v){
+  if(!STATE||STATE.netto===undefined){alert('Uzupelnij kalkulator najpierw.');return;}
+  var snap=JSON.parse(JSON.stringify(STATE));
+  var inp=document.getElementById('vinp-'+v);
+  var customName=inp?inp.value.trim():'';
+  snap.variantName=customName||snap.klient||'Wariant '+v;
+  VARIANTS[v]=snap;
+  var btn=document.getElementById('vbtn-'+v);
+  if(btn){
+    btn.textContent='✓ '+v+': '+snap.variantName.split(' ')[0]+' ('+f(snap.netto)+')';
+    btn.className='vslot-btn saved';
+  }
+  var loadLink=document.getElementById('vload-'+v);
+  if(loadLink)loadLink.style.display='block';
+}
+
+function clearVariants(){
+  VARIANTS={A:null,B:null,C:null};
+  ['A','B','C'].forEach(function(v){
+    var btn=document.getElementById('vbtn-'+v);
+    if(btn){btn.textContent='Zapisz '+v;btn.className='vslot-btn';}
+    var inp=document.getElementById('vinp-'+v);
+    if(inp)inp.value='';
+    var loadLink=document.getElementById('vload-'+v);
+    if(loadLink)loadLink.style.display='none';
+  });
+}
+
+function updateVariantLabel(){}
+
+var LANG='PL';
+var CURR='PLN';
+var T={
+  PL:{
+    wykończenie:'Wykończenie sauny',boazeria:'Boazeria wewnętrzna',boazeria2:'Boazeria wewnętrzna (2)',
+    zabudowa:'Zabudowa nad sauną',boaz_ext:'Boazeria zewnętrzna / obicie',
+    lawki:'Ławki i oparcia',lawki2:'Ławki i oparcia (2)',szklenie:'Szklenie',
+    sciana_dek:'Ściana dekoracyjna z kamienia',wyposazenie:'Wyposażenie sauny',
+    piec:'Piec',kamienie_d:'Kamienie Diabez',kamienie_s:'Kamienie szare okrągłe',
+    oslona:'Osłona na piec',prom350:'Promienniki 350W',prom500:'Promienniki 500W',prom750:'Promienniki 750W',
+    sterownik:'Sterownik FFES',wifi:'Zdalne sterowanie WiFi',bt:'Moduł Bluetooth do głośników',
+    awarying:'System awaryjnego wyłączania',led:'Oświetlenie LED',audio:'Nagłośnienie',
+    sciana_sol:'Ściana solna',aroma:'Aromaterapia',
+    logistyka:'Logistyka i dodatki',transport:'Transport i montaż',
+    cebrzyk:'Cebrzyk i chochla',klepsydra:'Klepsydra',
+    cena_sauny:'Cena sauny',cena_wypos:'Cena wyposażenia',
+    cena_netto:'Cena netto',cena_brutto:'Cena brutto',
+    zewnetrzna:'Zewnętrzna',wewnetrzna:'Wewnętrzna',finska:'Fińska',infrared:'Infrared',combi:'Combi'
+  },
+  EN:{
+    wykończenie:'Sauna Finishing',boazeria:'Interior cladding',boazeria2:'Interior cladding (2)',
+    zabudowa:'Above-sauna enclosure',boaz_ext:'Exterior cladding',
+    lawki:'Benches & backrests',lawki2:'Benches & backrests (2)',szklenie:'Sauna glass',
+    sciana_dek:'Sauna stone wall behind the heater',wyposazenie:'Sauna Equipment',
+    piec:'Heater',kamienie_d:'Diabez sauna stones',kamienie_s:'Round grey stones',
+    oslona:'Heater guard',prom350:'Infrared panels 350W',prom500:'Infrared panels 500W',prom750:'Infrared panels 750W',
+    sterownik:'FFES Controller',wifi:'Remote WiFi control',bt:'Bluetooth speaker module',
+    awarying:'Emergency shutdown system',led:'LED lighting',audio:'Sound system',
+    sciana_sol:'Salt wall',aroma:'Aromatherapy',
+    logistyka:'Logistics & extras',transport:'Delivery & installation',
+    cebrzyk:'Bucket & ladle',klepsydra:'Hourglass',
+    cena_sauny:'Sauna price',cena_wypos:'Equipment price',
+    cena_netto:'Total net price',cena_brutto:'Total gross price',
+    zewnetrzna:'Outdoor',wewnetrzna:'Indoor',finska:'Finnish',infrared:'Infrared',combi:'Combi'
+  }
+};
+function tr(k){return(T[LANG]||T.PL)[k]||k;}
+
+function getEurRate(){
+  var el=document.getElementById('eur');
+  return el?parseFloat(el.value)||4.4:4.4;
+}
+
+function fC(val){
+  if(CURR==='EUR'){
+    var rate=getEurRate();
+    var eur=Math.round(val/rate);
+    return eur.toLocaleString('pl')+' €';
+  }
+  return Math.round(val).toLocaleString('pl')+' zł';
+}
+
+function buildVariantHTML(s,vkey){
+  if(!s)return '';
+  var html='';
+  var mG=s.mg||1.4, mL=s.ml||1.4;
+
+  function vsec(t){html+='<div class="v-sec-hd">'+t+'</div>';}
+  function vrow(label,val){html+='<div class="v-row"><span class="v-label">'+label+'</span><span class="v-val">'+val+'</span></div>';}
+  function vrowYN(label,yes){var tY=LANG==='EN'?'YES':'TAK';var tN=LANG==='EN'?'NO':'NIE';html+='<div class="v-row-yn"><span class="v-label">'+label+'</span><span class="v-yn '+(yes?'v-yn-y':'v-yn-n')+'">'+(yes?tY:tN)+'</span></div>';}
+  function vrowMat(label,mat){
+    if(mat){
+      html+='<div class="v-row"><span class="v-label">'+label+'</span><span class="v-val" style="color:var(--mbm-dark)">'+mat+'</span></div>';
+    } else {
+      html+='<div class="v-row-yn"><span class="v-label">'+label+'</span><span class="v-yn v-yn-n">'+(LANG==='EN'?'NO':'NIE')+'</span></div>';
+    }
+  }
+  function vrowPrice(label,price){html+='<div class="v-row"><span class="v-label">'+label+'</span><span class="v-val" style="color:var(--mbm-primary)">'+fC(price)+'</span></div>';}
+  function vsubt(label,price,editable,vkey){
+    if(editable&&vkey){
+      html+='<div class="v-subtotal" style="cursor:default">'
+        +'<span style="font-weight:500;color:var(--mbm-dark)">'+label+'</span>'
+        +'<span style="display:flex;align-items:center;gap:6px">'
+        +'<input type="number" value="'+(CURR==='EUR'?Math.round(price/getEurRate()):Math.round(price))+'" '
+        +'onchange="overrideCenaSauny(\''+vkey+'\',this.value)" '
+        +'style="width:110px;text-align:right;font-size:13px;font-weight:500;color:var(--mbm-primary);'
+        +'border:1px solid var(--mbm-light);border-radius:4px;padding:2px 6px;background:#fff;font-family:inherit">'
+        +'<span style="font-size:13px;font-weight:500;color:var(--mbm-primary);white-space:nowrap">'+(CURR==='EUR'?'€':'zł')+'</span>'
+        +'</span>'
+        +'</div>';
+    } else {
+      html+='<div class="v-subtotal"><span style="font-weight:500;color:var(--mbm-dark)">'+label+'</span><span style="font-weight:500;color:var(--mbm-primary)">'+fC(price)+'</span></div>';
+    }
+  }
+
+  // WYKOŃCZENIE
+  vsec(tr('wykończenie'));
+  vrowMat(tr('boazeria'),s.b1&&s.b1.q>0?(s.b1.g||s.b1.name.split(' ')[0]):null);
+  if(s.b2&&s.b2.q>0)vrowMat('Boazeria (2)',s.b2.g||s.b2.name.split(' ')[0]);
+  if(!s.isZ)vrowMat(tr('zabudowa'),s.zb1&&s.zb1.q>0?(s.zb1.g||s.zb1.name.split(' ')[0]):null);
+  vrowMat(tr('lawki'),s.l1&&s.l1.q>0?(s.l1.g||s.l1.name.split(' ')[0]):null);
+  if(s.l2&&s.l2.q>0)vrowMat('Ławki (2)',s.l2.g||s.l2.name.split(' ')[0]);
+  var szkloNazwa=(s.szkt||'').replace(/\([^)]*\)/g,'').trim().split(' ')[0]||'—';
+  if(LANG==='EN'){var glassMap={'Grafitowe':'Graphite','Brązowe':'Smoked Glass','Float':'Float','Okno':'Double-pane window'};szkloNazwa=glassMap[szkloNazwa]||szkloNazwa;}
+  if(s.szkm>0){html+='<div class="v-row"><span class="v-label">'+tr('szklenie')+' — '+szkloNazwa+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'YES':'TAK')+'</span></div>';}
+  else vrowYN(tr('szklenie'),false);
+  // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
+  var cenaWypos=s.grzP+s.ledP+s.audP+(s.dodP||0);
+  var cenaSaunyAuto=s.netto-cenaWypos;
+  var cenaSauny=s.cenaSaunyOverride>0?s.cenaSaunyOverride:cenaSaunyAuto;
+  vsubt(tr('cena_sauny'),cenaSauny,true,vkey);
+
+  // WYPOSAŻENIE SAUNY (ogrzewanie + sciana + dekoracje z ceną)
+  vsec(tr('wyposazenie'));
+  if(s.typ!=='I'&&s.piec&&s.piec.cena>0)vrowPrice('Piec — '+s.piec.name.split('--')[0].trim(),s.piec.cena*mG);
+  else vrowYN(tr('piec'),false);
+  if(s.kamd>0)vrowPrice(tr('kamienie_d')+'  ('+s.kamd+'×)',s.kamd*50*mG);
+  if(s.kams>0)vrowPrice(tr('kamienie_s')+'  ('+s.kams+'×)',s.kams*130*mG);
+  if(s.osl>0)vrowPrice('Osłona na piec',s.osl*mG);
+  if(s.typ!=='F'){
+    if(s.pr3>0)vrowPrice('Promienniki 350W ×'+s.pr3,s.pr3*660*mG);
+    if(s.pr5>0)vrowPrice('Promienniki 500W ×'+s.pr5,s.pr5*710*mG);
+    if(s.pr7>0)vrowPrice('Promienniki 750W ×'+s.pr7,s.pr7*765*mG);
+  }
+
+  if(s.wifi)vrowPrice(tr('wifi'),400*mG); else vrowYN(tr('wifi'),false);
+  if(s.bt)vrowPrice(tr('bt'),300*mG); else vrowYN(tr('bt'),false);
+  if(s.aw)vrowPrice(tr('awarying'),600*mG);
+  if(s.ledtVal>0&&s.ledq>0){
+    var ledDesc=tr('led');
+    var ledExtra=[];
+    if(s.ledMiejsce)ledExtra.push(s.ledMiejsce);
+    if(s.ledBarwa)ledExtra.push(s.ledBarwa);
+    if(ledExtra.length)ledDesc+=' — '+ledExtra.join(', ');
+    vrowPrice(ledDesc,s.ledP);
+  } else vrowYN(tr('led'),false);
+  if(s.audtVal>0)vrowPrice('Nagłośnienie',s.audP);
+  else vrowYN(tr('audio'),false);
+  // Ściana dekoracyjna z kamienia - z ceną
+  if(s.scd&&s.scd!='Bez')vrowPrice(tr('sciana_dek'),parseFloat(s.scd)*mP||0);
+  else vrowYN(tr('sciana_dek'),false);
+  // Ściana solna - z ceną
+  var mDv=s.md||1.5;if(s.solC>0)vrowPrice('Ściana solna',s.solC*mDv);
+  else vrowYN(tr('sciana_sol'),false);
+  // Aromaterapia
+  if(s.aromC>0)vrowPrice('Aromaterapia',s.aromC*mDv);
+  else vrowYN(tr('aroma'),false);
+  vsubt(tr('cena_wypos'),cenaWypos);
+
+  // LOGISTYKA I DODATKI (tylko TAK/NIE, bez cen - transport, cebrzyk, klepsydra)
+  vsec(tr('logistyka'));
+  vrowYN(tr('transport'),s.transport>0);
+  vrowYN(tr('cebrzyk'),s.akcC>0);
+  vrowYN(tr('klepsydra'),s.klepC>0);
+
+  return html;
+}
+
+function loadStateToCalc(s){
+  // Set basic fields
+  function sv(id,val){var el=document.getElementById(id);if(el&&val!==undefined&&val!==null)el.value=val;}
+  function sc(id,val){var el=document.getElementById(id);if(el)el.checked=!!val;}
+  function sso(id,val){var el=document.getElementById(id);if(!el)return;for(var i=0;i<el.options.length;i++){if(parseFloat(el.options[i].value)===parseFloat(val)){el.selectedIndex=i;break;}}}
+
+  sv('klient',s.klient);sv('opis',s.opis);sv('minm',s.minm||12000);sv('eur',s.eur||4.4);
+  setWZ(s.isZ?'Z':'W');setTyp(s.typ||'F');setVAT(s.vat||8);
+
+  // Margins
+  sso('mk',s.mk||2.0);sso('mp',s.mp||1.5);sso('mg',s.mg||1.4);sso('ml',s.ml||1.4);sso('md',s.md||1.5);
+
+  // Boazeria - select by name from dropdown
+  if(s.b1&&s.b1.name)ssoByName('b1m',s.b1.name);sv('b1q',s.b1?s.b1.q:0);
+  if(s.b2&&s.b2.name)ssoByName('b2m',s.b2.name);sv('b2q',s.b2?s.b2.q:0);
+  if(s.zb1&&s.zb1.name)ssoByName('zb1m',s.zb1.name);sv('zb1q',s.zb1?s.zb1.q:0);
+  if(s.l1&&s.l1.name)ssoByName('l1m',s.l1.name);sv('l1q',s.l1?s.l1.q:0);
+  if(s.l2&&s.l2.name)ssoByName('l2m',s.l2.name);sv('l2q',s.l2?s.l2.q:0);
+  sv('katq',s.katq||0);sv('bshq',s.bshq||0);sv('cncq',s.cncq||0);sv('folq',s.folq||0);sv('tasq',s.tasq||0);sv('welq',s.welq||0);
+  sv('anoq',s.anoq||0);sv('anop',s.anop||150);sv('kabq',s.kabq||0);
+  sv('dachq',s.dachq||0);sv('dacrq',s.dacrq||0);sv('rynq',s.rynq||0);sv('podq',s.podq||0);sv('plyq',s.plyq||0);sv('styq',s.styq||0);
+
+  // Szklenie
+  sso('szkt',s.szkt||160);sv('szkm',s.szkm||0);sv('szlq',s.szlq||0);sv('otwq',s.otwq||0);if(document.getElementById('otwq2'))sv('otwq2',s.otwq2||0);
+
+  // Premium
+  sv('zawq',s.zawq||0);sso('klm',s.klamkaVal||150);sso('drz',s.drzwiVal||540);sso('scd',s.scd||0);
+
+  // Piec
+  sv('piec',s.piec?s.piec.cena:0);sv('kamd',s.kamd||0);sv('kams',s.kams||0);sv('osl',s.osl||0);
+
+  // Promienniki
+  sv('pr3',s.pr3||0);sv('pr5',s.pr5||0);sv('pr7',s.pr7||0);
+
+  // Sterownik
+  sv('ster-val',s.sterVal||0);
+  sc('awifi',s.wifi);sc('abt',s.bt);sc('asty',s.sty);sc('asty3',s.sty3);sc('aaw',s.aw);sc('apbez',s.pbez);
+
+  // LED
+  sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
+  sv('led-miejsce',s.ledMiejsce||'');sv('led-barwa',s.ledBarwa||'');sso('zast',s.zasilVal||0);sso('lstt',s.lsttVal||0);
+  if(document.getElementById('kabq-led'))sv('kabq-led',s.kabLed||0);
+  sc('profauto',true);
+
+  // Audio
+  sso('audt',s.audtVal||0);sso('btkt',s.btkt||0);
+
+  // Logistyka
+  sv('trn',s.transport||0);sv('dos',s.dostawa||0);sv('prj',s.projekt||0);sv('gdz',s.godz||0);
+
+  // Dodatkowe
+  sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+
+  r();
+}
+
+function loadToCalc(s){
+  if(!s)return;
+  _loading=true;
+
+  function sv(id,val){var el=document.getElementById(id);if(el&&val!==undefined&&val!==null)el.value=val;}
+  function sc(id,val){var el=document.getElementById(id);if(el)el.checked=!!val;}
+  function sso(id,val){
+    var el=document.getElementById(id);if(!el)return;
+    for(var i=0;i<el.options.length;i++){
+      if(parseFloat(el.options[i].value)===parseFloat(val)){el.selectedIndex=i;return;}
+    }
+  }
+  function ssoByName(id,name){
+    if(!name||name.indexOf('wybierz')>=0)return;
+    var el=document.getElementById(id);if(!el)return;
+    // Strategy 1: exact textContent match
+    for(var i=0;i<el.options.length;i++){
+      if(el.options[i].textContent===name){el.selectedIndex=i;return;}
+    }
+    // Strategy 2: option text contains stored name (handles prefix changes)
+    for(var i=0;i<el.options.length;i++){
+      if(el.options[i].textContent.indexOf(name)>=0){el.selectedIndex=i;return;}
+    }
+    // Strategy 3: stored name contains option core text (strip supplier prefix)
+    for(var i=0;i<el.options.length;i++){
+      var optCore=el.options[i].textContent.replace(/^\s*\[[^\]]+\]\s*/,'').split('—')[0].trim();
+      if(optCore&&name.indexOf(optCore)>=0){el.selectedIndex=i;return;}
+    }
+    // Strategy 4: find by material name keywords (last resort)
+    var nameParts=name.replace(/^\s*\[[^\]]+\]\s*/,'').split(' ').slice(0,3).join(' ');
+    if(nameParts.length>3){
+      for(var i=0;i<el.options.length;i++){
+        if(el.options[i].textContent.indexOf(nameParts)>=0){el.selectedIndex=i;return;}
+      }
+    }
+  }
+
+  // Basic fields
+  sv('klient',s.klient);sv('opis',s.opis||'');
+  sv('minm',s.minm||12000);sv('eur',s.eur||4.4);
+
+  // Type/VAT switches (won't trigger r() due to _loading flag)
+  setWZ(s.isZ?'Z':'W');
+  setTyp(s.typ||'F');
+  setVAT(s.vat||8);
+
+  // Marże
+  sso('mk',s.mk||2.0);sso('mp',s.mp||1.5);
+  sso('mg',s.mg||1.4);sso('ml',s.ml||1.4);sso('md',s.md||1.5);
+
+  // Boazeria i ławki - najpierw dropdown potem ilość
+  if(s.b1&&s.b1.name)ssoByName('b1m',s.b1.name);
+  sv('b1q',s.b1&&s.b1.q>0?s.b1.q:0);
+  if(s.b2&&s.b2.name)ssoByName('b2m',s.b2.name);
+  sv('b2q',s.b2&&s.b2.q>0?s.b2.q:0);
+  if(s.zb1&&s.zb1.name)ssoByName('zb1m',s.zb1.name);
+  sv('zb1q',s.zb1&&s.zb1.q>0?s.zb1.q:0);
+  if(s.l1&&s.l1.name)ssoByName('l1m',s.l1.name);
+  sv('l1q',s.l1&&s.l1.q>0?s.l1.q:0);
+  if(s.l2&&s.l2.name)ssoByName('l2m',s.l2.name);
+  sv('l2q',s.l2&&s.l2.q>0?s.l2.q:0);
+  if(s.k1&&s.k1.name)ssoByName('k1m',s.k1.name);
+  sv('k1q',s.k1&&s.k1.q>0?s.k1.q:0);
+
+  // Boazeria zewnętrzna
+  sv('bzn',s.bzn||'');sv('bzq',s.bzq||0);sv('bzp',s.bzp||0);
+
+  // Konstrukcja
+  sv('katq',s.katq||0);sv('bshq',s.bshq||0);sv('cncq',s.cncq||0);
+  sv('folq',s.folq||0);sv('tasq',s.tasq||0);sv('welq',s.welq||0);
+  sv('anoq',s.anoq||0);sv('anop',s.anop||150);sv('kabq',s.kabq||0);
+  sv('dachq',s.dachq||0);sv('dacrq',s.dacrq||0);sv('rynq',s.rynq||0);
+  sv('podq',s.podq||0);sv('plyq',s.plyq||0);sv('styq',s.styq||0);
+
+  // Szklenie
+  sso('szkt',s.szkt||160);sv('szkm',s.szkm||0);
+  sv('szlq',s.szlq||0);sv('otwq',s.otwq||0);
+  if(document.getElementById('otwq2'))sv('otwq2',s.otwq2||0);
+
+  // Premium
+  sv('zawq',s.zawq||0);
+  sso('klm',s.klamkaVal||150);
+  sso('drz',s.drzwiVal||540);
+  sso('scd',s.scd||0);
+  if(document.getElementById('drzwz'))sso('drzwz',s.drzwz||0);
+
+  // Piec
+  if(s.piec&&s.piec.cena>0)sv('piec',s.piec.cena);
+  else sv('piec',0);
+  sv('kamd',s.kamd||0);sv('kams',s.kams||0);sv('osl',s.osl||0);
+
+  // Promienniki
+  sv('pr3',s.pr3||0);sv('pr5',s.pr5||0);sv('pr7',s.pr7||0);
+
+  // Sterownik
+  sv('ster-val',s.sterVal||0);
+  sc('awifi',s.wifi||false);sc('abt',s.bt||false);
+  sc('asty',s.sty||false);sc('asty3',s.sty3||false);
+  sc('aaw',s.aw||false);sc('apbez',s.pbez||false);
+
+  // LED
+  sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
+  sv('led-miejsce',s.ledMiejsce||'');sv('led-barwa',s.ledBarwa||'');
+  sso('zast',s.zasilVal||0);sso('lstt',s.lsttVal||0);
+  if(document.getElementById('kabq-led'))sv('kabq-led',s.kabLed||0);
+  var pa=document.getElementById('profauto');if(pa)pa.checked=true;
+
+  // Audio
+  sso('audt',s.audtVal||0);sso('btkt',s.btkt||0);
+
+  // Logistyka
+  sv('trn',s.transport||0);sv('dos',s.dostawa||0);
+  sv('prj',s.projekt||0);sv('gdz',s.godz||0);
+
+  // Wyposażenie dodatkowe
+  sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);
+  sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+
+  // Odśwież badge dostawców i przelicz
+  _loading=false;
+  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');
+  r();
+}
+
+
+function loadVariantToCalc(v){
+  var s=VARIANTS[v];
+  if(!s){alert('Brak zapisanego wariantu '+v);return;}
+  loadToCalc(s);
+  showTab('calc');
+}
+
+function overrideCenaSauny(vkey,val){
+  if(!vkey||!VARIANTS[vkey])return;
+  var v=parseFloat(val)||0;
+  VARIANTS[vkey].cenaSaunyOverride=v;
+  // update total displays without full rebuild
+  var cenaWypos=VARIANTS[vkey].grzP+VARIANTS[vkey].ledP+VARIANTS[vkey].audP+(VARIANTS[vkey].dodP||0);
+  var netto=v+cenaWypos;
+  var brutto=netto*(1+(VARIANTS[vkey].vat||8)/100);
+  VARIANTS[vkey].netto=netto;
+  VARIANTS[vkey].brutto=brutto;
+  // rebuild to refresh totals
+  buildClient();
+}
+
+function buildClient(){
+  var active=Object.keys(VARIANTS).filter(function(v){return VARIANTS[v]!==null;});
+  var toShow=active.length>0
+    ?active.map(function(v){return {key:v,s:VARIANTS[v]};})
+    :(STATE&&STATE.klient?[{key:'',s:STATE}]:[]);
+
+  var grid=document.getElementById('variants-grid');
+  if(!grid)return;
+
+  if(toShow.length===0){
+    grid.innerHTML='<div style="padding:24px;color:var(--mbm-mid);font-size:13px;text-align:center">Uzupełnij kalkulator i zapisz wariant lub przejdź do widoku klienta.</div>';
+    return;
+  }
+
+  grid.className='variants-grid v'+toShow.length;
+
+  var logoSrc='';
+  try{logoSrc=localStorage.getItem('abm_logo')||'';}catch(e){}
+  var firmFooter='';
+  try{var fn=localStorage.getItem('abm_firm');if(fn){var fd=JSON.parse(fn);if(fd.name||fd.tel||fd.email){firmFooter='<div style="padding:8px 12px;background:var(--mbm-palest);font-size:10px;color:var(--mbm-mid);display:flex;gap:12px;flex-wrap:wrap">';if(fd.name)firmFooter+='<span>'+fd.name+'</span>';if(fd.tel)firmFooter+='<span>'+fd.tel+'</span>';if(fd.email)firmFooter+='<span>'+fd.email+'</span>';if(fd.www)firmFooter+='<span>'+fd.www+'</span>';firmFooter+='</div>';}}}catch(e){}
+
+  var html='';
+  toShow.forEach(function(item){
+    var s=item.s;
+    var typName=s.typ==='F'?tr('finska'):s.typ==='I'?tr('infrared'):tr('combi');
+    var saunaLabel=(s.isZ?tr('zewnetrzna'):tr('wewnetrzna'))+' '+typName;
+    html+='<div class="vcard">';
+    html+='<div class="v-hd">';
+    var vLabel=s.variantName&&s.variantName!==s.klient?s.variantName:(item.key?'Wariant '+item.key:'Oferta');
+    // Row 1: logo left | klient+sauna right
+    html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">';
+    if(logoSrc)html+='<img src="'+logoSrc+'" style="max-height:36px;max-width:90px;object-fit:contain;flex-shrink:0">';
+    else html+='<div style="flex-shrink:0"></div>';
+    html+='<div style="text-align:right">';
+    html+='<div style="font-size:15px;font-weight:500;color:#fff;line-height:1.2">'+(s.klient||'Klient')+'</div>';
+    html+='<div style="font-size:10px;color:var(--mbm-light);margin-top:2px">'+saunaLabel+'</div>';
+    html+='</div>';
+    html+='</div>';
+    // Row 2: wariant centered
+    html+='<div style="margin-top:6px;padding-top:5px;border-top:0.5px solid rgba(255,255,255,0.15);text-align:center">';
+    html+='<div style="font-size:11px;font-weight:600;color:#fff;letter-spacing:0.04em">'+vLabel+'</div>';
+    html+='</div>';
+    html+='</div>';
+    html+=buildVariantHTML(s,item.key);
+    html+=firmFooter;
+    html+='<div class="v-total"><span style="font-size:12px;color:#aaa">'+tr('cena_netto')+'</span><span style="font-size:16px;font-weight:500;color:#fff">'+fC(s.netto)+'</span></div>';
+    html+='<div class="v-total-b"><span style="font-size:12px;color:var(--mbm-pale)">'+tr('cena_brutto')+' (VAT '+s.vat+'%)</span><span style="font-size:16px;font-weight:500;color:#fff">'+fC(s.brutto)+'</span></div>';
+    html+='</div>';
+  });
+  grid.innerHTML=html;
+}
+
+// helper to get value from form element for buildClient (reads live)
+function gv2(id){var el=document.getElementById(id);return el?parseFloat(el.value)||1:1;}
+
+// ===== LISTA MATERIAŁÓW =====
+function buildOrder(){
+  var s=STATE;se('ord-title',s.klient||'—');
+  var rows=[];
+  function add(cat,name,qty,unit,price){if(qty>0&&name&&name.indexOf('wybierz')<0)rows.push({cat:cat,name:name,qty:qty,unit:unit,price:price,koszt:Math.round(qty*price)});}
+  if(s&&s.b1){
+    add('Boazeria',s.b1.name,s.b1.q,'szt.',gv('b1m'));add('Boazeria',s.b2.name,s.b2.q,'szt.',gv('b2m'));
+    if(!s.isZ)add('Zabudowa',s.zb1.name,s.zb1.q,'szt.',gv('zb1m'));
+    if(s.isZ&&s.bzq>0)add('Boazeria zewnetrzna',s.bzn,s.bzq,'szt.',s.bzp);
+    add('Lawki',s.l1.name,s.l1.q,'szt.',gv('l1m'));add('Lawki',s.l2.name,s.l2.q,'szt.',gv('l2m'));
+    if(s.katq>0)add('Wykończenie','Katownik olcha 24x24',s.katq,'szt.',25);
+    add('Konstrukcja',s.k1.name,s.k1.q,'szt.',gv('k1m'));
+    if(s.isZ&&s.bshq>0)add('Konstrukcja','BSH 100x100',s.bshq,'mb',36.25);
+    if(s.folq>0)add('Izolacja','Folia paraizolacyjna',s.folq,'rolki',4);
+    if(s.tasq>0)add('Izolacja','Tasma do folii para',s.tasq,'szt.',20);
+    if(s.welq>0)add('Izolacja','Welna '+(s.isZ?'100mm':'40mm'),s.welq,'m2',s.isZ?23:8.5);
+    if(s.anoq>0)add('Wentylacja','Anemostat',s.anoq,'szt.',s.anop);
+    if(s.kabq>0)add('Instalacja','Kabel do pieca',s.kabq,'mb',20);
+    if(s.isZ){if(s.dachq>0)add('Dach','Material dachowy',s.dachq,'m2',60);if(s.rynq>0)add('Dach','Rynny',s.rynq,'kpl.',1322);if(s.podq>0)add('Podloga','Podloga zewnetrzna',s.podq,'m2',140);if(s.plyq>0)add('Fundament','Plyta betonowa',s.plyq,'szt.',221.65);if(s.styq>0)add('Fundament','Styrodur 100mm XPS',s.styq,'m2',49.4);}
+    if(s.typ!=='I'&&s.piec.cena>0)add('Piec',s.piec.name.split('--')[0].trim(),1,'szt.',s.piec.cena);
+    if(s.kamd>0)add('Kamienie','Kamienie Diabez',s.kamd,'paczki',50);
+    if(s.kams>0)add('Kamienie','Kamienie szare okragle',s.kams,'szt.',130);
+    if(s.osl>0)add('Piec','Oslona na piec',1,'szt.',s.osl);
+    if(s.typ!=='F'){if(s.pr3>0)add('Promienniki','VitalSun 350W',s.pr3,'szt.',660);if(s.pr5>0)add('Promienniki','VitalSun 500W',s.pr5,'szt.',710);if(s.pr7>0)add('Promienniki','VitalSun 750W',s.pr7,'szt.',765);}
+    if(s.sterVal>0)add('Sterownik',s.ster.split('(')[0].trim(),1,'szt.',s.sterVal);
+    if(s.wifi)add('Sterownik','Modul WiFi XX-W',1,'szt.',400);if(s.bt)add('Sterownik','Modul BT XX-B',1,'szt.',300);if(s.sty)add('Sterownik','Cichy sty. X1/X2',1,'szt.',100);if(s.sty3)add('Sterownik','Cichy sty. X3',1,'szt.',250);if(s.aw)add('Sterownik','Awaryjne wylaczanie',1,'szt.',600);if(s.pbez)add('Sterownik','Przycisk bezpieczenstwa',1,'szt.',220);
+    if(s.ledtVal>0&&s.ledq>0)add('LED',s.ledt.split('—')[0].trim(),s.ledq,'mb/szt.',s.ledtVal);
+    if(s.kabLed>0)add('LED','Kabel LED',s.kabLed,'mb',7.9);
+    if(s.profq>0)add('LED','Profil LED aluminiowy',s.profq,'mb',12.45);
+    if(s.zasilVal>0)add('LED',s.zasil,1,'szt.',s.zasilVal);
+    if(s.lsttVal>0)add('LED',s.lstt,1,'szt.',s.lsttVal);
+    if(s.audtVal>0)add('Audio',s.audio.split('(')[0].trim(),1,'kpl.',s.audtVal);
+    if(s.btkt>0)add('Audio','Kontroler BT',1,'szt.',399);
+  }
+  if(rows.length===0){document.getElementById('ord-body').innerHTML='<p style="color:#999;font-size:12px">Uzupelnij kalkulator.</p>';return;}
+  var cats={};rows.forEach(function(r){if(!cats[r.cat])cats[r.cat]=[];cats[r.cat].push(r);});
+  var totalK=rows.reduce(function(a,r){return a+r.koszt;},0);
+  var html='<table class="ord-table"><thead><tr><th>Materiał</th><th>Ilość</th><th>Jedn.</th><th style="text-align:right">Cena jedn.</th><th style="text-align:right">Koszt</th></tr></thead><tbody>';
+  Object.keys(cats).forEach(function(cat){
+    html+='<tr><td class="ord-cat" colspan="5">'+cat+'</td></tr>';
+    cats[cat].forEach(function(r){html+='<tr><td>'+r.name+'</td><td style="text-align:right">'+r.qty+'</td><td>'+r.unit+'</td><td style="text-align:right">'+r.price.toFixed(2)+' zl</td><td style="text-align:right;font-weight:500">'+r.koszt.toLocaleString('pl')+' zl</td></tr>';});
+  });
+  html+='<tr style="background:#E6F1FB"><td colspan="4" style="font-weight:500;padding:8px 10px">SUMA KOSZTÓW MATERIAŁÓW</td><td style="text-align:right;font-weight:500;font-size:14px;padding:8px 10px">'+totalK.toLocaleString('pl')+' zl</td></tr></tbody></table>';
+  document.getElementById('ord-body').innerHTML=html;
+}
+
+// ===== HISTORIA =====
+async function saveQuote(){
+  var s=STATE;
+  if(!s||!s.klient){alert('Wpisz imie i nazwisko klienta przed zapisem.');return;}
+  try{
+    var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
+    var variants_snap={}; ['A','B','C'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));}); var entry={id:Date.now(),date:new Date().toLocaleDateString('pl-PL'),klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,isZ:s.isZ,typ:s.typ,state:JSON.stringify(s),variants:variants_snap};
+    hist.unshift(entry);if(hist.length>100)hist=hist.slice(0,100);
+    localStorage.setItem('abm_history',JSON.stringify(hist));
+  }catch(e){}
+  var cloudResult=await saveQuoteCloud(s);
+  if(cloudResult){
+    showSyncStatus('cloud','Zapisano w chmurze: '+s.klient);
+    alert('Zapisano w chmurze: '+s.klient+' — '+f(s.netto)+' netto');
+  }else{
+    var msg='Zapisano lokalnie: '+s.klient+' — '+f(s.netto)+' netto (brak polaczenia z chmura)';
+    alert(msg);
+  }
+}
+
+async function buildHistory(){
+  var container=document.getElementById('hist-list');
+  container.innerHTML='<p style="color:var(--mbm-mid);font-size:12px">Wczytywanie...</p>';
+
+  var rows=[];
+
+  // Try cloud first
+  try{ rows=await loadQuotesCloud(); }catch(ex){ rows=[]; }
+
+  // Fallback to localStorage
+  if(rows.length===0){
+    try{
+      var local=JSON.parse(localStorage.getItem('abm_history')||'[]');
+      rows=local.map(function(e){
+        return{id:e.id,created_at:e.date,klient:e.klient,opis:e.opis||'',
+          netto:e.netto,brutto:e.brutto,vat:e.vat,typ:e.typ,is_z:e.isZ,
+          _local:true,
+          variants:e.variants||null,
+          data:(function(){try{return JSON.parse(e.state||'{}');}catch(x){return e;}})()};
+      });
+    }catch(ex){ rows=[]; }
+  }
+
+  if(rows.length===0){
+    container.innerHTML='<p style="color:var(--mbm-mid);font-size:12px">Brak zapisanych wycen.</p>';
+    return;
+  }
+
+  container.innerHTML='';
+
+  rows.forEach(function(e){
+    var typName=(e.typ||'F')==='F'?'Fińska':(e.typ==='I'?'Infrared':'Combi');
+    var saunaType=(e.is_z||e.isZ?'[Z]':'[W]')+' '+typName;
+    var dateStr=e.created_at?new Date(e.created_at).toLocaleDateString('pl-PL'):'—';
+
+    var div=document.createElement('div');div.className='hist-item';
+
+    var left=document.createElement('div');
+    var t1=document.createElement('div');t1.style.cssText='font-weight:500;font-size:14px';t1.textContent=e.klient||'—';
+    var t2=document.createElement('div');t2.style.cssText='font-size:12px;color:var(--mbm-mid);margin-top:2px';
+    t2.textContent=dateStr+' | '+saunaType+(e.opis?' | '+e.opis:'');
+    var t3=document.createElement('div');t3.style.cssText='font-size:12px;margin-top:3px';
+    t3.innerHTML='<span style="color:var(--mbm-primary);font-weight:500">'+f(e.netto||0)+' zł</span> netto | <span style="font-weight:500">'+f(e.brutto||0)+' zł</span> brutto (VAT '+(e.vat||8)+'%)';
+    left.appendChild(t1);left.appendChild(t2);left.appendChild(t3);
+
+    var right=document.createElement('div');right.style.cssText='display:flex;gap:6px;align-items:center;flex-shrink:0';
+
+    // PODGLĄD button
+    var btnV=document.createElement('button');btnV.className='btn';btnV.textContent='Podgląd';
+    (function(row){
+      btnV.onclick=function(){
+        var s=row.data||null;
+        if(!s||!s.klient){
+          try{s=JSON.parse(row.state||'{}');}catch(ex){s=row;}
+        }
+        showQuoteModal(s||row);
+      };
+    })(e);
+
+    // WCZYTAJ button
+    var btnL=document.createElement('button');btnL.className='btn grn';btnL.textContent='↩ Wczytaj';
+    (function(row){
+      btnL.onclick=function(){
+        var s=row.data||null;
+        if(!s||!s.klient){try{s=JSON.parse(row.state||'{}');}catch(ex){s=null;}}
+        // Try to get state from nested structure (Supabase format)
+        if(s&&s.state&&s.state.klient){s=s.state;}
+        if(!s||!s.klient){alert('Brak danych wyceny.');return;}
+        loadToCalc(s);
+        // Restore variants if saved
+        var savedVariants=null;
+        try{
+          if(row.variants)savedVariants=typeof row.variants==='string'?JSON.parse(row.variants):(row.variants&&typeof row.variants==='object'?row.variants:null);
+          else if(row.data&&row.data.variants)savedVariants=row.data.variants;
+        }catch(ex){}
+        if(savedVariants){
+          VARIANTS=savedVariants;
+          ['A','B','C'].forEach(function(v){
+            if(!VARIANTS[v])return;
+            var btn=document.getElementById('vbtn-'+v);
+            var inp=document.getElementById('vinp-'+v);
+            if(btn){
+              var sn=VARIANTS[v].variantName||VARIANTS[v].klient||'Wariant '+v;
+              btn.textContent='✓ '+v+': '+sn.split(' ')[0]+' ('+f(VARIANTS[v].netto)+')';
+              btn.style.background='var(--mbm-pale)';
+              btn.style.borderColor='var(--mbm-primary)';
+              btn.style.color='var(--mbm-primary)';
+            }
+            if(inp&&VARIANTS[v].variantName)inp.value=VARIANTS[v].variantName;
+            var loadLink=document.getElementById('vload-'+v);
+            if(loadLink)loadLink.style.display='block';
+          });
+          alert('Wczytano wycenę z '+Object.keys(savedVariants).filter(function(v){return savedVariants[v]!==null;}).length+' wariantami.');
+        } else {
+          alert('Wczytano wycenę (brak zapisanych wariantów — wycena trafiła do kalkulatora).');
+        }
+        showTab('calc');
+      };
+    })(e);
+
+    // USUŃ button
+    var btnD=document.createElement('button');btnD.className='hist-del';btnD.textContent='×';btnD.title='Usuń';
+    (function(row){
+      btnD.onclick=function(){
+        if(!confirm('Usunąć tę wycenę?'))return;
+        // localStorage
+        try{
+          var h=JSON.parse(localStorage.getItem('abm_history')||'[]');
+          h=h.filter(function(x){return String(x.id)!==String(row.id);});
+          localStorage.setItem('abm_history',JSON.stringify(h));
+        }catch(ex){}
+        // cloud
+        if(!row._local && supa){
+          try{supa.from('quotes').delete().eq('id',row.id).then(function(){});}catch(ex){}
+        }
+        buildHistory();
+      };
+    })(e);
+
+    right.appendChild(btnV);right.appendChild(btnL);right.appendChild(btnD);
+    div.appendChild(left);div.appendChild(right);
+    container.appendChild(div);
+  });
+
+  if(typeof showSyncStatus==='function') showSyncStatus('cloud','Historia: '+rows.length+' wycen');
+}
+
+
+async function loadQuoteFromCloud(entry,btn){
+  if(!entry||!entry.data){alert('Nie mozna wczytac wyceny.');return;}
+  loadToCalc(entry.data);
+  showTab('calc');
+}
+
+async function deleteQuoteFromCloud(entry,btn){
+  if(!confirm('Usunąć tę wycenę?'))return;
+  // Remove from localStorage
+  try{
+    var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
+    hist=hist.filter(function(e){return String(e.id)!==String(entry.id);});
+    localStorage.setItem('abm_history',JSON.stringify(hist));
+  }catch(ex){}
+  // Remove from Supabase (if connected)
+  if(supa){try{await deleteQuoteCloud(entry.id);}catch(ex){}}
+  buildHistory();
+}
+
+function loadQuote(id){
+  try{
+    var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
+    var entry=hist.find(function(e){return e.id===id;});
+    if(!entry){alert('Nie znaleziono wyceny.');return;}
+    var s=null;
+    try{s=JSON.parse(entry.state||'{}');}catch(e){s=entry;}
+    if(!s||!s.klient){alert('Nie można wczytać wyceny — brak danych.');return;}
+    loadToCalc(s);
+    // Restore variants
+    if(entry.variants){
+      try{
+        var sv=typeof entry.variants==='string'?JSON.parse(entry.variants):entry.variants;
+        VARIANTS=sv;
+        ['A','B','C'].forEach(function(v){
+          if(!VARIANTS[v])return;
+          var btn=document.getElementById('vbtn-'+v);
+          var inp=document.getElementById('vinp-'+v);
+          if(btn){
+            var sn=VARIANTS[v].variantName||VARIANTS[v].klient||'Wariant '+v;
+            btn.textContent='✓ '+v+': '+sn.split(' ')[0]+' ('+f(VARIANTS[v].netto)+')';
+            btn.style.background='var(--mbm-pale)';
+            btn.style.borderColor='var(--mbm-primary)';
+            btn.style.color='var(--mbm-primary)';
+          }
+          if(inp&&VARIANTS[v].variantName)inp.value=VARIANTS[v].variantName;
+          var loadLink=document.getElementById('vload-'+v);
+          if(loadLink)loadLink.style.display='block';
+        });
+      }catch(ex){}
+    }
+    showTab('calc');
+  }catch(e){alert('Błąd wczytywania: '+e.message);}
+}
+
+function deleteQuote(id){
+  if(!confirm('Usunac ta wycene?'))return;
+  try{var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');hist=hist.filter(function(e){return e.id!==id;});localStorage.setItem('abm_history',JSON.stringify(hist));buildHistory();}catch(e){}
+}
+
+async function clearHistory(){
+  if(!confirm('Usunąć całą historię wycen?'))return;
+  try{localStorage.removeItem('abm_history');}catch(e){}
+  if(supa){
+    try{supa.from('quotes').delete().neq('id',0).then(function(){buildHistory();});}
+    catch(ex){buildHistory();}
+  } else {
+    buildHistory();
+  }
+}
+
+
+// ===== CENNIKI =====
+var BOAZ_EXT=[];
+
+function loadPricesExt(){
+  try{var be=localStorage.getItem('abm_boaz_ext');BOAZ_EXT=be?JSON.parse(be):[];}catch(e){BOAZ_EXT=[];}
+}
+
+function buildPriceTables(){
+  renderPriceTable('price-boaz',BOAZ,'boaz');
+  renderPriceTable('price-boaz-ext',BOAZ_EXT,'boaz-ext');
+  renderPriceTable('price-deski',DESKI,'deski');
+  renderPriceTable('price-konstr',KONSTR,'konstr');
+  var ce=document.getElementById('count-boaz-ext');if(ce)ce.textContent=BOAZ_EXT.length>0?BOAZ_EXT.length+' pozycji':'';
+  var cb=document.getElementById('count-boaz');if(cb)cb.textContent=BOAZ.length+' pozycji';
+  var cd=document.getElementById('count-deski');if(cd)cd.textContent=DESKI.length+' pozycji';
+  var ck=document.getElementById('count-konstr');if(ck)ck.textContent=KONSTR.length+' pozycji';
+}
+
+function renderPriceTable(containerId,data,key){
+  var el=document.getElementById(containerId);if(!el)return;
+  if(!data||data.length===0){
+    if(key==='boaz-ext')el.innerHTML='<p style="font-size:12px;color:#999;padding:6px 0">Brak pozycji.</p>';
+    else el.innerHTML='<p style="font-size:12px;color:#999;padding:6px 0">Brak pozycji.</p>';
+    return;
+  }
+  var html='<table class="price-table"><thead><tr><th>Materiał</th><th style="width:130px">Dostawca</th><th style="width:90px">Cena (zł)</th><th style="width:32px"></th></tr></thead><tbody>';
+  var lastG='';
+  data.forEach(function(item,i){
+    if(item.g!==lastG){html+='<tr><td class="cat-row" colspan="4">'+item.g+'</td></tr>';lastG=item.g;}
+    var supOpts=Object.keys(SN).map(function(k){
+      return '<option value="'+k+'"'+(item.s===k?' selected':'')+'>'+SN[k]+'</option>';
+    }).join('');
+    html+='<tr>';
+    html+='<td style="font-size:12px">'+item.n+'</td>';
+    html+='<td><select data-key="'+key+'" data-idx="'+i+'" onchange="updateSupplier(this)" style="font-size:11px;height:24px;border:0.5px solid #ddd;border-radius:4px;width:100%;padding:0 3px">'+supOpts+'</select></td>';
+    html+='<td><input type="number" value="'+item.p+'" step="0.01" min="0" data-key="'+key+'" data-idx="'+i+'" onchange="updatePrice(this)" style="width:82px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td>';
+    html+='<td style="text-align:center"><button onclick="deleteMaterial(\''+key+'\','+i+')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;padding:1px 4px" title="Usuń">×</button></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function updateSupplier(el){
+  var key=el.dataset.key,idx=parseInt(el.dataset.idx),val=el.value;
+  var arr=key==='boaz'?BOAZ:key==='boaz-ext'?BOAZ_EXT:key==='deski'?DESKI:KONSTR;
+  if(arr&&arr[idx]){arr[idx].s=val;savePricesQuiet();}
+}
+
+
+function updatePrice(el){
+  var key=el.dataset.key,idx=parseInt(el.dataset.idx),val=parseFloat(el.value)||0;
+  if(key==='boaz')BOAZ[idx].p=val;
+  else if(key==='boaz-ext')BOAZ_EXT[idx].p=val;
+  else if(key==='deski')DESKI[idx].p=val;
+  else if(key==='konstr')KONSTR[idx].p=val;
+}
+
+function toggleAddPieceRow(){
+  var cat=document.getElementById('add-cat').value;
+  var pr=document.getElementById('add-piece-row');
+  if(pr)pr.style.display=cat==='piece'?'block':'none';
+  // For LED and glass, group field label
+  var grpSub=document.querySelector('#add-group')?.previousElementSibling;
+  if(grpSub){
+    if(cat==='glass')grpSub.textContent='Rodzaj szkła';
+    else if(cat==='led')grpSub.textContent='Kategoria (np. Taśma LED)';
+    else if(cat==='piece')grpSub.textContent='Seria (np. HUUM DROP)';
+    else grpSub.textContent='Grupa / gatunek drewna';
+  }
+}
+
+function addMaterial(){
+  var cat=document.getElementById('add-cat').value;
+  var grp=document.getElementById(cat==='piece'?(document.getElementById('add-group2').value.trim()?'add-group2':'add-group'):'add-group').value.trim()||document.getElementById('add-group').value.trim();
+  var name=document.getElementById('add-name').value.trim();
+  var price=parseFloat(document.getElementById('add-price').value)||0;
+  var sup=document.getElementById('add-sup').value;
+
+  if(!name){alert('Wpisz nazwę / opis pozycji.');return;}
+
+  if(cat==='glass'){
+    // Add to glass price table
+    var glassPrices=JSON.parse(localStorage.getItem('abm_glass_custom')||'[]');
+    glassPrices.push({n:name,p:price,g:grp||'Szklenie',s:sup});
+    localStorage.setItem('abm_glass_custom',JSON.stringify(glassPrices));
+    alert('Dodano do szklenia: '+name);
+    document.getElementById('add-name').value='';document.getElementById('add-price').value='0';
+    return;
+  }
+
+  if(cat==='led'){
+    var ledPrices=JSON.parse(localStorage.getItem('abm_led_custom')||'[]');
+    ledPrices.push({id:'custom-'+Date.now(),n:name,p:price,g:grp||'LED',s:sup});
+    localStorage.setItem('abm_led_custom',JSON.stringify(ledPrices));
+    alert('Dodano do LED: '+name+'. Widoczne po odświeżeniu sekcji LED.');
+    document.getElementById('add-name').value='';document.getElementById('add-price').value='0';
+    if(document.getElementById('price-led-body'))buildLedPriceTable();
+    return;
+  }
+
+  if(cat==='piece'){
+    var grpP=document.getElementById('add-group2').value.trim()||grp||'Inne';
+    var eurP=parseFloat(document.getElementById('add-eur').value)||0;
+    if(!grpP){alert('Wpisz serię pieca.');return;}
+    PIECE.push({g:grpP,n:name,eur:eurP});
+    rebP();
+    alert('Dodano piec: '+name+'. Widoczny w dropdownie kalkulatora.');
+    document.getElementById('add-name').value='';document.getElementById('add-price').value='0';
+    document.getElementById('add-eur').value='0';
+    if(document.getElementById('price-piece-body'))buildPiecePriceTable();
+    return;
+  }
+
+  // Standard material (boaz/deski/konstr/boaz-ext)
+  if(!grp){alert('Wpisz grupę / gatunek.');return;}
+  if(price<=0){alert('Wpisz cenę większą od 0.');return;}
+  var item={g:grp,n:name,p:price,s:sup};
+  if(cat==='boaz')BOAZ.push(item);
+  else if(cat==='boaz-ext')BOAZ_EXT.push(item);
+  else if(cat==='deski')DESKI.push(item);
+  else if(cat==='konstr')KONSTR.push(item);
+  document.getElementById('add-name').value='';
+  document.getElementById('add-price').value='0';
+  buildPriceTables();
+  savePricesQuiet();
+}
+
+function deleteMaterial(key,idx){
+  if(!confirm('Usunąć ten materiał z listy?'))return;
+  if(key==='boaz')BOAZ.splice(idx,1);
+  else if(key==='boaz-ext')BOAZ_EXT.splice(idx,1);
+  else if(key==='deski')DESKI.splice(idx,1);
+  else if(key==='konstr')KONSTR.splice(idx,1);
+  buildPriceTables();
+  savePricesQuiet();
+}
+
+function togglePriceSection(key){
+  // Try wrapper first (material tables), then direct (glass/led/piece)
+  var el=document.getElementById('price-'+key+'-wrap')||document.getElementById('price-'+key);
+  var tog=document.getElementById('toggle-'+key);
+  if(!el)return;
+  var vis=el.style.display!=='none';
+  el.style.display=vis?'none':'block';
+  if(tog)tog.textContent=vis?'▸ rozwiń':'▾ zwiń';
+  if(!vis){
+    if(key==='led')buildLedPriceTable();
+    if(key==='piece')buildPiecePriceTable();
+    if(key==='boaz'||key==='boaz-ext'||key==='deski'||key==='konstr')buildPriceTables();
+  }
+}
+
+var LED_ITEMS=[
+  {n:'Taśma LED COB 6500K 480 LED 10W 900lm IP65 (24V)',p:41.9,id:'led-1'},
+  {n:'Taśma LED 4000K 120 SMD 2835 10W 950lm IP54 (24V)',p:34.9,id:'led-2'},
+  {n:'Taśma LED COB RGBCCT 5w1 840 LED 16W IP65 (24V)',p:67.0,id:'led-3'},
+  {n:'Taśma LED RGBW +4000K 60 SMD 19W LAKIEROWANA IP54',p:49.86,id:'led-4'},
+  {n:'NEONICA Sauna PRO RGB 600 24V IP68 5m PROFESJONALNA',p:89.2,id:'led-5'},
+  {n:'NEONICA Sauna PRO 600 24V IP68 5m PROFESJONALNA',p:53.5,id:'led-6'},
+  {n:'Zasilacz IP67 24V 1A 24W',p:44.9,id:'zas-1'},
+  {n:'Zasilacz IP67 24V 1.5A 36W',p:63.9,id:'zas-2'},
+  {n:'Zasilacz IP67 24V 1.875A 45W',p:69.9,id:'zas-3'},
+  {n:'Zasilacz IP67 24V 2.5A 60W',p:75.9,id:'zas-4'},
+  {n:'Zasilacz IP67 24V 3.33A 80W',p:89.0,id:'zas-5'},
+  {n:'Zasilacz IP67 24V 4.17A 100W',p:117.0,id:'zas-6'},
+  {n:'Zasilacz XLG MEAN WELL IP67 24V 6.25A 150W',p:169.0,id:'zas-7'},
+  {n:'Zasilacz XLG MEAN WELL IP67 24V 8.33A 200W',p:230.0,id:'zas-8'},
+  {n:'Zasilacz ELG MEAN WELL IP67 24V 10A 240W',p:249.0,id:'zas-9'},
+  {n:'Zasilacz XLG MEAN WELL IP67 24V 312W 13A',p:309.0,id:'zas-10'},
+  {n:'Profil LED aluminiowy (mb)',p:12.45,id:'prof-1'},
+  {n:'Kabel LED (mb)',p:7.9,id:'kab-led-1'},
+];
+
+function buildLedPriceTable(){
+  // merge default + custom
+  var customLed=[];try{customLed=JSON.parse(localStorage.getItem('abm_led_custom')||'[]');}catch(e){}
+  var allLed=LED_ITEMS.concat(customLed);
+
+  var el=document.getElementById('price-led-body');if(!el)return;
+  var html='<table class="price-table"><thead><tr><th>Produkt</th><th>Cena (zł)</th></tr></thead><tbody>';
+  allLed.forEach(function(item){
+    var saved=localStorage.getItem('abm_price_'+item.id);
+    var val=saved?parseFloat(saved):item.p;
+    html+='<tr><td style="font-size:12px">'+item.n+'</td>';
+    html+='<td><input type="number" value="'+val+'" step="0.01" min="0" data-led-id="'+item.id+'" onchange="saveLedPrice(this)" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function saveLedPrice(el){
+  localStorage.setItem('abm_price_'+el.dataset.ledId,el.value);
+}
+
+function buildPiecePriceTable(){
+  var el=document.getElementById('price-piece-body');if(!el)return;
+  var html='<table class="price-table"><thead><tr><th>Model pieca</th><th>Cena EUR</th></tr></thead><tbody>';
+  var lastG='';
+  PIECE.forEach(function(item,i){
+    if(item.g!==lastG){html+='<tr><td class="cat-row" colspan="2">'+item.g+'</td></tr>';lastG=item.g;}
+    var saved=localStorage.getItem('abm_piece_eur_'+i);
+    var val=saved?parseFloat(saved):item.eur;
+    html+='<tr><td style="font-size:12px">'+item.n+'</td>';
+    html+='<td><input type="number" value="'+val+'" step="0.01" min="0" data-piece-idx="'+i+'" onchange="savePieceEur(this)" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>';
+  });
+  html+='</tbody></table><p style="font-size:11px;color:var(--mbm-mid);margin-top:6px">Zapisane ceny EUR są ładowane przy następnym otwarciu pliku.</p>';
+  el.innerHTML=html;
+}
+
+function savePieceEur(el){
+  var idx=parseInt(el.dataset.pieceIdx);
+  var val=parseFloat(el.value)||0;
+  if(PIECE[idx])PIECE[idx].eur=val;
+  localStorage.setItem('abm_piece_eur_'+idx,val);
+  rebP();r();
+}
+
+// Load saved piece EUR prices on init
+function updatePromPrices(){
+  var map={
+    'pr3m':['pp-v3','pp-g3'],
+    'pr5m':['pp-v5','pp-g5'],
+    'pr7m':['pp-v7','pp-g7']
+  };
+  var prices={
+    'pp-v3':parseFloat(document.getElementById('pp-v3')?.value)||660,
+    'pp-v5':parseFloat(document.getElementById('pp-v5')?.value)||710,
+    'pp-v7':parseFloat(document.getElementById('pp-v7')?.value)||765,
+    'pp-g3':parseFloat(document.getElementById('pp-g3')?.value)||900,
+    'pp-g5':parseFloat(document.getElementById('pp-g5')?.value)||960,
+    'pp-g7':parseFloat(document.getElementById('pp-g7')?.value)||960,
+  };
+  // Save
+  Object.keys(prices).forEach(function(k){localStorage.setItem('abm_'+k,prices[k]);});
+  // Update dropdowns
+  ['3','5','7'].forEach(function(w){
+    var sel=document.getElementById('pr'+w+'m');if(!sel)return;
+    var v=parseFloat(prices['pp-v'+w]),g=parseFloat(prices['pp-g'+w]);
+    var moc=w==='3'?350:w==='5'?500:750;
+    sel.options[1].value=v+'|'+moc;sel.options[1].textContent='Vitae '+moc+'W — STANDARD ('+v+' zł)';
+    sel.options[2].value=g+'|'+moc;sel.options[2].textContent='Glass '+moc+'W — PREMIUM ('+g+' zł)';
+  });
+  onProm();
+}
+
+function loadSavedPromPrices(){
+  var keys=['pp-v3','pp-v5','pp-v7','pp-g3','pp-g5','pp-g7'];
+  keys.forEach(function(k){
+    var saved=localStorage.getItem('abm_'+k);
+    if(saved){var el=document.getElementById(k);if(el)el.value=saved;}
+  });
+  if(document.getElementById('pp-v3'))updatePromPrices();
+}
+
+function loadSavedPiecePrices(){
+  PIECE.forEach(function(item,i){
+    var saved=localStorage.getItem('abm_piece_eur_'+i);
+    if(saved)item.eur=parseFloat(saved)||item.eur;
+  });
+}
+
+function syncGlassPrice(type,val){}
+
+function savePricesQuiet(){
+  try{
+    localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));
+    localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
+    localStorage.setItem('abm_deski',JSON.stringify(DESKI));
+    localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
+    mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
+    mkSelBZ();
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
+    mkSelG('k1m',KONSTR);
+  }catch(e){}
+}
+
+function savePrices(){
+  try{
+    localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));
+    localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
+    localStorage.setItem('abm_deski',JSON.stringify(DESKI));
+    localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
+    mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
+    mkSelBZ();
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
+    mkSelG('k1m',KONSTR);
+    alert('Ceny zapisane! Dropdowny w kalkulatorze zostaly zaktualizowane.');
+  }catch(e){alert('Blad zapisu: '+e.message);}
+}
+
+function resetPrices(){
+  if(!confirm('Przywrocic domyslne ceny? Twoje zmiany zostana utracone.'))return;
+  try{
+    localStorage.removeItem('abm_boaz');localStorage.removeItem('abm_boaz_ext');
+    localStorage.removeItem('abm_deski');localStorage.removeItem('abm_konstr');
+    BOAZ=JSON.parse(JSON.stringify(DEFAULT_BOAZ));DESKI=JSON.parse(JSON.stringify(DEFAULT_DESKI));
+    KONSTR=JSON.parse(JSON.stringify(DEFAULT_KONSTR));BOAZ_EXT=[];
+    mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
+    mkSelBZ();
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('k1m',KONSTR);
+    buildPriceTables();
+    alert('Ceny przywrocone do domyslnych.');
+  }catch(e){}
+}
+
+// ===== USTAWIENIA / LOGO =====
+function uploadLogo(event){
+  var file=event.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      localStorage.setItem('abm_logo',e.target.result);
+      showLogoPreview(e.target.result);
+      syncSaveLogo(e.target.result);
+      alert('Logo zapisane i zsynchronizowane z chmurą!');
+    }catch(ex){alert('Blad: '+ex.message);}
+  };
+  reader.readAsDataURL(file);
+}
+
+function showLogoPreview(src){
+  var lp=document.getElementById('logo-preview');var li=document.getElementById('logo-img');
+  if(lp&&li){li.src=src;lp.style.display='block';}
+}
+
+function removeLogo(){
+  try{localStorage.removeItem('abm_logo');var lp=document.getElementById('logo-preview');if(lp)lp.style.display='none';alert('Logo usuniete.');}catch(e){}
+}
+
+function loadSettings(){
+  try{
+    var logo=localStorage.getItem('abm_logo');if(logo)showLogoPreview(logo);
+    var fn=localStorage.getItem('abm_firm');
+    if(fn){var fd=JSON.parse(fn);
+      ['firm-name','firm-tel','firm-email','firm-www'].forEach(function(id){
+        var key=id.replace('firm-','');var el=document.getElementById(id);if(el&&fd[key])el.value=fd[key];
+      });}
+  }catch(e){}
+}
+
+function saveFirmData(){
+  try{
+    var fd={name:gs('firm-name'),tel:gs('firm-tel'),email:gs('firm-email'),www:gs('firm-www')};
+    localStorage.setItem('abm_firm',JSON.stringify(fd));
+  }catch(e){}
+  syncSaveFirma();
+}
+
+// ===== EKSPORT CSV =====
+function exportCSV(){
+  var s=STATE;if(!s||!s.klient){alert('Uzupelnij kalkulator najpierw.');return;}
+  var rows=[['Klient',s.klient],['Data',new Date().toLocaleDateString('pl-PL')],['Typ',s.isZ?'Zewnetrzna':'Wewnetrzna'],['Opis',s.opis||''],
+    ['',''],['SEKCJA','WARTOSC SPRZEDAZY'],
+    ['1. Wykończenie',s.s1],['2. Konstrukcja',s.s2],['3. Szklenie',s.szkP],['4. Premium',s.prmP],['5. Ogrzewanie',s.grzP],['6. LED',s.ledP],['7. Audio',s.audP],['8. Logistyka',s.logist],
+    ['',''],['Koszt materialow',s.totalK],['Zysk na materialach',s.zysk],['Niekontrolowane wydatki',s.nkw],['CENA NETTO',s.netto],['CENA BRUTTO (VAT '+s.vat+'%)',s.brutto]
+  ];
+  var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='wycena_'+s.klient.replace(/\s+/g,'_')+'_'+new Date().toLocaleDateString('pl-PL').replace(/\./g,'-')+'.csv';
+  a.click();URL.revokeObjectURL(url);
+}
+
+function toggleCurr(){
+  CURR=CURR==='PLN'?'EUR':'PLN';
+  var btn=document.getElementById('curr-btn');
+  if(btn)btn.textContent=CURR==='PLN'?'€ EUR':'zł PLN';
+  buildClient();
+}
+
+function toggleLang(){
+  LANG=LANG==='PL'?'EN':'PL';
+  var btn=document.getElementById('lang-btn');
+  if(btn)btn.textContent=LANG==='PL'?'EN':'PL';
+  buildClient();
+}
+
+function printPDF(){
+  // Make sure client view is visible before printing
+  showTab('client');
+  buildClient();
+  setTimeout(function(){window.print();}, 300);
+}
+
+// ===== INIT =====
+
+// fix gs function (closure issue above)
+function gs(id){var el=document.getElementById(id);if(!el)return '';return el.value||'';}
+
+loadPrices();
+mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
+mkSelBZ();
+mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
+mkSelG('k1m',KONSTR);
+rebP();r();
+initVslots();
+loadSavedPiecePrices();loadSavedPromPrices();
+// Init Supabase
+initSupabase();
+syncLoad();
+
+// Zero clearing on number inputs
+document.addEventListener('focus', function(e){
+  if(e.target && e.target.type==='number'){
+    var v=parseFloat(e.target.value);
+    if(v===0||e.target.value==='0'){
+      e.target.value='';
+      e.target.dataset.wasZero='1';
+    }
+  }
+}, true);
+document.addEventListener('blur', function(e){
+  if(e.target && e.target.type==='number'){
+    if(e.target.value===''||e.target.value===null){
+      e.target.value='0';
+      r();
+    }
+    delete e.target.dataset.wasZero;
+  }
+}, true);
+
+function closeModal(){document.getElementById('quote-modal').classList.remove('on');}
+
+function showQuoteModal(entry){
+  if(!entry)return;
+  var s=null;
+  // Case 1: raw STATE object passed directly (has klient property)
+  if(entry.klient!==undefined){
+    s=entry;
+  // Case 2: history entry with state as JSON string
+  } else if(entry.state){
+    try{s=JSON.parse(entry.state);}catch(e){s=null;}
+  // Case 3: Supabase row with data object
+  } else if(entry.data){
+    s=typeof entry.data==='string'?JSON.parse(entry.data):entry.data;
+  }
+  // Fallback: use entry itself
+  if(!s||!s.netto)s=entry;
+  if(!s)return;
+
+  var typName=s.typ==='F'?'Fińska':s.typ==='I'?'Infrared':'Combi';
+  var saunaType=(s.isZ?'Zewnętrzna':'Wewnętrzna')+' '+typName;
+  var dateStr=entry.date||new Date(entry.created_at||Date.now()).toLocaleDateString('pl-PL');
+
+  document.getElementById('modal-title').textContent=s.klient+' — '+dateStr;
+  document.getElementById('modal-netto').textContent=f(s.netto)+' zł';
+  document.getElementById('modal-brutto-lbl').textContent='Cena brutto (VAT '+s.vat+'%)';
+  document.getElementById('modal-brutto').textContent=f(s.brutto)+' zł';
+
+  function row(label,val){
+    if(!val||val==='0'||val===0)return'<div class="modal-row"><span class="modal-label">'+label+'</span><span class="modal-nie">—</span></div>';
+    return'<div class="modal-row"><span class="modal-label">'+label+'</span><span class="modal-val">'+val+'</span></div>';
+  }
+  function rowPrice(label,val,price){
+    if(!val||val===0)return'<div class="modal-row"><span class="modal-label">'+label+'</span><span class="modal-nie">—</span></div>';
+    return'<div class="modal-row"><span class="modal-label">'+label+'</span><span class="modal-price">'+f(price)+' zł</span></div>';
+  }
+  function sec(t){return'<div class="modal-sec">'+t+'</div>';}
+  function yn(label,yes){return'<div class="modal-row"><span class="modal-label">'+label+'</span><span class="'+(yes?'modal-val':'modal-nie')+'">'+(yes?'TAK':'NIE')+'</span></div>';}
+
+  var html='';
+  html+='<div class="modal-row" style="padding:8px 0 12px"><span class="modal-label">Typ sauny</span><span class="modal-val">'+saunaType+(s.opis?' — '+s.opis:'')+'</span></div>';
+
+  html+=sec('Wykończenie');
+  if(s.b1&&s.b1.q>0)html+=row('Boazeria wewnętrzna',s.b1.name+'  ×'+s.b1.q+' szt.');
+  if(s.b2&&s.b2.q>0)html+=row('Boazeria wewnętrzna (2)',s.b2.name+'  ×'+s.b2.q+' szt.');
+  if(!s.isZ&&s.zb1&&s.zb1.q>0)html+=row('Zabudowa nad sauną',s.zb1.name+'  ×'+s.zb1.q+' szt.');
+  if(s.isZ&&s.bzq>0)html+=row('Boazeria zewnętrzna',s.bzn+'  ×'+s.bzq+' szt.');
+  if(s.l1&&s.l1.q>0)html+=row('Ławki i oparcia',s.l1.name+'  ×'+s.l1.q+' szt.');
+  if(s.l2&&s.l2.q>0)html+=row('Ławki (2)',s.l2.name+'  ×'+s.l2.q+' szt.');
+  if(s.katq>0)html+=row('Kątowniki olcha',s.katq+' szt.');
+  html+=row('Szklenie',s.szkt&&s.szkm>0?s.szkt+' — '+s.szkm+' m²':'—');
+
+  html+=sec('Konstrukcja');
+  if(s.k1&&s.k1.q>0)html+=row('Drewno konstrukcyjne',s.k1.name+'  ×'+s.k1.q+' szt.');
+  html+=row('Folia paraizolacyjna',s.folq>0?s.folq+' rolek':0);
+  html+=row('Taśma para',s.tasq>0?s.tasq+' szt.':0);
+  html+=row('Wełna',s.welq>0?s.welq+' m²':0);
+  html+=row('Kabel do pieca',s.kabq>0?s.kabq+' mb':0);
+  html+=row('Anemostat',s.anoq>0?s.anoq+' szt.':0);
+  if(s.isZ&&s.bshq>0)html+=row('BSH 100×100',s.bshq+' mb');
+
+  html+=sec('Szklenie i wyposażenie premium');
+  html+=row('Zawiasy',s.zawq>0?s.zawq+' szt.':0);
+  html+=yn('Klamka / antaba',s.klamkaVal>0);
+  html+=yn('Drzwi do sauny',s.drzwiVal>0);
+  html+=yn('Ściana dekoracyjna z kamienia',s.scd&&parseFloat(s.scd)>0);
+
+  html+=sec('Ogrzewanie');
+  if(s.piec&&s.piec.cena>0){
+    var piecModel=s.piec.name?s.piec.name.split('--')[0].split('—')[0].trim():'Nieznany model';
+    html+=row('Piec — model',piecModel);
+    html+=row('Piec — cena zakupu',f(s.piec.cena)+' zł');
+  }
+  html+=row('Kamienie Diabez',s.kamd>0?s.kamd+' paczek':0);
+  html+=row('Kamienie szare okrągłe',s.kams>0?s.kams+' szt.':0);
+  html+=yn('Osłona na piec',s.osl>0);
+  if(s.typ!=='F'){
+    html+=row('Promienniki 350W',s.pr3>0?s.pr3+' szt.':0);
+    html+=row('Promienniki 500W',s.pr5>0?s.pr5+' szt.':0);
+    html+=row('Promienniki 750W',s.pr7>0?s.pr7+' szt.':0);
+  }
+  if(s.sterVal>0){
+    var sterLabel='Sterownik FFES';
+    if(s.sterModel&&s.sterModel!=='0'){var sp=s.sterSer==='Cmini'?'C mini ':s.sterSer==='C'?'C ':'Z ';sterLabel+=' '+sp+s.sterModel;}
+    html+=rowPrice(sterLabel,true,s.sterVal);
+  }
+  html+=yn('WiFi',s.wifi);html+=yn('Bluetooth',s.bt);html+=yn('System awaryjny',s.aw);
+
+  html+=sec('LED i audio');
+  if(s.ledtVal>0&&s.ledq>0)html+=row('Taśma LED',s.ledt+' × '+s.ledq+' mb');
+  html+=row('Profil LED',s.profq>0?s.profq+' mb':0);
+  html+=yn('Zasilacz LED',s.zasilVal>0);html+=yn('Sterownik LED',s.lsttVal>0);
+  html+=row('Kabel LED',s.kabLed>0?s.kabLed+' mb':0);
+  html+=yn('Nagłośnienie',s.audtVal>0);
+
+  html+=sec('Logistyka i dodatki');
+  html+=row('Transport i montaż',s.transport>0?f(s.transport)+' zł':0);
+  html+=row('Dostawa drewna',s.dostawa>0?f(s.dostawa)+' zł':0);
+  html+=row('Projekt 2D',s.projekt>0?f(s.projekt)+' zł':0);
+  html+=row('Roboczogodziny',s.godz>0?s.godz+'h × 60 zł':0);
+  html+=yn('Ściana solna',s.solC>0);html+=yn('Aromaterapia',s.aromC>0);
+  html+=yn('Cebrzyk i chochla',s.akcC>0);html+=yn('Klepsydra',s.klepC>0);
+
+  html+=sec('Marże i parametry');
+  html+=row('Kurs EUR',s.eur?' 1 EUR = '+s.eur+' zł':0);
+  html+=row('Marża konstr./wykończ.',s.mk?Math.round((parseFloat(s.mk)-1)*100)+'%':'—');
+  html+=row('Marża grzanie',s.mg?Math.round((s.mg-1)*100)+'%':0);
+  html+=row('Marża LED/audio',s.ml?Math.round((s.ml-1)*100)+'%':0);
+  html+=row('Zysk na materiałach',s.zysk?f(s.zysk)+' zł':0);
+  html+=row('Niekontrolowane wydatki',s.nkw?f(s.nkw)+' zł':0);
+
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('quote-modal').classList.add('on');
+}
+
+
+// ===== KOSZTY RZECZYWISTE =====
+var ACTUAL_DATA = {}; // key: itemId, value: {qty, price}
+
+function buildActual(reload){
+  var s = STATE;
+  var actTitle = document.getElementById('act-title');
+  if(actTitle) actTitle.textContent = s.klient || '—';
+
+  // Load saved actual data only on explicit reload (tab open), not on field change
+  if(reload !== false){
+    try { ACTUAL_DATA = JSON.parse(localStorage.getItem('abm_actual_'+((s.klient||'').replace(/\s+/g,'_'))) || '{}'); } catch(e){ ACTUAL_DATA = {}; }
+  }
+
+  // Build order rows same as buildOrder but with editable actual fields
+  var rows = [];
+  function add(cat, name, qty, unit, price, id){
+    if(qty > 0 && name && name.indexOf('wybierz') < 0)
+      rows.push({cat:cat, name:name, qty:qty, unit:unit||'szt.', price:price, koszt:Math.round(qty*price), id:id||name.replace(/\s+/g,'_').slice(0,20)});
+  }
+
+  if(s && s.b1){
+    add('Boazeria', s.b1.name, s.b1.q, 'szt.', gv('b1m'), 'b1');
+    add('Boazeria', s.b2.name, s.b2.q, 'szt.', gv('b2m'), 'b2');
+    if(!s.isZ) add('Zabudowa', s.zb1.name, s.zb1.q, 'szt.', gv('zb1m'), 'zb1');
+    if(s.isZ && s.bzq > 0) add('Boazeria zewnętrzna', s.bzn, s.bzq, 'szt.', s.bzp, 'bzn');
+    add('Ławki', s.l1.name, s.l1.q, 'szt.', gv('l1m'), 'l1');
+    add('Ławki', s.l2.name, s.l2.q, 'szt.', gv('l2m'), 'l2');
+    if(s.katq > 0) add('Wykończenie', 'Kątownik', s.katq, 'szt.', gv('kat-cena')||30, 'kat');
+    add('Konstrukcja', s.k1.name, s.k1.q, 'szt.', gv('k1m'), 'k1');
+    if(s.isZ && s.bshq > 0) add('Konstrukcja', 'BSH 100x100', s.bshq, 'mb', 36.25, 'bsh');
+    if(s.folq > 0) add('Izolacja', 'Folia paraizolacyjna', s.folq, 'rolek', 4, 'fol');
+    if(s.tasq > 0) add('Izolacja', 'Taśma do folii para', s.tasq, 'szt.', 20, 'tas');
+    if(s.welq > 0) add('Izolacja', 'Wełna '+(s.isZ?'100mm':'40mm'), s.welq, 'm²', s.isZ?23:8.5, 'wel');
+    if(s.anoq > 0) add('Wentylacja', 'Anemostat', s.anoq, 'szt.', s.anop, 'ano');
+    if(s.kabq > 0) add('Instalacja', 'Kabel do pieca', s.kabq, 'mb', 20, 'kab');
+    if(s.isZ){
+      if(s.dachq>0) add('Dach', 'Materiał dachowy', s.dachq, 'm²', 60, 'dach');
+      if(s.rynq>0) add('Dach', 'Rynny', s.rynq, 'kpl.', 1322, 'ryn');
+      if(s.podq>0) add('Podłoga', 'Podłoga zewnętrzna', s.podq, 'm²', 140, 'pod');
+      if(s.plyq>0) add('Fundament', 'Płyta betonowa', s.plyq, 'szt.', 221.65, 'ply');
+      if(s.styq>0) add('Fundament', 'Styrodur 100mm', s.styq, 'm²', 49.4, 'sty');
+    }
+    if(s.typ!=='I' && s.piec && s.piec.cena > 0) add('Piec', s.piec.name.split('--')[0].trim(), 1, 'szt.', s.piec.cena, 'piec');
+    if(s.kamd > 0) add('Kamienie', 'Kamienie Diabez', s.kamd, 'paczki', 50, 'kamd');
+    if(s.kams > 0) add('Kamienie', 'Kamienie szare', s.kams, 'szt.', 130, 'kams');
+    if(s.osl > 0) add('Piec', 'Osłona na piec', 1, 'szt.', s.osl, 'osl');
+    if(s.typ!=='F'){
+      if(s.pr3>0) add('Promienniki', 'Promienniki 350W', s.pr3, 'szt.', parseFloat((s.pr3m||'660|350').split('|')[0])||660, 'pr3');
+      if(s.pr5>0) add('Promienniki', 'Promienniki 500W', s.pr5, 'szt.', parseFloat((s.pr5m||'710|500').split('|')[0])||710, 'pr5');
+      if(s.pr7>0) add('Promienniki', 'Promienniki 750W', s.pr7, 'szt.', parseFloat((s.pr7m||'765|750').split('|')[0])||765, 'pr7');
+    }
+    if(s.sterVal > 0) add('Sterownik', 'Sterownik FFES', 1, 'szt.', s.sterVal, 'ster');
+    if(s.wifi) add('Sterownik', 'Moduł WiFi', 1, 'szt.', 400, 'wifi');
+    if(s.bt) add('Sterownik', 'Moduł BT', 1, 'szt.', 300, 'bt');
+    if(s.ledtVal > 0 && s.ledq > 0) add('LED', 'Taśma LED', s.ledq, 'mb/szt.', s.ledtVal, 'led');
+    if(s.profq > 0) add('LED', 'Profil LED', s.profq, 'mb', 12.45, 'prof');
+    if(s.zasilVal > 0) add('LED', 'Zasilacz LED', 1, 'szt.', s.zasilVal, 'zasil');
+    if(s.audtVal > 0) add('Audio', 'Nagłośnienie', 1, 'kpl.', s.audtVal, 'aud');
+    if(s.solC > 0) add('Dodatki', 'Ściana solna', 1, 'szt.', s.solC, 'sol');
+    if(s.aromC > 0) add('Dodatki', 'Aromaterapia', 1, 'szt.', s.aromC, 'arom');
+    if(s.akcC > 0) add('Dodatki', 'Cebrzyk i chochla', 1, 'kpl.', s.akcC, 'akc');
+    if(s.klepC > 0) add('Dodatki', 'Klepsydra', 1, 'szt.', s.klepC, 'klep');
+  }
+
+  if(rows.length === 0){
+    document.getElementById('act-body').innerHTML = '<p style="color:#999;font-size:12px">Uzupełnij kalkulator najpierw.</p>';
+    return;
+  }
+
+  var cats = {};
+  rows.forEach(function(r){ if(!cats[r.cat]) cats[r.cat]=[]; cats[r.cat].push(r); });
+
+  var totalEst = rows.reduce(function(a,r){ return a+r.koszt; }, 0);
+  var totalReal = 0;
+  rows.forEach(function(r){
+    var d = ACTUAL_DATA[r.id] || {};
+    var aq = d.qty !== undefined ? d.qty : r.qty;
+    var ap = d.price !== undefined ? d.price : r.price;
+    totalReal += Math.round(aq * ap);
+  });
+  // Note: totalEst and totalReal are updated again by extraRow() calls
+  // so we compute diff/pct for summary cards AFTER html is built
+  var _preEst = totalEst, _preReal = totalReal;
+  // Summary cards updated after table build (extraRow modifies totals)
+  // Build table
+  var html = '<table class="act-table"><thead><tr>'
+    + '<th>Materiał</th><th>Wycena<br>ilość</th><th>Wycena<br>cena/szt.</th><th>Wycena<br>koszt</th>'
+    + '<th>Faktura<br>ilość</th><th>Faktura<br>cena/szt.</th><th>Faktura<br>koszt</th>'
+    + '<th>Różnica</th></tr></thead><tbody>';
+
+  Object.keys(cats).forEach(function(cat){
+    html += '<tr><td class="act-cat" colspan="8">' + cat + '</td></tr>';
+    cats[cat].forEach(function(r){
+      var d = ACTUAL_DATA[r.id] || {};
+      var aq = d.qty !== undefined ? d.qty : r.qty;
+      var ap = d.price !== undefined ? d.price : r.price;
+      var realCost = Math.round(aq * ap);
+      var diff2 = realCost - r.koszt;
+      var diffCls = diff2 > 50 ? 'act-over' : diff2 < -50 ? 'act-ok' : 'act-under';
+      var diffTxt = (diff2 >= 0 ? '+' : '') + f(diff2) + ' zł';
+      html += '<tr>'
+        + '<td style="font-size:11px">' + r.name.slice(0,35) + (r.name.length>35?'…':'') + '</td>'
+        + '<td style="text-align:right">' + r.qty + ' ' + r.unit + '</td>'
+        + '<td style="text-align:right">' + r.price.toFixed(2) + ' zł</td>'
+        + '<td style="text-align:right;font-weight:500">' + f(r.koszt) + ' zł</td>'
+        + '<td style="text-align:center"><input class="act-input" type="number" value="' + aq + '" min="0" step="0.01" data-id="' + r.id + '" data-field="qty" onchange="updateActual(this)"></td>'
+        + '<td style="text-align:center"><input class="act-input" type="number" value="' + ap.toFixed(2) + '" min="0" step="0.01" data-id="' + r.id + '" data-field="price" onchange="updateActual(this)"></td>'
+        + '<td style="text-align:right;font-weight:500">' + f(realCost) + ' zł</td>'
+        + '<td style="text-align:right" class="' + diffCls + '">' + diffTxt + '</td>'
+        + '</tr>';
+    });
+  });
+
+  // Extra cost rows (transport, montaz, niespodziewane)
+  function extraRow(label, id, estVal){
+    var d = ACTUAL_DATA[id] || {};
+    var aq = d.qty !== undefined ? d.qty : 1;
+    var ap = d.price !== undefined ? d.price : estVal;
+    var realCost = Math.round(aq * ap);
+    var estCost = Math.round(estVal);
+    var diff2 = realCost - estCost;
+    var diffCls = diff2 > 50 ? 'act-over' : diff2 < -50 ? 'act-ok' : 'act-under';
+    totalReal += realCost;
+    totalEst += estCost;
+    return '<tr style="background:var(--mbm-palest)">'
+      + '<td style="font-size:12px;font-style:italic">' + label + '</td>'
+      + '<td></td><td style="text-align:right">' + estVal.toFixed(2) + ' zł</td>'
+      + '<td style="text-align:right;font-weight:500">' + f(estCost) + ' zł</td>'
+      + '<td style="text-align:center"><input class="act-input" type="number" value="' + aq + '" min="0" step="1" data-id="' + id + '" data-field="qty" onchange="updateActual(this)" style="width:50px"></td>'
+      + '<td style="text-align:center"><input class="act-input" type="number" value="' + ap.toFixed(2) + '" min="0" step="1" data-id="' + id + '" data-field="price" onchange="updateActual(this)"></td>'
+      + '<td style="text-align:right;font-weight:500" id="act-cell-' + id + '">' + f(realCost) + ' zł</td>'
+      + '<td style="text-align:right" class="' + diffCls + '" id="act-diff-' + id + '">' + (diff2>=0?'+':'') + f(diff2) + ' zł</td>'
+      + '</tr>';
+  }
+
+  html += '<tr><td class="act-cat" colspan="8">Projekt i logistyka</td></tr>';
+  html += extraRow('Transport i montaż', 'extra_transport', s.transport||0);
+  html += extraRow('Dostawa drewna i materiałów', 'extra_dostawa', s.dostawa||0);
+  html += extraRow('Projekt 2D / wizualizacja', 'extra_projekt', s.projekt||0);
+  html += extraRow('Roboczogodziny ('+( s.godz||0)+'h × 60 zł)', 'extra_roboczo', s.godz ? s.godz*60 : 0);
+  html += extraRow('Niekontrolowane wydatki (wycena: 10% kosztów)', 'extra_nkw', s.nkw||0);
+  html += extraRow('Niespodziewane wydatki (faktyczne)', 'extra_niespodziewane', 0);
+
+  // Totals row
+  var diff = totalReal - totalEst;
+  html += '<tr style="background:var(--mbm-dark);color:#fff;font-weight:500">'
+    + '<td colspan="3" style="padding:8px;color:#fff">SUMA CAŁKOWITA</td>'
+    + '<td style="text-align:right;padding:8px;color:#fff">' + f(totalEst) + ' zł</td>'
+    + '<td colspan="2" style="text-align:right;padding:8px;color:rgba(255,255,255,0.7)">Faktycznie</td>'
+    + '<td style="text-align:right;padding:8px;color:#fff">' + f(totalReal) + ' zł</td>'
+    + '<td style="text-align:right;padding:8px" class="' + (diff>0?'act-over':diff<0?'act-ok':'act-under') + '" id="act-total-diff">'
+    + (diff>=0?'+':'') + f(diff) + ' zł</td>'
+    + '</tr></tbody></table>';
+
+  document.getElementById('act-body').innerHTML = html;
+
+  // Update summary cards with final totals (including extra rows)
+  var finalDiff = totalReal - totalEst;
+  var finalPct = totalEst > 0 ? Math.round(finalDiff/totalEst*100) : 0;
+  var estEl2 = document.getElementById('act-est');
+  var realEl2 = document.getElementById('act-real');
+  var diffEl2 = document.getElementById('act-diff');
+  var pctEl2 = document.getElementById('act-pct');
+  if(estEl2) estEl2.textContent = f(totalEst) + ' zł';
+  if(realEl2) realEl2.textContent = f(totalReal) + ' zł';
+  if(diffEl2){ diffEl2.textContent=(finalDiff>=0?'+':'')+f(finalDiff)+' zł'; diffEl2.className='act-sv '+(finalDiff>0?'act-over':finalDiff<0?'act-ok':''); }
+  if(pctEl2){ pctEl2.textContent=(finalPct>=0?'+':'')+finalPct+'%'; pctEl2.className='act-sv '+(finalPct>5?'act-over':finalPct<-5?'act-ok':'act-under'); }
+}
+
+function updateActual(el){
+  var id = el.dataset.id;
+  var field = el.dataset.field;
+  var val = parseFloat(el.value) || 0;
+  if(!ACTUAL_DATA[id]) ACTUAL_DATA[id] = {};
+  ACTUAL_DATA[id][field] = val;
+  recalcActualRow(id);
+}
+
+function recalcActualRow(id){
+  // Find all inputs with this id and get current qty+price
+  var qtyEl = document.querySelector('.act-input[data-id="'+id+'"][data-field="qty"]');
+  var priceEl = document.querySelector('.act-input[data-id="'+id+'"][data-field="price"]');
+  if(!qtyEl || !priceEl) return;
+
+  var qty = parseFloat(qtyEl.value) || 0;
+  var price = parseFloat(priceEl.value) || 0;
+  var realCost = Math.round(qty * price);
+
+  // Update Faktura koszt cell (6th td in the row = index 6)
+  var row = qtyEl.closest('tr');
+  if(!row) return;
+  var cells = row.querySelectorAll('td');
+  if(cells.length >= 8){
+    // Faktura koszt = cells[6], Różnica = cells[7]
+    var estCost = parseInt((cells[3].textContent||'0').replace(/[^0-9-]/g,'')) || 0;
+    var diff = realCost - estCost;
+    var diffCls = diff > 50 ? 'act-over' : diff < -50 ? 'act-ok' : 'act-under';
+
+    cells[6].textContent = f(realCost) + ' zł';
+    cells[7].textContent = (diff>=0?'+':'') + f(diff) + ' zł';
+    cells[7].className = diffCls;
+  }
+
+  // Update summary cards
+  recalcActualSummary();
+}
+
+function recalcActualSummary(){
+  var totalReal = 0;
+  var totalEst = 0;
+
+  document.querySelectorAll('#act-body tr').forEach(function(row){
+    var cells = row.querySelectorAll('td');
+    if(cells.length >= 8 && !row.querySelector('td.act-cat')){
+      // Get estimated cost (cells[3])
+      var est = parseInt((cells[3].textContent||'0').replace(/[^0-9]/g,'')) || 0;
+      // Get actual cost (cells[6])
+      var real = parseInt((cells[6].textContent||'0').replace(/[^0-9]/g,'')) || 0;
+      totalEst += est;
+      totalReal += real;
+    }
+  });
+
+  var diff = totalReal - totalEst;
+  var pct = totalEst > 0 ? Math.round(diff/totalEst*100) : 0;
+
+  var estEl = document.getElementById('act-est');
+  var realEl = document.getElementById('act-real');
+  var diffEl = document.getElementById('act-diff');
+  var pctEl = document.getElementById('act-pct');
+
+  if(estEl) estEl.textContent = f(totalEst) + ' zł';
+  if(realEl) realEl.textContent = f(totalReal) + ' zł';
+  if(diffEl){
+    diffEl.textContent = (diff>=0?'+':'') + f(diff) + ' zł';
+    diffEl.className = 'act-sv ' + (diff > 0 ? 'act-over' : diff < 0 ? 'act-ok' : '');
+  }
+  if(pctEl){
+    pctEl.textContent = (pct>=0?'+':'') + pct + '%';
+    pctEl.className = 'act-sv ' + (pct > 5 ? 'act-over' : pct < -5 ? 'act-ok' : 'act-under');
+  }
+
+  // Update totals row
+  var totRow = document.querySelector('#act-body tr:last-child');
+  if(totRow){
+    var totCells = totRow.querySelectorAll('td');
+    if(totCells.length >= 8){
+      totCells[3].textContent = f(totalEst) + ' zł';
+      totCells[6].textContent = f(totalReal) + ' zł';
+      totCells[7].textContent = (diff>=0?'+':'') + f(diff) + ' zł';
+      totCells[7].className = diff>0?'act-over':diff<0?'act-ok':'act-under';
+    }
+  }
+}
+
+function saveActual(){
+  var nameEl = document.getElementById('act-save-name');
+  var name = (nameEl ? nameEl.value.trim() : '') || (STATE.klient ? STATE.klient + ' — ' + new Date().toLocaleDateString('pl-PL') : 'Projekt ' + new Date().toLocaleDateString('pl-PL'));
+
+  // Compute totals
+  var totalEst = 0, totalReal = 0;
+  document.querySelectorAll('#act-body tr').forEach(function(row){
+    var cells = row.querySelectorAll('td');
+    if(cells.length >= 8 && !row.querySelector('td.act-cat') && !row.querySelector('.act-input')){} // skip
+    if(cells.length >= 8 && row.querySelector('.act-input')){
+      totalEst += parseInt((cells[3].textContent||'0').replace(/[^0-9]/g,''))||0;
+      totalReal += parseInt((cells[6].textContent||'0').replace(/[^0-9]/g,''))||0;
+    }
+  });
+  var diff = totalReal - totalEst;
+  var pct = totalEst > 0 ? Math.round(diff/totalEst*100) : 0;
+
+  var entry = {
+    id: Date.now(),
+    name: name,
+    date: new Date().toLocaleDateString('pl-PL'),
+    klient: STATE.klient || '',
+    totalEst: totalEst,
+    totalReal: totalReal,
+    diff: diff,
+    pct: pct,
+    data: JSON.parse(JSON.stringify(ACTUAL_DATA)),
+    state: STATE ? JSON.parse(JSON.stringify(STATE)) : null
+  };
+
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem('abm_actual_history') || '[]'); } catch(e){}
+  hist.unshift(entry);
+  if(hist.length > 50) hist = hist.slice(0, 50);
+  localStorage.setItem('abm_actual_history', JSON.stringify(hist));
+
+  var nameDisp = document.getElementById('act-active-name');
+  if(nameDisp) nameDisp.textContent = name;
+  if(nameEl) nameEl.value = '';
+
+  alert('Zapisano: ' + name);
+  if(document.getElementById('actual-hist-wrap') && document.getElementById('actual-hist-wrap').style.display !== 'none'){
+    buildActualHistory();
+  }
+}
+
+function clearActual(){
+  if(!confirm('Wyczyścić wszystkie faktycznie wpisane wartości? (Wycena pozostanie bez zmian)')) return;
+  ACTUAL_DATA = {};
+  buildActual(false);
+  var nameDisp = document.getElementById('act-active-name');
+  if(nameDisp) nameDisp.textContent = '—';
+}
+
+function exportActualCSV(){
+  var s = STATE;
+  var rows = [['Materiał','Wycena ilość','Wycena cena','Wycena koszt','Faktura ilość','Faktura cena','Faktura koszt','Różnica']];
+  document.querySelectorAll('#act-body tr:not(.act-cat)').forEach(function(tr){
+    var cells = tr.querySelectorAll('td');
+    if(cells.length >= 8){
+      rows.push([
+        cells[0].textContent.trim(),
+        cells[1].textContent.trim(),
+        cells[2].textContent.trim(),
+        cells[3].textContent.trim(),
+        (tr.querySelector('input[data-field="qty"]')||{}).value||'',
+        (tr.querySelector('input[data-field="price"]')||{}).value||'',
+        cells[6].textContent.trim(),
+        cells[7].textContent.trim()
+      ]);
+    }
+  });
+  var csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');
+  var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href=url; a.download='koszty_rzeczywiste_'+(s.klient||'projekt').replace(/\s+/g,'_')+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+
+
+function toggleActualHistory(){
+  var wrap = document.getElementById('actual-hist-wrap');
+  var tog = document.getElementById('actual-hist-toggle');
+  if(!wrap) return;
+  var vis = wrap.style.display !== 'none';
+  wrap.style.display = vis ? 'none' : 'block';
+  if(tog) tog.textContent = vis ? '▸ rozwiń' : '▾ zwiń';
+  if(!vis) buildActualHistory();
+}
+
+function buildActualHistory(){
+  var container = document.getElementById('actual-hist-list');
+  if(!container) return;
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem('abm_actual_history') || '[]'); } catch(e){}
+  if(hist.length === 0){
+    container.innerHTML = '<p style="font-size:12px;color:var(--mbm-mid)">Brak zapisanych projektów.</p>';
+    return;
+  }
+  var html = '';
+  hist.forEach(function(e){
+    var diffCls = e.diff > 0 ? 'color:#791F1F' : e.diff < 0 ? 'color:#27500A' : 'color:#666';
+    var diffTxt = (e.diff >= 0 ? '+' : '') + f(e.diff) + ' zł (' + (e.pct >= 0 ? '+' : '') + e.pct + '%)';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--mbm-pale);gap:8px;flex-wrap:wrap">';
+    html += '<div>';
+    html += '<div style="font-weight:500;font-size:13px">' + e.name + '</div>';
+    html += '<div style="font-size:11px;color:var(--mbm-mid);margin-top:2px">' + e.date + (e.klient?' | '+e.klient:'') + '</div>';
+    html += '<div style="font-size:12px;margin-top:3px">Wycena: <strong>' + f(e.totalEst) + ' zł</strong> | Faktura: <strong>' + f(e.totalReal) + ' zł</strong> | <span style="' + diffCls + ';font-weight:500">' + diffTxt + '</span></div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+    html += '<button class="btn" onclick="loadActualEntry(' + e.id + ')">Wczytaj</button>';
+    html += '<button class="hist-del" onclick="deleteActualEntry(' + e.id + ')" title="Usuń">×</button>';
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+function loadActualEntry(id){
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem('abm_actual_history') || '[]'); } catch(e){}
+  var entry = hist.find(function(e){ return e.id === id; });
+  if(!entry){ alert('Nie znaleziono projektu.'); return; }
+
+  // Load state to calc if available
+  if(entry.state && entry.state.klient){
+    loadToCalc(entry.state);
+  }
+
+  // Load actual data
+  ACTUAL_DATA = entry.data || {};
+
+  // Set active name
+  var nameDisp = document.getElementById('act-active-name');
+  if(nameDisp) nameDisp.textContent = entry.name;
+
+  // Rebuild
+  buildActual(false);
+
+  // Scroll to table
+  var actBody = document.getElementById('act-body');
+  if(actBody) actBody.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function deleteActualEntry(id){
+  if(!confirm('Usunąć ten projekt z historii?')) return;
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem('abm_actual_history') || '[]'); } catch(e){}
+  hist = hist.filter(function(e){ return e.id !== id; });
+  localStorage.setItem('abm_actual_history', JSON.stringify(hist));
+  buildActualHistory();
+}
+
+</script>
+
+<!-- MODAL PODGLĄD WYCENY -->
+<div class="modal-overlay" id="quote-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3 id="modal-title">Podgląd wyceny</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-total">
+      <span style="font-size:13px;color:#aaa">Cena całkowita netto</span>
+      <span style="font-size:18px;font-weight:500" id="modal-netto">—</span>
+    </div>
+    <div style="background:var(--mbm-primary);color:#fff;padding:10px 20px;border-radius:0 0 12px 12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--mbm-pale)" id="modal-brutto-lbl">Cena brutto</span>
+      <span style="font-size:18px;font-weight:500" id="modal-brutto">—</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
