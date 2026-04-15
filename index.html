@@ -710,12 +710,11 @@ function showSyncStatus(mode,msg){
     </div>
     <div class="c2 row" style="margin-top:4px">
       <div><div class="sub">Umiejscowienie LED</div>
-        <select id="led-miejsce" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
-          <option value="">— nie określono —</option>
-          <option value="Za oparciem">Za oparciem</option>
-          <option value="Pod ławką (rozświetla podłogę)">Pod ławką (rozświetla podłogę)</option>
-          <option value="W ławce (rozświetla ławkę od środka)">W ławce (rozświetla ławkę od środka)</option>
-        </select>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:2px">
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="led-m1" value="Za oparciem" onchange="r()" style="width:14px;height:14px"> Za oparciem</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="led-m2" value="Pod ławką (rozświetla podłogę)" onchange="r()" style="width:14px;height:14px"> Pod ławką (rozświetla podłogę)</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="led-m3" value="W ławce (rozświetla ławkę od środka)" onchange="r()" style="width:14px;height:14px"> W ławce (rozświetla ławkę od środka)</label>
+        </div>
       </div>
       <div><div class="sub">Barwa LED</div>
         <select id="led-barwa" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;color:var(--mbm-dark);width:100%">
@@ -1408,7 +1407,7 @@ function r(){
     kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
     pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),pr3m:document.getElementById('pr3m')?.value||'660|350',pr5m:document.getElementById('pr5m')?.value||'710|500',pr7m:document.getElementById('pr7m')?.value||'765|750',moc:moc,
     ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),aw:ck('aaw'),
-    ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:gs('led-miejsce'),ledBarwa:gs('led-barwa'),
+    ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),ledBarwa:gs('led-barwa'),
     audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
     solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
     transport:gv('trn'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
@@ -1671,7 +1670,13 @@ function loadStateToCalc(s){
 
   // LED
   sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
-  sv('led-miejsce',s.ledMiejsce||'');sv('led-barwa',s.ledBarwa||'');sso('zast',s.zasilVal||0);sso('lstt',s.lsttVal||0);
+  // Restore LED miejsce checkboxes
+  var _ledM=s.ledMiejsce||'';
+  ['led-m1','led-m2','led-m3'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.checked=_ledM.indexOf(el.value)>=0;
+  });
+  sv('led-barwa',s.ledBarwa||'');sso('zast',s.zasilVal||0);sso('lstt',s.lsttVal||0);
   if(document.getElementById('kabq-led'))sv('kabq-led',s.kabLed||0);
   sc('profauto',true);
 
@@ -1789,7 +1794,13 @@ function loadToCalc(s){
 
   // LED
   sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
-  sv('led-miejsce',s.ledMiejsce||'');sv('led-barwa',s.ledBarwa||'');
+  // Restore LED miejsce checkboxes
+  var _ledM=s.ledMiejsce||'';
+  ['led-m1','led-m2','led-m3'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.checked=_ledM.indexOf(el.value)>=0;
+  });
+  sv('led-barwa',s.ledBarwa||'');
   sso('zast',s.zasilVal||0);sso('lstt',s.lsttVal||0);
   if(document.getElementById('kabq-led'))sv('kabq-led',s.kabLed||0);
   var pa=document.getElementById('profauto');if(pa)pa.checked=true;
