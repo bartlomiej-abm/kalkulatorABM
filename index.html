@@ -1588,8 +1588,8 @@ function buildVariantHTML(s,vkey){
   vsec(tr('wyposazenie'));
   if(s.typ!=='I'&&s.piec&&s.piec.cena>0)vrowPrice('Piec — '+s.piec.name.split('--')[0].trim(),s.piec.cena*mG);
   else vrowYN(tr('piec'),false);
-  if(s.kamd>0)vrowPrice(tr('kamienie_d')+'  ('+s.kamd+'×)',s.kamd*50*mG);
-  if(s.kams>0)vrowPrice(tr('kamienie_s')+'  ('+s.kams+'×)',s.kams*130*mG);
+  if(s.kamd>0)vrowPrice(tr('kamienie_d')+' STANDARD  ('+s.kamd*20+' kg)',s.kamd*50*mG);
+  if(s.kams>0)vrowPrice(tr('kamienie_s')+' PREMIUM  ('+s.kams*15+' kg)',s.kams*130*mG);
   if(s.osl>0)vrowPrice('Osłona na piec',s.osl*mG);
   if(s.typ!=='F'){
     if(s.pr3>0)vrowPrice('Promienniki 350W ×'+s.pr3,s.pr3*660*mG);
