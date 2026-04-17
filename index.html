@@ -130,6 +130,23 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .act-sc{background:#fff;border:0.5px solid var(--mbm-pale);border-radius:8px;padding:10px 12px}
 .act-sl{font-size:10px;color:var(--mbm-mid);margin-bottom:3px}
 .act-sv{font-size:16px;font-weight:500}
+/* DIM CALC MODAL */
+.dim-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.dim-modal-overlay.on{display:flex}
+.dim-modal{background:#fff;border-radius:12px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto}
+.dim-modal-hd{background:var(--mbm-dark);color:#fff;padding:14px 20px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
+.dim-modal-hd h3{font-size:15px;font-weight:500}
+.dim-modal-body{padding:18px 20px}
+.dim-sec{margin-bottom:16px}
+.dim-sec-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mbm-mid);margin-bottom:8px}
+.dim-wall{display:grid;grid-template-columns:80px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
+.dim-wall-lbl{font-size:12px;font-weight:500;color:var(--mbm-dark)}
+.dim-input{font-size:12px;padding:4px 8px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;width:100%;background:#fff}
+.dim-select{font-size:12px;padding:4px 8px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;width:100%;background:#fff}
+.dim-result{background:var(--mbm-pale);border-radius:8px;padding:12px 16px;margin-top:16px;font-size:12px}
+.dim-result-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid rgba(0,0,0,0.06)}
+.dim-result-row:last-child{border-bottom:none}
+.dim-result-val{font-weight:500;color:var(--mbm-primary)}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.on{display:flex}
@@ -461,6 +478,7 @@ function showSyncStatus(mode,msg){
     <span style="flex:1"></span>
     <button class="btn grn" onclick="saveQuote()">💾 Zapisz wycenę</button>
     <button class="btn act" onclick="showTab('client')">Widok klienta →</button>
+    <button class="btn" onclick="openDimCalc()" style="background:var(--mbm-primary);color:#fff;border-color:var(--mbm-primary)">📐 Kalkulator wymiarów</button>
   </div>
 
   <div class="sec"><div class="sb">
@@ -3118,6 +3136,257 @@ function deleteActualEntry(id){
   buildActualHistory();
 }
 
+
+// ===== KALKULATOR WYMIARÓW =====
+var _dimResult = {};
+
+function openDimCalc(){
+  // Populate material dropdowns from BOAZ and DESKI arrays
+  var bSel=document.getElementById('dw-boaz-mat');
+  var dSel=document.getElementById('dw-desk-mat');
+  if(bSel){
+    while(bSel.options.length>1)bSel.remove(1);
+    BOAZ.forEach(function(item,i){bSel.add(new Option('['+( SN[item.s]||item.s)+'] '+item.n+' ('+item.p+' zł)',i));});
+  }
+  if(dSel){
+    while(dSel.options.length>1)dSel.remove(1);
+    DESKI.forEach(function(item,i){dSel.add(new Option('['+( SN[item.s]||item.s)+'] '+item.n+' ('+item.p+' zł)',i));});
+  }
+  dimCalc();
+  document.getElementById('dim-modal-overlay').classList.add('on');
+}
+
+function closeDimCalc(){
+  document.getElementById('dim-modal-overlay').classList.remove('on');
+}
+
+function dimGetCoverage(name){
+  // Extract coverage from name - e.g. "14x96x2100" -> 86mm, "14x90x2100" -> 80mm, "14x120x2100"->110mm
+  var m=name.match(/x(\d+)x/i);
+  if(m){
+    var w=parseInt(m[1]);
+    // Coverage = width - 10mm (lap joint)
+    if(w>=120) return 110;
+    if(w>=96) return 86;
+    if(w>=90) return 80;
+    return w-10;
+  }
+  // Default fallback
+  if(name.indexOf('120')>0) return 110;
+  if(name.indexOf('96')>0) return 86;
+  if(name.indexOf('90')>0) return 80;
+  return 86;
+}
+
+function dimGetDeskWidth(name){
+  // Extract desk width: "28x90x...", "28x95x...", "28x80x..."
+  var m=name.match(/x(\d+)x/i);
+  if(m) return parseInt(m[1]);
+  if(name.indexOf('95')>=0) return 95;
+  if(name.indexOf('90')>=0) return 90;
+  if(name.indexOf('80')>=0) return 80;
+  return 90;
+}
+
+function dimCalc(){
+  var wA=parseFloat(document.getElementById('dw-a').value)||200;
+  var wB=parseFloat(document.getElementById('dw-b').value)||150;
+  var wC=parseFloat(document.getElementById('dw-c').value)||200;
+  var wD=parseFloat(document.getElementById('dw-d').value)||150;
+  var wH=parseFloat(document.getElementById('dw-h').value)||200;
+  var tA=document.getElementById('dw-at').value;
+  var tB=document.getElementById('dw-bt').value;
+  var tC=document.getElementById('dw-ct').value;
+  var tD=document.getElementById('dw-dt').value;
+  var lawki=document.getElementById('dw-lawki').value;
+  var lawkiTyp=document.getElementById('dw-lawki-typ').value;
+  var l1=parseFloat(document.getElementById('dw-l1').value)||200;
+  var l2=parseFloat(document.getElementById('dw-l2').value)||150;
+
+  // Show/hide l2 based on layout
+  var needL2=['1L','1N','2L'].indexOf(lawki)>=0;
+  var l2wrap=document.getElementById('dw-l2-wrap');
+  if(l2wrap) l2wrap.style.display=needL2?'block':'none';
+
+  // Get selected boazeria material
+  var bSel=document.getElementById('dw-boaz-mat');
+  var boazIdx=bSel&&bSel.value!=='auto'?parseInt(bSel.value):null;
+  var boazMat=null;
+  if(boazIdx!==null && BOAZ[boazIdx]) boazMat=BOAZ[boazIdx];
+  else if(BOAZ.length>0){
+    // Pick cheapest
+    boazMat=BOAZ.reduce(function(a,b){return a.p<=b.p?a:b;});
+    boazIdx=BOAZ.indexOf(boazMat);
+  }
+
+  // Get selected desk material
+  var dSel=document.getElementById('dw-desk-mat');
+  var deskIdx=dSel&&dSel.value!=='auto'?parseInt(dSel.value):null;
+  var deskMat=null;
+  if(deskIdx!==null && DESKI[deskIdx]) deskMat=DESKI[deskIdx];
+  else if(DESKI.length>0){
+    deskMat=DESKI.reduce(function(a,b){return a.p<=b.p?a:b;});
+    deskIdx=DESKI.indexOf(deskMat);
+  }
+
+  var coverage=boazMat?dimGetCoverage(boazMat.n):86;
+  var deskW=deskMat?dimGetDeskWidth(deskMat.n):90;
+
+  // ---- BOAZERIA ----
+  // effective width per wall type
+  function wallBoazWidth(w, type){
+    if(type==='glass') return 0;
+    if(type==='door') return Math.max(0, w-60); // 600mm = 60cm
+    return w;
+  }
+  var totalBoazCm = wallBoazWidth(wA,tA)+wallBoazWidth(wB,tB)+wallBoazWidth(wC,tC)+wallBoazWidth(wD,tD);
+  // Add ceiling: all 4 walls contribute ceiling strips (same width)
+  var ceilBoazCm = wA+wB+wC+wD; // ceiling always full
+
+  // Boards per meter: ceil(width_cm*10 / coverage_mm)
+  function boardsForWall(widthCm, cov, wasteP){
+    if(widthCm<=0) return 0;
+    var boards=Math.ceil((widthCm*10)/cov);
+    return Math.ceil(boards*(1+wasteP));
+  }
+
+  // Vertical boards (ściany): each board 2100mm, cut to 2000mm (wH)
+  var boazWalls=0;
+  [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
+    boazWalls+=boardsForWall(wallBoazWidth(pair[0],pair[1]),coverage,0.10);
+  });
+
+  // Ceiling boards: perpendicular, use same length 2100mm
+  var boazCeil=boardsForWall(totalBoazCm,coverage,0.10); // reuse total wall width as "length" dimension for ceiling
+  // Actually ceiling: ceil boards run along width A&C, depth B&D
+  // Simpler: total ceiling area = (wA*wB)/coverage * boards
+  // Let's use: boards = ceil((wA*10/coverage)) + ceil((wB*10/coverage)) pairs
+  // For simplicity - ceiling = 1 layer boards running across A (quantity = ceil(wB*10/coverage)), length wA
+  // We'll just add ceiling as separate calc
+  var ceilA=boardsForWall(wB,coverage,0.10); // boards running across width B, length A
+  var ceilB=boardsForWall(wA,coverage,0.10); // boards for the ends? No - sauna ceiling is one direction
+  // Standard: ceiling boards run the long dimension, quantity = ceil(short_dim/coverage)
+  var longDim=Math.max(wA,wC), shortDim=Math.min(wB,wD);
+  var boazCeiling=boardsForWall(shortDim,coverage,0.10);
+
+  var totalBoaz=boazWalls+boazCeiling;
+
+  // ---- ŁAWKI ----
+  // Siedzisko depth = 5 desks + 4 gaps
+  var seatDepth=5*deskW+4*5; // mm
+
+  // Boards per bench run = ceil(length_cm*10 / deskW)
+  // Boards run LENGTHWISE along the bench
+  // Each board = 2100mm = 210cm
+  // Per one row: ceil(length / 210) boards
+  var BOARD_LEN=210; // cm
+
+  function rowBoards(lenCm){
+    return Math.ceil(lenCm/BOARD_LEN);
+  }
+
+  // One bench: seat = 5 rows, oparcie = 3 rows, front (zabudowane) = 5 rows
+  function addBench(lenCm){
+    var seat=5*rowBoards(lenCm);
+    var oparcie=3*rowBoards(lenCm);
+    var front=isZab?5*rowBoards(lenCm):0;
+    deskCount+=seat+oparcie+front;
+  }
+
+  var deskCount=0;
+  var isL=lawki.indexOf('L')>=0;
+  var isN=lawki.indexOf('N')>=0;
+  var isZab=lawkiTyp==='zab';
+
+  // L2 adjusted for L-shape (shorter by seat depth)
+  var l2adj=isL?Math.max(0,l2-Math.round(seatDepth/10)):l2;
+
+  if(lawki==='1'){
+    addBench(l1);
+  } else if(lawki==='1L'){
+    addBench(l1);
+    addBench(l2adj);
+  } else if(lawki==='1N'){
+    addBench(l1);
+    addBench(l2);
+  } else if(lawki==='2'){
+    addBench(l1); // górna
+    var lowerLen=isZab?l1:l1+50;
+    addBench(lowerLen); // dolna
+  } else if(lawki==='2L'){
+    addBench(l1); // górna główna
+    addBench(l2adj); // górna boczna
+    var lowerMain=isZab?l1:l1+50;
+    addBench(lowerMain); // dolna główna
+    addBench(l2adj); // dolna boczna
+  }
+
+  // 10% waste
+  deskCount=Math.ceil(deskCount*1.10);
+
+  // ---- STORE RESULTS ----
+  _dimResult={
+    boazMat:boazMat, boazIdx:boazIdx, boazCount:totalBoaz,
+    boazWalls:boazWalls, boazCeiling:boazCeiling,
+    deskMat:deskMat, deskIdx:deskIdx, deskCount:deskCount,
+    seatDepth:seatDepth, coverage:coverage, deskW:deskW
+  };
+
+  // ---- RENDER RESULT ----
+  var rows=document.getElementById('dim-result-rows');
+  if(!rows) return;
+  var html='';
+  function resultRow(label,val,sub){
+    return '<div class="dim-result-row"><span>'+label+'</span><div style="text-align:right"><span class="dim-result-val">'+val+'</span>'+(sub?'<span style="font-size:10px;color:var(--mbm-mid);margin-left:6px">'+sub+'</span>':'')+' </div></div>';
+  }
+  html+=resultRow('Boazeria — ściany', boazWalls+' szt.', boazMat?boazMat.n:'—');
+  html+=resultRow('Boazeria — sufit', boazCeiling+' szt.', 'krycie: '+coverage+' mm');
+  html+=resultRow('Boazeria ŁĄCZNIE', totalBoaz+' szt.', '(+10% odpad)');
+  html+=resultRow('Deski ławkowe', deskCount+' szt.', deskMat?deskMat.n:'—');
+  html+=resultRow('  — siedzisko', '5 rzędów', '5 × ceil(długość/210cm)');
+  html+=resultRow('  — oparcie', '3 rzędy', 'zawsze 3 rzędy wzdłuż');
+  if(isZab) html+=resultRow('  — front (zabudowane)', '5 rzędów', '+5 rzędów pionowo');
+  html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
+  rows.innerHTML=html;
+}
+
+function applyDimCalc(){
+  if(!_dimResult.boazMat && !_dimResult.deskMat){
+    alert('Uzupełnij kalkulator — brak materiałów w cennikach boazerii lub desek.');
+    return;
+  }
+
+  // Set boazeria
+  if(_dimResult.boazMat){
+    var b1m=document.getElementById('b1m');
+    if(b1m){
+      for(var i=0;i<b1m.options.length;i++){
+        if(b1m.options[i].textContent.indexOf(_dimResult.boazMat.n)>=0){b1m.selectedIndex=i;break;}
+      }
+    }
+    var b1q=document.getElementById('b1q');
+    if(b1q) b1q.value=_dimResult.boazCount;
+    uM('b1');
+  }
+
+  // Set deski
+  if(_dimResult.deskMat){
+    var l1m=document.getElementById('l1m');
+    if(l1m){
+      for(var i=0;i<l1m.options.length;i++){
+        if(l1m.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){l1m.selectedIndex=i;break;}
+      }
+    }
+    var l1q=document.getElementById('l1q');
+    if(l1q) l1q.value=_dimResult.deskCount;
+    uM('l1');
+  }
+
+  r();
+  closeDimCalc();
+  alert('Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.');
+}
+
 </script>
 
 <!-- MODAL PODGLĄD WYCENY -->
@@ -3137,6 +3406,120 @@ function deleteActualEntry(id){
       <span style="font-size:18px;font-weight:500" id="modal-brutto">—</span>
     </div>
   </div>
+</div>
+
+<!-- KALKULATOR WYMIARÓW -->
+<div class="dim-modal-overlay" id="dim-modal-overlay" onclick="if(event.target===this)closeDimCalc()">
+<div class="dim-modal">
+  <div class="dim-modal-hd">
+    <h3>📐 Kalkulator wymiarów sauny</h3>
+    <button onclick="closeDimCalc()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+  </div>
+  <div class="dim-modal-body">
+
+    <!-- ŚCIANY -->
+    <div class="dim-sec">
+      <div class="dim-sec-title">Wymiary ścian (cm) i typ</div>
+      <div style="display:grid;grid-template-columns:60px 80px 1fr;gap:6px;font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;margin-bottom:4px">
+        <div></div><div>Szerokość (cm)</div><div>Typ ściany</div>
+      </div>
+      <div class="dim-wall"><span class="dim-wall-lbl">Ściana A</span>
+        <input type="number" id="dw-a" class="dim-input" value="200" min="50" oninput="dimCalc()">
+        <select id="dw-at" class="dim-select" onchange="dimCalc()">
+          <option value="full">Pełna boazeria</option>
+          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="glass">Cała szklana</option>
+        </select>
+      </div>
+      <div class="dim-wall"><span class="dim-wall-lbl">Ściana B</span>
+        <input type="number" id="dw-b" class="dim-input" value="150" min="50" oninput="dimCalc()">
+        <select id="dw-bt" class="dim-select" onchange="dimCalc()">
+          <option value="full">Pełna boazeria</option>
+          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="glass">Cała szklana</option>
+        </select>
+      </div>
+      <div class="dim-wall"><span class="dim-wall-lbl">Ściana C</span>
+        <input type="number" id="dw-c" class="dim-input" value="200" min="50" oninput="dimCalc()">
+        <select id="dw-ct" class="dim-select" onchange="dimCalc()">
+          <option value="full">Pełna boazeria</option>
+          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="glass">Cała szklana</option>
+        </select>
+      </div>
+      <div class="dim-wall"><span class="dim-wall-lbl">Ściana D</span>
+        <input type="number" id="dw-d" class="dim-input" value="150" min="50" oninput="dimCalc()">
+        <select id="dw-dt" class="dim-select" onchange="dimCalc()">
+          <option value="full">Pełna boazeria</option>
+          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="glass">Cała szklana</option>
+        </select>
+      </div>
+      <div class="dim-wall" style="margin-top:8px"><span class="dim-wall-lbl" style="color:var(--mbm-mid)">Wysokość</span>
+        <input type="number" id="dw-h" class="dim-input" value="200" min="150" oninput="dimCalc()">
+        <span style="font-size:11px;color:var(--mbm-mid)">cm (standardowo 200 cm)</span>
+      </div>
+    </div>
+
+    <!-- ŁAWKI -->
+    <div class="dim-sec">
+      <div class="dim-sec-title">Ławki</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Układ ławek</div>
+          <select id="dw-lawki" class="dim-select" onchange="dimCalc()">
+            <option value="1">Jeden poziom</option>
+            <option value="1L">Jeden poziom — litera L</option>
+            <option value="1N">Jeden poziom — naprzeciwko</option>
+            <option value="2">Dwa poziomy</option>
+            <option value="2L">Dwa poziomy — litera L</option>
+          </select>
+        </div>
+        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Typ ławek</div>
+          <select id="dw-lawki-typ" class="dim-select" onchange="dimCalc()">
+            <option value="lev">Lewitujące</option>
+            <option value="zab">Zabudowane</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Długość ławki głównej (cm)</div>
+          <input type="number" id="dw-l1" class="dim-input" value="200" min="50" oninput="dimCalc()">
+        </div>
+        <div id="dw-l2-wrap"><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Długość ławki bocznej (cm)</div>
+          <input type="number" id="dw-l2" class="dim-input" value="150" min="50" oninput="dimCalc()">
+        </div>
+      </div>
+    </div>
+
+    <!-- MATERIAŁ -->
+    <div class="dim-sec">
+      <div class="dim-sec-title">Materiał</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Boazeria wewnętrzna</div>
+          <select id="dw-boaz-mat" class="dim-select" onchange="dimCalc()">
+            <option value="auto">Automatycznie (najtańsza)</option>
+          </select>
+        </div>
+        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Deski ławkowe</div>
+          <select id="dw-desk-mat" class="dim-select" onchange="dimCalc()">
+            <option value="auto">Automatycznie (najtańsze)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- WYNIK -->
+    <div id="dim-result" class="dim-result">
+      <div style="font-size:11px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Obliczone ilości</div>
+      <div id="dim-result-rows"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closeDimCalc()">Anuluj</button>
+      <button class="btn act" onclick="applyDimCalc()" style="font-size:13px;padding:7px 18px">✓ Wstaw do kalkulatora</button>
+    </div>
+  </div>
+</div>
 </div>
 </body>
 </html>
