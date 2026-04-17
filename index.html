@@ -444,6 +444,34 @@ function showSyncStatus(mode,msg){
 </script>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="position:fixed;inset:0;background:var(--mbm-dark);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:36px 40px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="text-align:center;margin-bottom:24px">
+      <div id="login-logo-wrap" style="margin-bottom:10px;min-height:40px"></div>
+      <div style="font-size:22px;font-weight:600;color:var(--mbm-dark);font-family:'Outfit',sans-serif">ABM Sauny</div>
+      <div style="font-size:13px;color:var(--mbm-mid);margin-top:4px">Kalkulator wycen</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Login</div>
+      <input id="login-input" type="text" placeholder="Wpisz login" onkeydown="if(event.key==='Enter')doLogin()"
+        style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--mbm-light);border-radius:7px;font-family:inherit;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Hasło</div>
+      <input id="pass-input" type="password" placeholder="Wpisz hasło" onkeydown="if(event.key==='Enter')doLogin()"
+        style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--mbm-light);border-radius:7px;font-family:inherit;box-sizing:border-box">
+    </div>
+    <div id="login-err" style="display:none;font-size:12px;color:#c00;margin-bottom:10px;text-align:center">
+      Nieprawidłowy login lub hasło
+    </div>
+    <button onclick="doLogin()" style="width:100%;background:var(--mbm-dark);color:#fff;border:none;border-radius:7px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">
+      Zaloguj się
+    </button>
+  </div>
+</div>
+
 <div class="header">
   <h1>ABM Sauny — Kalkulator</h1>
   <div id="sync-status" style="font-size:11px;padding:3px 10px;border-radius:4px;background:var(--mbm-pale);color:var(--mbm-primary)">☁ Łączenie...</div>
@@ -455,7 +483,12 @@ function showSyncStatus(mode,msg){
     <button class="tab" onclick="showTab('history')">Historia wycen</button>
     <button class="tab" onclick="showTab('prices')">Edytuj cenniki</button>
     <button class="tab" onclick="showTab('settings')">Ustawienia</button>
+    <div id="user-badge-wrap" style="display:none;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
+    <span style="font-size:11px;color:var(--mbm-pale)">👤</span>
+    <span id="user-badge" style="font-size:12px;font-weight:500;color:#fff;background:var(--mbm-primary);padding:3px 10px;border-radius:10px;white-space:nowrap"></span>
+    <button onclick="doLogout()" style="background:none;border:0.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;white-space:nowrap">Wyloguj</button>
   </div>
+</div>
 </div>
 
 <!-- ===== KALKULATOR ===== -->
@@ -475,6 +508,7 @@ function showSyncStatus(mode,msg){
     <div id="vslot-B" class="vslot"></div>
     <div id="vslot-C" class="vslot"></div>
     <button onclick="clearVariants()" style="font-size:11px;color:var(--mbm-mid);background:none;border:0.5px solid var(--mbm-light);border-radius:4px;padding:3px 8px;cursor:pointer;font-family:inherit">✕ Wyczyść</button>
+    <button onclick="clearCalc()" style="background:none;border:0.5px solid #c00;color:#c00;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px">🗑 Wyczyść kalkulator</button>
     <span style="flex:1"></span>
     <button class="btn grn" onclick="saveQuote()">💾 Zapisz wycenę</button>
     <button class="btn act" onclick="showTab('client')">Widok klienta →</button>
@@ -1030,6 +1064,83 @@ function showSyncStatus(mode,msg){
 </div>
 
 <script>
+
+// ===== UŻYTKOWNICY I ROLE =====
+var USERS = [
+  {login:'admin',    password:'abm2024', name:'Administrator', role:'admin'},
+  {login:'sprzedaz', password:'sauna123', name:'Sprzedaż',      role:'sales'},
+];
+var CURRENT_USER = null;
+
+function checkLogin(login, pass){
+  return USERS.find(function(u){ return u.login===login && u.password===pass; })||null;
+}
+function isAdmin(){ return CURRENT_USER && CURRENT_USER.role==='admin'; }
+function isSales(){ return CURRENT_USER && CURRENT_USER.role==='sales'; }
+
+function applyRole(){
+  var salesHide=['.dv','.ch','.cost-only','.margin-row','#tab-prices-btn'];
+  var salesHideIds=['tkos','tzys','tmar'];
+  if(isSales()){
+    // Hide cost columns and margin section
+    document.querySelectorAll('.dv').forEach(function(el){el.style.visibility='hidden';});
+    document.querySelectorAll('.ch').forEach(function(el){el.style.visibility='hidden';});
+    document.querySelectorAll('.margin-row').forEach(function(el){el.style.display='none';});
+    // Hide cost & profit summary cards
+    salesHideIds.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el){var card=el.closest('.tc');if(card)card.style.visibility='hidden';}
+    });
+    // Hide Edytuj cenniki tab
+    document.querySelectorAll('.tab').forEach(function(btn){
+      if(btn.textContent.indexOf('Edytuj cenniki')>=0) btn.style.display='none';
+    });
+    // Rename Kalkulator title
+    var h1=document.querySelector('.header h1');
+    if(h1) h1.textContent='ABM Sauny — Wycena';
+  }
+}
+
+function doLogin(){
+  var l=document.getElementById('login-input').value.trim();
+  var p=document.getElementById('pass-input').value;
+  var user=checkLogin(l,p);
+  if(!user){ document.getElementById('login-err').style.display='block'; return; }
+  CURRENT_USER=user;
+  sessionStorage.setItem('abm_user', JSON.stringify(user));
+  document.getElementById('login-overlay').style.display='none';
+  document.getElementById('user-badge').textContent=user.name;
+  document.getElementById('user-badge-wrap').style.display='flex';
+  applyRole();
+  syncLoad();
+}
+
+function doLogout(){
+  if(!confirm('Wylogować się?')) return;
+  sessionStorage.removeItem('abm_user');
+  CURRENT_USER=null;
+  location.reload();
+}
+
+function initLogin(){
+  // Show logo on login screen
+  var logoSrc=localStorage.getItem('abm_logo');
+  if(logoSrc){
+    var wrap=document.getElementById('login-logo-wrap');
+    if(wrap){var img=document.createElement('img');img.src=logoSrc;img.style.cssText='max-height:48px;max-width:160px;object-fit:contain';wrap.appendChild(img);}
+  }
+  var saved=sessionStorage.getItem('abm_user');
+  if(saved){
+    try{
+      CURRENT_USER=JSON.parse(saved);
+      document.getElementById('login-overlay').style.display='none';
+      document.getElementById('user-badge').textContent=CURRENT_USER.name;
+      document.getElementById('user-badge-wrap').style.display='flex';
+      applyRole();
+    }catch(e){ sessionStorage.removeItem('abm_user'); }
+  }
+}
+
 // ===== DANE =====
 var SN={S:'Saunatech',E:'EKO DREWNO',L:'ELODENA',A:'ABACHI.PL',K:'KUUKS',G:'ALGA',KL:'KingLED',KR:'Kurek',M:'Wpisane'};
 var SC={S:'bS',E:'bE',L:'bL',A:'bA',K:'bK',G:'bG',KL:'bKL',KR:'bKR',M:'bM'};
@@ -1507,7 +1618,7 @@ var T={
     wykończenie:'Wykończenie sauny',boazeria:'Boazeria wewnętrzna',boazeria2:'Boazeria wewnętrzna (2)',
     zabudowa:'Zabudowa nad sauną',boaz_ext:'Boazeria zewnętrzna / obicie',
     lawki:'Ławki i oparcia',lawki2:'Ławki i oparcia (2)',szklenie:'Szklenie',
-    sciana_dek:'Ściana dekoracyjna z kamienia',wyposazenie:'Wyposażenie sauny',
+    sciana_dek:'Ściana dekoracyjna z kamienia',podloga:'Podłoga',wyposazenie:'Wyposażenie sauny',
     piec:'Piec',kamienie_d:'Kamienie Diabez',kamienie_s:'Kamienie szare okrągłe',
     oslona:'Osłona na piec',prom350:'Promienniki 350W',prom500:'Promienniki 500W',prom750:'Promienniki 750W',
     sterownik:'Sterownik FFES',wifi:'Zdalne sterowanie WiFi',bt:'Moduł Bluetooth do głośników',
@@ -1523,7 +1634,7 @@ var T={
     wykończenie:'Sauna Finishing',boazeria:'Interior cladding',boazeria2:'Interior cladding (2)',
     zabudowa:'Above-sauna enclosure',boaz_ext:'Exterior cladding',
     lawki:'Benches & backrests',lawki2:'Benches & backrests (2)',szklenie:'Sauna glass',
-    sciana_dek:'Sauna stone wall behind the heater',wyposazenie:'Sauna Equipment',
+    sciana_dek:'Sauna stone wall behind the heater',podloga:'Flooring',wyposazenie:'Sauna Equipment',
     piec:'Heater',kamienie_d:'Diabez sauna stones',kamienie_s:'Round grey stones',
     oslona:'Heater guard',prom350:'Infrared panels 350W',prom500:'Infrared panels 500W',prom750:'Infrared panels 750W',
     sterownik:'FFES Controller',wifi:'Remote WiFi control',bt:'Bluetooth speaker module',
@@ -1806,7 +1917,7 @@ function loadToCalc(s){
 
   // Sterownik
   sv('ster-val',s.sterVal||0);
-  sc('awifi',s.wifi||false);sc('abt',s.bt||false);
+  sso('amod-ir',s.modIR||0);sc('awifi',s.wifi||false);sc('abt',s.bt||false);
   sc('asty',s.sty||false);sc('asty3',s.sty3||false);
   sc('aaw',s.aw||false);sc('apbez',s.pbez||false);
 
@@ -1836,7 +1947,7 @@ function loadToCalc(s){
 
   // Odśwież badge dostawców i przelicz
   _loading=false;
-  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');
+  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');uM('podl');
   r();
 }
 
@@ -2023,7 +2134,7 @@ async function buildHistory(){
     var left=document.createElement('div');
     var t1=document.createElement('div');t1.style.cssText='font-weight:500;font-size:14px';t1.textContent=e.klient||'—';
     var t2=document.createElement('div');t2.style.cssText='font-size:12px;color:var(--mbm-mid);margin-top:2px';
-    t2.textContent=dateStr+' | '+saunaType+(e.opis?' | '+e.opis:'');
+    t2.textContent=dateStr+(e.author?' | '+e.author:'')+' | '+saunaType+(e.opis?' | '+e.opis:'');
     var t3=document.createElement('div');t3.style.cssText='font-size:12px;margin-top:3px';
     t3.innerHTML='<span style="color:var(--mbm-primary);font-weight:500">'+f(e.netto||0)+' zł</span> netto | <span style="font-weight:500">'+f(e.brutto||0)+' zł</span> brutto (VAT '+(e.vat||8)+'%)';
     left.appendChild(t1);left.appendChild(t2);left.appendChild(t3);
@@ -2450,7 +2561,7 @@ function savePricesQuiet(){
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
-    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);
   }catch(e){}
 }
@@ -2463,7 +2574,7 @@ function savePrices(){
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
-    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);
     alert('Ceny zapisane! Dropdowny w kalkulatorze zostaly zaktualizowane.');
   }catch(e){alert('Blad zapisu: '+e.message);}
@@ -2478,7 +2589,7 @@ function resetPrices(){
     KONSTR=JSON.parse(JSON.stringify(DEFAULT_KONSTR));BOAZ_EXT=[];
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
-    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('k1m',KONSTR);
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);mkSelG('k1m',KONSTR);
     buildPriceTables();
     alert('Ceny przywrocone do domyslnych.');
   }catch(e){}
@@ -2571,14 +2682,15 @@ function gs(id){var el=document.getElementById(id);if(!el)return '';return el.va
 loadPrices();
 mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
 mkSelBZ();
-mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);
+mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
 mkSelG('k1m',KONSTR);
 rebP();r();
 initVslots();
 loadSavedPiecePrices();loadSavedPromPrices();
+initLogin();
 // Init Supabase
 initSupabase();
-if(supa){
+if(supa&&CURRENT_USER){
   showSyncStatus('local','Łączenie z chmurą...');
   var _syncTimeout=setTimeout(function(){
     showSyncStatus('local','Przekroczono czas połączenia — tryb lokalny');
@@ -2691,6 +2803,10 @@ function showQuoteModal(entry){
     html+=row('Promienniki 350W',s.pr3>0?s.pr3+' szt.':0);
     html+=row('Promienniki 500W',s.pr5>0?s.pr5+' szt.':0);
     html+=row('Promienniki 750W',s.pr7>0?s.pr7+' szt.':0);
+  }
+  if(s.modIR>0){
+    var modIRName=s.modIR>=400?'G4 — 4 strefy':'G2 — 2 strefy';
+    vrowPrice('Moduł sterowania promienniki — '+modIRName,s.modIR*mG);
   }
   if(s.sterVal>0){
     var sterLabel='Sterownik FFES';
@@ -3160,6 +3276,23 @@ function closeDimCalc(){
   document.getElementById('dim-modal-overlay').classList.remove('on');
 }
 
+function dimGetBoardLen(name){
+  // Format: "14x90x2100", "28x90 2400mm", "15x90 Olcha 2,10m", "15x90 2.10m", "x2400"
+  // 1. Match "x2100" or "x2400" style
+  var m=name.match(/[xX](\d{3,4})(?:\s|$)/);
+  if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
+  // 2. Match "2400mm" or "2100 mm"
+  m=name.match(/(\d{3,4})\s*mm/i);
+  if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
+  // 3. Match "2,10m" or "2.10m" or "2,40m"
+  m=name.match(/(\d)[,\.](\d{1,2})\s*m(?:\b|$)/i);
+  if(m){var l=parseFloat(m[1]+'.'+m[2])*100;if(l>=150&&l<=300)return Math.round(l);}
+  // 4. Plain 4-digit number at end: "...2100"
+  m=name.match(/(\d{4})\s*$/);
+  if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
+  return 240;
+}
+
 function dimGetCoverage(name){
   // Extract coverage from name - e.g. "14x96x2100" -> 86mm, "14x90x2100" -> 80mm, "14x120x2100"->110mm
   var m=name.match(/x(\d+)x/i);
@@ -3210,33 +3343,23 @@ function dimCalc(){
 
   // Get selected boazeria material
   var bSel=document.getElementById('dw-boaz-mat');
-  var boazIdx=bSel&&bSel.value!=='auto'?parseInt(bSel.value):null;
-  var boazMat=null;
-  if(boazIdx!==null && BOAZ[boazIdx]) boazMat=BOAZ[boazIdx];
-  else if(BOAZ.length>0){
-    // Pick cheapest
-    boazMat=BOAZ.reduce(function(a,b){return a.p<=b.p?a:b;});
-    boazIdx=BOAZ.indexOf(boazMat);
-  }
+  var boazIdx=bSel&&bSel.value!==''?parseInt(bSel.value):null;
+  var boazMat=(boazIdx!==null&&BOAZ[boazIdx])?BOAZ[boazIdx]:null;
 
   // Get selected desk material
   var dSel=document.getElementById('dw-desk-mat');
-  var deskIdx=dSel&&dSel.value!=='auto'?parseInt(dSel.value):null;
-  var deskMat=null;
-  if(deskIdx!==null && DESKI[deskIdx]) deskMat=DESKI[deskIdx];
-  else if(DESKI.length>0){
-    deskMat=DESKI.reduce(function(a,b){return a.p<=b.p?a:b;});
-    deskIdx=DESKI.indexOf(deskMat);
-  }
+  var deskIdx=dSel&&dSel.value!==''?parseInt(dSel.value):null;
+  var deskMat=(deskIdx!==null&&DESKI[deskIdx])?DESKI[deskIdx]:null;
 
   var coverage=boazMat?dimGetCoverage(boazMat.n):86;
   var deskW=deskMat?dimGetDeskWidth(deskMat.n):90;
 
   // ---- BOAZERIA ----
   // effective width per wall type
+  var doorW=(parseFloat(document.getElementById('dw-door')?.value)||600)/10; // mm to cm
   function wallBoazWidth(w, type){
     if(type==='glass') return 0;
-    if(type==='door') return Math.max(0, w-60); // 600mm = 60cm
+    if(type==='door') return Math.max(0, w-doorW);
     return w;
   }
   var totalBoazCm = wallBoazWidth(wA,tA)+wallBoazWidth(wB,tB)+wallBoazWidth(wC,tC)+wallBoazWidth(wD,tD);
@@ -3244,17 +3367,32 @@ function dimCalc(){
   var ceilBoazCm = wA+wB+wC+wD; // ceiling always full
 
   // Boards per meter: ceil(width_cm*10 / coverage_mm)
+  var BOARD_LEN = deskMat ? dimGetBoardLen(deskMat.n) : 240;
+  var BOAZ_LEN  = boazMat ? dimGetBoardLen(boazMat.n) : 240;
+  var MAX_BOAZ  = 240;
+
   function boardsForWall(widthCm, cov, wasteP){
     if(widthCm<=0) return 0;
     var boards=Math.ceil((widthCm*10)/cov);
     return Math.ceil(boards*(1+wasteP));
   }
+  // Wall boards - vertical, length = wH, but if wH > BOAZ_LEN need 2 per slot
+  function wallBoardMult(){
+    if(!boazMat) return 1;
+    var bl=Math.min(BOAZ_LEN,MAX_BOAZ);
+    return Math.ceil(wH/bl); // 1 for <=240cm height
+  }
 
   // Vertical boards (ściany): each board 2100mm, cut to 2000mm (wH)
+  var wallMult=wallBoardMult();
   var boazWalls=0;
-  [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
-    boazWalls+=boardsForWall(wallBoazWidth(pair[0],pair[1]),coverage,0.10);
-  });
+  if(boazMat){
+    [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
+      boazWalls+=boardsForWall(wallBoazWidth(pair[0],pair[1]),coverage,0.10)*wallMult;
+    });
+  }
+  var boazLen2=boazMat?Math.min(BOAZ_LEN,MAX_BOAZ):240;
+  var wallNote=boazMat?(wallMult>1?'łączenie ('+wallMult+' deski/pion)':'deski '+boazLen2+'cm (bez łączenia)'):'— wybierz materiał —';
 
   // Ceiling boards: perpendicular, use same length 2100mm
   var boazCeil=boardsForWall(totalBoazCm,coverage,0.10); // reuse total wall width as "length" dimension for ceiling
@@ -3266,10 +3404,17 @@ function dimCalc(){
   var ceilA=boardsForWall(wB,coverage,0.10); // boards running across width B, length A
   var ceilB=boardsForWall(wA,coverage,0.10); // boards for the ends? No - sauna ceiling is one direction
   // Standard: ceiling boards run the long dimension, quantity = ceil(short_dim/coverage)
+  // Ceiling: boards run lengthwise (along wall A/C direction = longDim)
+  // Rows = how many strips across width B/D (= shortDim / coverage)
+  // Boards per row = ceil(longDim / board_length) — joining if sauna longer than board
   var longDim=Math.max(wA,wC), shortDim=Math.min(wB,wD);
-  var boazCeiling=boardsForWall(shortDim,coverage,0.10);
+  var boazLen=boazMat?Math.min(dimGetBoardLen(boazMat.n),MAX_BOAZ):MAX_BOAZ;
+  var ceilRows=boazMat?Math.ceil(shortDim*10/coverage):0;
+  var ceilPerRow=Math.ceil(longDim/boazLen);
+  var boazCeiling=boazMat?Math.ceil(ceilRows*ceilPerRow*1.10):0;
+  var ceilNote=boazMat?(ceilPerRow>1?'łączenie — '+ceilPerRow+'szt./rząd, deski '+boazLen+'cm':'deski '+boazLen+'cm, bez łączenia'):'—';
 
-  var totalBoaz=boazWalls+boazCeiling;
+  var totalBoaz=boazMat?boazWalls+boazCeiling:0;
 
   // ---- ŁAWKI ----
   // Siedzisko depth = 5 desks + 4 gaps
@@ -3279,10 +3424,14 @@ function dimCalc(){
   // Boards run LENGTHWISE along the bench
   // Each board = 2100mm = 210cm
   // Per one row: ceil(length / 210) boards
-  var BOARD_LEN=210; // cm
-
+  // Board lengths from material names
+  // How many boards needed to span a length (with joining if needed)
   function rowBoards(lenCm){
     return Math.ceil(lenCm/BOARD_LEN);
+  }
+  function boazRowBoards(lenCm){
+    var bl=Math.min(BOAZ_LEN,MAX_BOAZ);
+    return Math.ceil(lenCm/bl);
   }
 
   // One bench: seat = 5 rows, oparcie = 3 rows, front (zabudowane) = 5 rows
@@ -3322,14 +3471,24 @@ function dimCalc(){
   }
 
   // 10% waste
-  deskCount=Math.ceil(deskCount*1.10);
+  deskCount=deskMat?Math.ceil(deskCount*1.10):0;
+
+  // ---- WEŁNA m2 ----
+  // Total wall + ceiling area in m2
+  var welWalls=0;
+  [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
+    welWalls+=wallBoazWidth(pair[0],pair[1])*wH/10000; // cm*cm -> m2
+  });
+  var welCeil=wA*wB/10000; // one ceiling rectangle (shorter dims)
+  var welTotal=Math.ceil((welWalls+welCeil)*1.10); // +10% overlap
 
   // ---- STORE RESULTS ----
   _dimResult={
     boazMat:boazMat, boazIdx:boazIdx, boazCount:totalBoaz,
     boazWalls:boazWalls, boazCeiling:boazCeiling,
     deskMat:deskMat, deskIdx:deskIdx, deskCount:deskCount,
-    seatDepth:seatDepth, coverage:coverage, deskW:deskW
+    seatDepth:seatDepth, coverage:coverage, deskW:deskW,
+    welTotal:welTotal, welWalls:Math.round(welWalls*100)/100, welCeil:Math.round(welCeil*100)/100
   };
 
   // ---- RENDER RESULT ----
@@ -3339,14 +3498,15 @@ function dimCalc(){
   function resultRow(label,val,sub){
     return '<div class="dim-result-row"><span>'+label+'</span><div style="text-align:right"><span class="dim-result-val">'+val+'</span>'+(sub?'<span style="font-size:10px;color:var(--mbm-mid);margin-left:6px">'+sub+'</span>':'')+' </div></div>';
   }
-  html+=resultRow('Boazeria — ściany', boazWalls+' szt.', boazMat?boazMat.n:'—');
-  html+=resultRow('Boazeria — sufit', boazCeiling+' szt.', 'krycie: '+coverage+' mm');
-  html+=resultRow('Boazeria ŁĄCZNIE', totalBoaz+' szt.', '(+10% odpad)');
-  html+=resultRow('Deski ławkowe', deskCount+' szt.', deskMat?deskMat.n:'—');
+  html+=resultRow('Boazeria — ściany', boazMat?boazWalls+' szt.':'— wybierz materiał', wallNote);
+  html+=resultRow('Boazeria — sufit', boazMat?boazCeiling+' szt.':'—', boazMat?('krycie: '+coverage+' mm | '+ceilNote):'');
+  html+=resultRow('Boazeria ŁĄCZNIE', boazMat?totalBoaz+' szt.':'—', '(+10% odpad)');
+  html+=resultRow('Deski ławkowe', deskCount+' szt.', (deskMat?deskMat.n+' | ':'')+'dł. '+BOARD_LEN+'cm'+(rowBoards(l1)>1?' (łączenie)':''));
   html+=resultRow('  — siedzisko', '5 rzędów', '5 × ceil(długość/210cm)');
   html+=resultRow('  — oparcie', '3 rzędy', 'zawsze 3 rzędy wzdłuż');
   if(isZab) html+=resultRow('  — front (zabudowane)', '5 rzędów', '+5 rzędów pionowo');
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
+  html+=resultRow('Wełna mineralna', welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
   rows.innerHTML=html;
 }
 
@@ -3382,9 +3542,99 @@ function applyDimCalc(){
     uM('l1');
   }
 
+  // Set wełna
+  var welQ=document.getElementById('welq');
+  if(welQ&&_dimResult.welTotal>0) welQ.value=_dimResult.welTotal;
+  // Note: podłoga not auto-calculated yet
+
   r();
   closeDimCalc();
   alert('Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.');
+}
+
+
+function clearCalc(){
+  if(!confirm('Wyczyścić wszystkie pola kalkulatora?')) return;
+  _loading=true;
+
+  // Basic info
+  ['klient','opis'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+
+  // All number inputs to 0
+  var numIds=[
+    'b1q','b2q','zb1q','l1q','l2q','k1q','podlq',
+    'katq','bshq','cncq','folq','tasq','welq','anoq','anop','kabq',
+    'dachq','dacrq','rynq','podq','plyq','styq',
+    'szkm','szlq','otwq','otwq2','zawq',
+    'kamd','kams','osl','pr3','pr5','pr7',
+    'ledq','kabq-led','trn','dos','prj','gdz',
+    'sol-c','arom-c','akc-c','klep-c','nkw'
+  ];
+  numIds.forEach(function(id){var el=document.getElementById(id);if(el)el.value=0;});
+
+  // Selects to first option (index 0)
+  var selIds=['b1m','b2m','zb1m','l1m','l2m','k1m','podlm',
+    'szkt','klm','drz','scd','drzwz',
+    'ledt','zast','lstt','audt','btkt',
+    'pr3m','pr5m','pr7m','ster-val','amod-ir'];
+  selIds.forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
+
+  // Checkboxes off
+  ['awifi','abt','asty','asty3','aaw','apbez','nkw-auto','profauto',
+   'led-m1','led-m2','led-m3'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.checked=(id==='nkw-auto'||id==='profauto');
+  });
+
+  // LED barwa select
+  var lb=document.getElementById('led-barwa');if(lb)lb.selectedIndex=0;
+
+  // Reset ster-val
+  var sv=document.getElementById('ster-val');if(sv)sv.value=0;
+
+  // Refresh supplier badges
+  ['b1','b2','zb1','l1','l2','k1','podl'].forEach(function(p){uM(p);});
+
+  _loading=false;
+  r();
+}
+
+
+function buildUserList(){
+  if(!isAdmin()) return;
+  var el=document.getElementById('user-list');
+  var cnt=document.getElementById('user-count');
+  if(!el) return;
+  if(cnt) cnt.textContent=USERS.length+' użytkowników';
+  var html='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--mbm-dark);color:#fff"><th style="padding:5px 8px;text-align:left">Login</th><th style="padding:5px 8px;text-align:left">Imię i nazwisko</th><th style="padding:5px 8px;text-align:left">Hasło</th><th style="padding:5px 8px;text-align:left">Rola</th><th style="padding:5px 8px;width:60px"></th></tr></thead><tbody>';
+  USERS.forEach(function(u,i){
+    var roleBadge=u.role==='admin'?'<span style="background:var(--mbm-dark);color:#fff;padding:1px 7px;border-radius:8px;font-size:10px">Admin</span>':'<span style="background:var(--mbm-pale);color:var(--mbm-primary);padding:1px 7px;border-radius:8px;font-size:10px">Sprzedaż</span>';
+    html+='<tr style="border-bottom:0.5px solid #eee"><td style="padding:5px 8px">'+u.login+'</td><td style="padding:5px 8px">'+u.name+'</td><td style="padding:5px 8px;font-family:monospace">'+u.password+'</td><td style="padding:5px 8px">'+roleBadge+'</td>';
+    html+='<td style="padding:5px 8px;text-align:center"><button onclick="removeUser('+i+')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:15px" title="Usuń">×</button></td></tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function addUser(){
+  var login=document.getElementById('new-login').value.trim();
+  var name=document.getElementById('new-name').value.trim();
+  var pass=document.getElementById('new-pass').value.trim();
+  var role=document.getElementById('new-role').value;
+  if(!login||!name||!pass){alert('Wypełnij login, imię i hasło.');return;}
+  if(USERS.find(function(u){return u.login===login;})){alert('Użytkownik o tym loginie już istnieje.');return;}
+  USERS.push({login:login,name:name,password:pass,role:role});
+  document.getElementById('new-login').value='';
+  document.getElementById('new-name').value='';
+  document.getElementById('new-pass').value='';
+  buildUserList();
+  alert('Dodano użytkownika: '+name+'\n\nPamiętaj: zmiany obowiązują tylko w tej sesji. Żeby były permanentne, zaktualizuj plik HTML i wgraj na GitHub.');
+}
+
+function removeUser(idx){
+  if(USERS[idx]&&CURRENT_USER&&USERS[idx].login===CURRENT_USER.login){alert('Nie możesz usunąć samego siebie.');return;}
+  if(!confirm('Usunąć użytkownika '+USERS[idx].name+'?')) return;
+  USERS.splice(idx,1);
+  buildUserList();
 }
 
 </script>
@@ -3427,7 +3677,7 @@ function applyDimCalc(){
         <input type="number" id="dw-a" class="dim-input" value="200" min="50" oninput="dimCalc()">
         <select id="dw-at" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
-          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
       </div>
@@ -3435,7 +3685,7 @@ function applyDimCalc(){
         <input type="number" id="dw-b" class="dim-input" value="150" min="50" oninput="dimCalc()">
         <select id="dw-bt" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
-          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
       </div>
@@ -3443,7 +3693,7 @@ function applyDimCalc(){
         <input type="number" id="dw-c" class="dim-input" value="200" min="50" oninput="dimCalc()">
         <select id="dw-ct" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
-          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
       </div>
@@ -3451,11 +3701,15 @@ function applyDimCalc(){
         <input type="number" id="dw-d" class="dim-input" value="150" min="50" oninput="dimCalc()">
         <select id="dw-dt" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
-          <option value="door">Boazeria + drzwi (600mm)</option>
+          <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
       </div>
-      <div class="dim-wall" style="margin-top:8px"><span class="dim-wall-lbl" style="color:var(--mbm-mid)">Wysokość</span>
+      <div class="dim-wall" style="margin-top:4px"><span class="dim-wall-lbl" style="color:var(--mbm-mid)">Szer. drzwi</span>
+        <input type="number" id="dw-door" class="dim-input" value="600" min="400" max="1200" oninput="dimCalc()">
+        <span style="font-size:11px;color:var(--mbm-mid)">mm (odejmowane od szerokości ściany)</span>
+      </div>
+      <div class="dim-wall" style="margin-top:4px"><span class="dim-wall-lbl" style="color:var(--mbm-mid)">Wysokość</span>
         <input type="number" id="dw-h" class="dim-input" value="200" min="150" oninput="dimCalc()">
         <span style="font-size:11px;color:var(--mbm-mid)">cm (standardowo 200 cm)</span>
       </div>
@@ -3497,12 +3751,12 @@ function applyDimCalc(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Boazeria wewnętrzna</div>
           <select id="dw-boaz-mat" class="dim-select" onchange="dimCalc()">
-            <option value="auto">Automatycznie (najtańsza)</option>
+            <option value="">— wybierz materiał —</option>
           </select>
         </div>
         <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Deski ławkowe</div>
           <select id="dw-desk-mat" class="dim-select" onchange="dimCalc()">
-            <option value="auto">Automatycznie (najtańsze)</option>
+            <option value="">— wybierz materiał —</option>
           </select>
         </div>
       </div>
