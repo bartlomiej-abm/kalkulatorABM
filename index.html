@@ -298,13 +298,6 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
   .variants-grid.v3{grid-template-columns:1fr 1fr!important}
 }
 
-/* SALES ROLE */
-body.role-sales .cost-only{display:none!important}
-body.role-sales .dv{visibility:hidden!important}
-body.role-sales .ch{visibility:hidden!important}
-body.role-sales .margin-row{display:none!important}
-body.role-sales #alrt{display:none!important}
-body.role-sales #minm-wrap{display:none!important}
 @media print{
   .header,.top-bar,.tabs,.cl-btns{display:none!important}
   body{background:#fff}.view{padding:0;max-width:none!important}
@@ -357,6 +350,9 @@ async function syncLoad(){
             localStorage.setItem('abm_logo',logoData.replace(/^"|"$/g,''));
           }
         }catch(e){}
+      }
+      if(row.key==='suppliers' && row.value){
+        try{var sup=typeof row.value==='object'?row.value:JSON.parse(row.value);Object.keys(sup).forEach(function(k){SN[k]=sup[k];SC[k]='bM';});}catch(e){}
       }
       if(row.key==='boaz_ext' && row.value){
         try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
@@ -453,7 +449,7 @@ function showSyncStatus(mode,msg){
 <body>
 
 <!-- LOGIN OVERLAY -->
-<div id="login-overlay" style="position:fixed;inset:0;background:var(--mbm-dark);z-index:9999;display:none;align-items:center;justify-content:center">
+<div id="login-overlay" style="position:fixed;inset:0;background:var(--mbm-dark);z-index:9999;display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:14px;padding:36px 40px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
     <div style="text-align:center;margin-bottom:24px">
       <div id="login-logo-wrap" style="margin-bottom:10px;min-height:40px"></div>
@@ -495,7 +491,6 @@ function showSyncStatus(mode,msg){
     <span id="user-badge" style="font-size:12px;font-weight:500;color:#fff;background:var(--mbm-primary);padding:3px 10px;border-radius:10px;white-space:nowrap"></span>
     <button onclick="doLogout()" style="background:none;border:0.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;white-space:nowrap">Wyloguj</button>
   </div>
-
 </div>
 </div>
 
@@ -589,17 +584,6 @@ function showSyncStatus(mode,msg){
       <div class="cf row"><span class="lbl">Anemostat (szt. × cena zł)</span><input type="number" id="anoq" value="2" min="0" onchange="r()"><input type="number" id="anop" value="150" min="0" onchange="r()"><span class="dv" id="anok">0 zł</span><span class="dv hi" id="anop2">0 zł</span></div>
       <div class="cf row"><span class="lbl">Kabel piec (mb × 20 zł)</span><input type="number" id="kabq" value="10" min="0" onchange="r()"><span></span><span class="dv" id="kabk">0 zł</span><span class="dv hi" id="kabp">0 zł</span></div>
     </div>
-    <div class="grp" id="gpSkrz" style="display:none"><div class="gt">Skrzynka zasilania [Z]</div>
-      <div class="c3 row">
-        <div><div class="sub">Skrzynka zasilania</div>
-          <select id="skrz" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;width:100%">
-            <option value="0">Bez</option>
-            <option value="300">Skrzynka zasilania (300 zł)</option>
-          </select>
-        </div>
-        <span></span><span class="dv hi" id="skrzp">0 zł</span>
-      </div>
-    </div>
     <div class="grp" id="gpDach" style="display:none"><div class="gt">Dach, podłoga i fundament [Z]</div>
       <div class="cf row"><span class="lbl">Dach — materiał (m² × 60 zł)</span><input type="number" id="dachq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dachk">0 zł</span><span class="dv hi" id="dachp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Dach — robocizna (m² × 110 zł)</span><input type="number" id="dacrq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dacrk">0 zł</span><span class="dv" style="color:#aaa">—</span></div>
@@ -610,15 +594,7 @@ function showSyncStatus(mode,msg){
     </div>
   </div></div>
 
-  <div id="gpK2" style="display:none">
-  <div class="sec"><div class="sh"><span class="st">2b. Dodatkowe drewno konstrukcyjne [Z]</span><span class="ss" id="sm2b">0 zł</span></div>
-  <div class="sb">
-    <div class="c5 row"><div class="ch">Materiał</div><div class="ch">szt.</div><div class="ch">dostawca</div><div class="ch">koszt</div><div class="ch">sprzedaż</div></div>
-    <div class="c5 row"><select id="k2m" onchange="uM('k2');r()"><option value="0">-- wybierz --</option></select><input type="number" id="k2q" value="0" min="0" onchange="r()"><span class="badge" id="k2s">—</span><span class="dv" id="k2k">0 zł</span><span class="dv hi" id="k2p">0 zł</span></div>
-    <div class="c5 row"><select id="k3m" onchange="uM('k3');r()"><option value="0">-- wybierz --</option></select><input type="number" id="k3q" value="0" min="0" onchange="r()"><span class="badge" id="k3s">—</span><span class="dv" id="k3k">0 zł</span><span class="dv hi" id="k3p">0 zł</span></div>
-  </div></div>
-</div>
-<div class="sec"><div class="sh"><span class="st">3. Szklenie</span><span class="ss" id="sm3">0 zł</span><select id="ms" onchange="r()" style="font-size:11px;padding:2px 6px;height:22px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#333"><option value="1.5">marża 50%</option><option value="1.6">marża 60%</option><option value="1.7">marża 70%</option><option value="1.8">marża 80%</option><option value="1.9">marża 90%</option><option value="2.0" selected>marża 100%</option></select></div><div class="sb">
+  <div class="sec"><div class="sh"><span class="st">3. Szklenie</span><span class="ss" id="sm3">0 zł</span><select id="ms" onchange="r()" style="font-size:11px;padding:2px 6px;height:22px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#333"><option value="1.5">marża 50%</option><option value="1.6">marża 60%</option><option value="1.7">marża 70%</option><option value="1.8">marża 80%</option><option value="1.9">marża 90%</option><option value="2.0" selected>marża 100%</option></select></div><div class="sb">
     <div class="c4 row">
       <div><div class="sub">Typ szkła</div><select id="szkt" onchange="r()"><option value="160">Float (160 zł/m²)</option><option value="265">Grafitowe (265 zł/m²)</option><option value="265">Brązowe (265 zł/m²)</option><option value="700">Okno dwukomorowe (700 zł/m²)</option></select></div>
       <div><div class="sub">Powierzchnia (m²)</div><input type="number" id="szkm" value="3.6" step="0.1" min="0" onchange="r()"></div>
@@ -632,37 +608,10 @@ function showSyncStatus(mode,msg){
     </div>
   </div></div>
 
-  <div id="gpSzkZ" style="display:none">
-  <div class="sec"><div class="sh"><span class="st">3b. Szklenie zewnętrzne [Z]</span><span class="ss" id="sm3b">0 zł</span></div>
-  <div class="sb">
-    <div class="c3 row">
-      <div><div class="sub">Okno dwukomorowe (m²)</div><input type="number" id="szkzm" value="0" min="0" step="0.1" onchange="r()"></div>
-      <div><div class="sub">Drzwi zewnętrzne</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="drzz" onchange="r()" style="flex:1;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff">
-            <option value="0">Bez</option>
-            <option value="800">Drewniane (800 zł)</option>
-            <option value="1200">Aluminiowe (1200 zł)</option>
-            <option value="1800">PVC (1800 zł)</option>
-          </select>
-          <input type="number" id="drzzq" value="1" min="0" max="10" onchange="r()" style="width:50px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center;font-size:12px;padding:0 4px">
-        </div>
-      </div>
-      <div><div class="sub">Klamka zewnętrzna</div>
-        <select id="klmz" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;width:100%">
-          <option value="0">Bez</option>
-          <option value="150">Standard (150 zł)</option>
-          <option value="300">Premium (300 zł)</option>
-        </select>
-      </div>
-    </div>
-    <div class="c3 row"><span></span><span class="dv" id="szkzk">0 zł</span><span class="dv hi" id="szkzp">0 zł</span></div>
-  </div></div>
-</div>
-<div class="sec"><div class="sh"><span class="st">4. Wyposażenie premium</span><span class="ss" id="sm4">0 zł</span></div><div class="sb">
+  <div class="sec"><div class="sh"><span class="st">4. Wyposażenie premium</span><span class="ss" id="sm4">0 zł</span></div><div class="sb">
     <div class="c4 row">
       <div><div class="sub">Zawiasy (szt. × 240 zł)</div><input type="number" id="zawq" value="2" min="0" onchange="r()"></div>
-      <div><div class="sub">Antaba / klamka</div><select id="klm" onchange="r()"><option value="150">Made by ABM (150)</option><option value="479">ANTABA (479)</option><option value="0">Bez</option></select><input type="number" id="klmq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center;font-size:12px;padding:0 4px"></div>
+      <div><div class="sub">Antaba / klamka</div><select id="klm" onchange="r()"><option value="150">Made by ABM (150)</option><option value="479">ANTABA (479)</option><option value="0">Bez</option></select></div>
       <div><div class="sub">Drzwi do sauny</div><select id="drz" onchange="r()" style="display:none"><option value="0" selected>Bez</option></select><span style="font-size:11px;color:var(--mbm-mid)">—</span></div>
       <div><div class="sub">Ściana dekoracyjna</div><select id="scd" onchange="r()"><option value="0">Bez</option><option value="1000">Ściana z kamienia (1000)</option></select></div>
     </div>
@@ -811,8 +760,8 @@ function showSyncStatus(mode,msg){
     <div class="c4 row">
       <div><div class="sub">Taśma LED</div><select id="ledt" onchange="r()"><option value="0">Bez oświetlenia</option><option value="41.9">Taśma LED COB 6500K 480 LED 10W 900lm IP65 (24V) — 41,90/mb</option><option value="34.9">Taśma LED 4000K 120 SMD 2835 10W 950lm IP54 (24V) — 34,90/mb</option><option value="67">Taśma LED COB RGBCCT (RGB+CCT) 5w1 840 LED 16W IP65 (24V) — 67,00/mb</option><option value="49.86">Taśma LED RGBW +4000K 60 SMD 19W LAKIEROWANA IP54 — 49,86/mb</option><option value="89.2">NEONICA Sauna PRO RGB 600 24V IP68 5m SERIA PROFESJONALNA — 89,20/mb</option><option value="53.5">NEONICA Sauna PRO 600 24V IP68 5m SERIA PROFESJONALNA — 53,50/mb</option></select></div>
       <div><div class="sub">Ilość (mb/szt.)</div><input type="number" id="ledq" value="10" min="0" onchange="r()"></div>
-      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()"><option value="0">Bez zasilacza</option><option value="44.9">IP67 24V 1A 24W — 44,90</option><option value="63.9">IP67 24V 1.5A 36W — 63,90</option><option value="69.9">IP67 24V 1.875A 45W — 69,90</option><option value="75.9">IP67 24V 2.5A 60W — 75,90</option><option value="89.0">IP67 24V 3.33A 80W — 89,00</option><option value="117.0">IP67 24V 4.17A 100W — 117,00</option><option value="169.0">XLG MEAN WELL IP67 24V 6.25A 150W — 169,00</option><option value="230.0">XLG MEAN WELL IP67 24V 8.33A 200W — 230,00</option><option value="249.0">ELG MEAN WELL IP67 24V 10A 240W — 249,00</option><option value="309.0">XLG MEAN WELL IP67 24V 312W 13A — 309,00</option></select><input type="number" id="zastq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center;font-size:12px;padding:0 4px"></div>
-      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option><option value="135">V4 4-kan. (135)</option><option value="159">WT5 WiFi (159)</option><option value="250">Moduł+ster. (250)</option></select><input type="number" id="lsttq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center;font-size:12px;padding:0 4px"></div>
+      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()"><option value="0">Bez zasilacza</option><option value="44.9">IP67 24V 1A 24W — 44,90</option><option value="63.9">IP67 24V 1.5A 36W — 63,90</option><option value="69.9">IP67 24V 1.875A 45W — 69,90</option><option value="75.9">IP67 24V 2.5A 60W — 75,90</option><option value="89.0">IP67 24V 3.33A 80W — 89,00</option><option value="117.0">IP67 24V 4.17A 100W — 117,00</option><option value="169.0">XLG MEAN WELL IP67 24V 6.25A 150W — 169,00</option><option value="230.0">XLG MEAN WELL IP67 24V 8.33A 200W — 230,00</option><option value="249.0">ELG MEAN WELL IP67 24V 10A 240W — 249,00</option><option value="309.0">XLG MEAN WELL IP67 24V 312W 13A — 309,00</option></select></div>
+      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option><option value="135">V4 4-kan. (135)</option><option value="159">WT5 WiFi (159)</option><option value="250">Moduł+ster. (250)</option></select></div>
     </div>
     <div class="c2 row" style="margin-top:4px">
       <div><div class="sub">Umiejscowienie LED</div>
@@ -857,7 +806,7 @@ function showSyncStatus(mode,msg){
 
   <div class="sec"><div class="sh"><span class="st">7. Audio</span><span class="ss" id="sm7">0 zł</span></div><div class="sb">
     <div class="c2 row">
-      <div><div class="sub">Głośniki</div><select id="audt" onchange="r()"><option value="0">Bez nagłośnienia</option><option value="320">2× TONSIL standard (320)</option><option value="799">2× BOSE Premium (799)</option></select><input type="number" id="audtq" value="2" min="0" max="20" onchange="r()" style="width:50px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center;font-size:12px;padding:0 4px"></div>
+      <div><div class="sub">Głośniki</div><select id="audt" onchange="r()"><option value="0">Bez nagłośnienia</option><option value="320">2× TONSIL standard (320)</option><option value="799">2× BOSE Premium (799)</option></select></div>
       <div><div class="sub">Kontroler BT</div><select id="btkt" onchange="r()"><option value="0">Bez</option><option value="399">Kontroler BT (399)</option></select></div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
@@ -893,11 +842,11 @@ function showSyncStatus(mode,msg){
     </div>
   </div></div>
 
-  <div id="alrt" class="alrt cost-only"></div>
+  <div id="alrt" class="alrt"></div>
   <div class="tot" style="grid-template-columns:repeat(5,1fr)">
-    <div class="tc cost-only"><div class="tl">Koszt materiałów</div><div class="tv" id="tkos">0 zł</div></div>
-    <div class="tc cost-only"><div class="tl">Zysk na materiałach</div><div class="tv" id="tzys">0 zł</div></div>
-    <div class="tc cost-only"><div class="tl">Marża</div><div class="tv" id="tmar" style="color:var(--mbm-primary)">0%</div></div>
+    <div class="tc"><div class="tl">Koszt materiałów</div><div class="tv" id="tkos">0 zł</div></div>
+    <div class="tc"><div class="tl">Zysk na materiałach</div><div class="tv" id="tzys">0 zł</div></div>
+    <div class="tc"><div class="tl">Marża</div><div class="tv" id="tmar" style="color:var(--mbm-primary)">0%</div></div>
     <div class="tc"><div class="tl">Cena netto</div><div class="tv" id="tnet">0 zł</div></div>
     <div class="tc"><div class="tl" id="tbrtlbl">Cena brutto (8% VAT)</div><div class="tv" id="tbrt">0 zł</div></div>
   </div>
@@ -1028,7 +977,7 @@ function showSyncStatus(mode,msg){
       </div>
       <div class="c4 row">
         <div><div class="sub">Dostawca</div>
-          <select id="add-sup" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+          <select id="add-sup" onchange="var w=document.getElementById('add-sup-custom-wrap');if(w)w.style.display=this.value==='M'?'block':'none'" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
             <option value="S">Saunatech</option>
             <option value="E">EKO DREWNO</option>
             <option value="L">ELODENA</option>
@@ -1039,6 +988,9 @@ function showSyncStatus(mode,msg){
             <option value="KR">Kurek</option>
             <option value="M">Wpisane ręcznie</option>
           </select>
+        </div>
+        <div id="add-sup-custom-wrap" style="display:none"><div class="sub">Nazwa dostawcy</div>
+          <input type="text" id="add-sup-custom" placeholder="Wpisz nazwę dostawcy" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
         </div>
         <div style="display:flex;align-items:flex-end">
           <button class="btn grn" onclick="addMaterial()" style="height:26px;margin-top:auto">✔ Dodaj do listy</button>
@@ -1088,6 +1040,35 @@ function showSyncStatus(mode,msg){
     <div id="price-piece-body"></div>
   </div></div></div>
 
+  <!-- ZARZĄDZANIE DOSTAWCAMI -->
+  <div class="sec" style="margin-top:12px">
+    <div class="sh"><span class="st">Dostawcy</span><span class="ss" id="sup-count"></span></div>
+    <div class="sb">
+      <div id="sup-list" style="margin-bottom:12px"></div>
+      <div style="border-top:0.5px solid var(--mbm-pale);padding-top:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Dodaj nowego dostawcę</div>
+        <div style="display:grid;grid-template-columns:80px 1fr 1fr 80px;gap:6px;align-items:end">
+          <div><div class="sub">Skrót (kod)</div><input type="text" id="new-sup-key" placeholder="np. ZD1" maxlength="5" style="width:100%;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;padding:3px 8px;font-size:12px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+          <div><div class="sub">Pełna nazwa</div><input type="text" id="new-sup-name" placeholder="np. Zakład Drzewny Kowalski" style="width:100%;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;padding:3px 8px;font-size:12px"></div>
+          <div><div class="sub">Kolor badge</div>
+            <select id="new-sup-color" style="width:100%;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;padding:0 6px;font-size:12px;background:#fff">
+              <option value="bM">Szary (domyślny)</option>
+              <option value="bS">Ciemny</option>
+              <option value="bE">Zielony</option>
+              <option value="bL">Niebieski</option>
+              <option value="bA">Brązowy</option>
+              <option value="bG">Fioletowy</option>
+              <option value="bKL">Pomarańczowy</option>
+              <option value="bKR">Jasnoniebieski</option>
+            </select>
+          </div>
+          <div><button class="btn grn" onclick="addSupplier()" style="width:100%;height:28px;font-size:12px">+ Dodaj</button></div>
+        </div>
+        <p style="font-size:11px;color:var(--mbm-mid);margin-top:6px">Nowy dostawca pojawi się od razu we wszystkich listach wyboru dostawcy.</p>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ===== USTAWIENIA ===== -->
@@ -1133,61 +1114,13 @@ function isAdmin(){ return CURRENT_USER && CURRENT_USER.role==='admin'; }
 function isSales(){ return CURRENT_USER && CURRENT_USER.role==='sales'; }
 
 function applyRole(){
-  if(isSales()){
-    document.body.classList.add('role-sales');
-    // Shrink summary tot to 2 cards
-    var tot=document.querySelector('.tot');
-    if(tot) tot.style.gridTemplateColumns='repeat(2,1fr)';
-    // Hide Edytuj cenniki tab
-    document.querySelectorAll('.tab').forEach(function(btn){
-      if(btn.textContent.indexOf('Edytuj cenniki')>=0) btn.style.display='none';
-    });
-    return;
-  }
-  // Admin - ensure everything visible
-  document.body.classList.remove('role-sales');
-  var _dummy=['.dv','.ch']; // keep var for compat
-  var _dummy2=['tkos','tzys','tmar']; // keep var for compat
-  if(false){
-    document.querySelectorAll('.dv').forEach(function(el){el.style.visibility='hidden';});
-    document.querySelectorAll('.ch').forEach(function(el){el.style.visibility='hidden';});
-    document.querySelectorAll('.margin-row').forEach(function(el){el.style.display='none';});
-    // Hide cost & profit summary cards
-    salesHideIds.forEach(function(id){
-      var el=document.getElementById(id);
-      if(el){var card=el.closest('.tc');if(card)card.style.visibility='hidden';}
-    });
-    // Hide Edytuj cenniki tab
-    document.querySelectorAll('.tab').forEach(function(btn){
-      if(btn.textContent.indexOf('Edytuj cenniki')>=0) btn.style.display='none';
-    });
-    // Rename Kalkulator title
-    var h1=document.querySelector('.header h1');
-    if(h1) h1.textContent='ABM Sauny — Wycena';
-  }
+  if(!isSales()) return;
+  ['tkos','tzys','tmar'].forEach(function(id){var el=document.getElementById(id);if(el){var card=el.closest('.tc');if(card)card.style.display='none';}});
+  var tot=document.querySelector('.tot');if(tot)tot.style.gridTemplateColumns='repeat(2,1fr)';
+  var mrow=document.querySelector('.margin-row');if(mrow)mrow.style.display='none';
+  var alrt=document.getElementById('alrt');if(alrt)alrt.style.display='none';
+  document.querySelectorAll('.tab').forEach(function(btn){if(btn.textContent.trim()==='Edytuj cenniki')btn.style.display='none';});
 }
-
-function doLogin(){
-  var l=document.getElementById('login-input').value.trim();
-  var p=document.getElementById('pass-input').value;
-  var user=checkLogin(l,p);
-  if(!user){ document.getElementById('login-err').style.display='block'; return; }
-  CURRENT_USER=user;
-  sessionStorage.setItem('abm_user', JSON.stringify(user));
-  document.getElementById('login-overlay').style.display='none';
-  document.getElementById('user-badge').textContent=user.name;
-  document.getElementById('user-badge-wrap').style.display='flex';
-  applyRole();
-  syncLoad();
-}
-
-function doLogout(){
-  if(!confirm('Wylogować się?')) return;
-  sessionStorage.removeItem('abm_user');
-  CURRENT_USER=null;
-  location.reload();
-}
-
 
 function doLogin(){
   var l=document.getElementById('login-input').value.trim();
@@ -1385,7 +1318,7 @@ function showTab(t){
   if(t==='order'){buildOrder();}
   if(t==='history'){buildHistory();}
   if(t==='actual'){buildActual(true);}
-  if(t==='prices'){buildPriceTables();}
+  if(t==='prices'){buildSupplierList();}{buildPriceTables();}
   if(t==='settings'){loadSettings();}
 }
 
@@ -1481,7 +1414,6 @@ function setWZ(t){
   document.getElementById('rowBSH').style.display=isZ?'block':'none';
   document.getElementById('rowCNC').style.display=isZ?'block':'none';
   document.getElementById('rowDrzwZ').style.display=isZ?'block':'none';
-  ['gpK2','gpSzkZ','gpSkrz'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isZ?'block':'none';});
   var wl=document.getElementById('wellb');
   if(wl)wl.textContent=isZ?'[Z] Welna 100mm (m2 x 23,00 zl)':'[W] Welna 40mm (m2 x 8,50 zl)';
   setVAT(isZ?23:8);r();
@@ -1597,13 +1529,8 @@ function r(){
   var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
   var logist=gv('trn')+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
-  var k2K=gv('k2m')*gv('k2q'),k2P=k2K*(gv('mk')||2);se('k2k',f(k2K));se('k2p',f(k2P));
-  var k3K=gv('k3m')*gv('k3q'),k3P=k3K*(gv('mk')||2);se('k3k',f(k3K));se('k3p',f(k3P));
-  var szkzK=(gv('szkzm')||0)*700+(gv('drzz')||0)*(gv('drzzq')||1)+(gv('klmz')||0),szkzP=szkzK*(gv('mp')||1.5);se('szkzk',f(szkzK));se('szkzp',f(szkzP));
-  var skrzK=gv('skrz')||0,skrzP=skrzK*(gv('mp')||1.5);se('skrzp',f(skrzP));
-  se('sm2b',f(k2P+k3P));se('sm3b',f(szkzP+skrzP));
-  var totalSp=s1+s2+szkP+k2P+k3P+szkzP+skrzP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2K+k3K+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?szkzK+skrzK+gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalSp=s1+s2+szkP+prmP+grzP+ledP+audP+dodP;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -1801,15 +1728,6 @@ function buildVariantHTML(s,vkey){
   if(LANG==='EN'){var glassMap={'Grafitowe':'Graphite','Brązowe':'Smoked Glass','Float':'Float','Okno':'Double-pane window'};szkloNazwa=glassMap[szkloNazwa]||szkloNazwa;}
   if(s.szkm>0){html+='<div class="v-row"><span class="v-label">'+tr('szklenie')+' — '+szkloNazwa+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'YES':'TAK')+'</span></div>';}
   else vrowYN(tr('szklenie'),false);
-  // Wykończenie zewnętrzne [Z]
-  if(s.isZ){
-    vsec(LANG==='EN'?'Exterior Finishing':'Wykończenie zewnętrzne');
-    if(s.bzq>0) vrowMat(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', s.bzn||null);
-    else vrowYN(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', false);
-    vrowYN(LANG==='EN'?'Structure BSH 100x100':'Konstrukcja BSH 100x100', (s.bshq||0)>0);
-    vrowYN(LANG==='EN'?'XPS insulation board':'Plyta XPS', (s.styq||0)>0);
-    vrowYN(LANG==='EN'?'Ground — concrete slab':'Zabezpieczenie spodu', (s.plyq||0)>0);
-  }
   // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
   var cenaWypos=s.grzP+s.ledP+s.audP+(s.dodP||0);
   var cenaSaunyAuto=s.netto-cenaWypos;
@@ -2050,7 +1968,7 @@ function loadToCalc(s){
 
   // Odśwież badge dostawców i przelicz
   _loading=false;
-  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');uM('k2');uM('k3');uM('podl');
+  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');uM('podl');
   r();
 }
 
@@ -2474,6 +2392,7 @@ function addMaterial(){
   var name=document.getElementById('add-name').value.trim();
   var price=parseFloat(document.getElementById('add-price').value)||0;
   var sup=document.getElementById('add-sup').value;
+  if(sup==='M'){var customName=document.getElementById('add-sup-custom').value.trim();if(customName)SN['M']=customName;}
 
   if(!name){alert('Wpisz nazwę / opis pozycji.');return;}
 
@@ -2789,7 +2708,7 @@ mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
 mkSelG('k1m',KONSTR);
 rebP();r();
 initVslots();
-loadSavedPiecePrices();loadSavedPromPrices();
+loadCustomSuppliers();loadSavedPiecePrices();loadSavedPromPrices();
 initLogin();
 // Init Supabase
 initSupabase();
@@ -3740,6 +3659,151 @@ function removeUser(idx){
   buildUserList();
 }
 
+
+// ===== ZARZĄDZANIE DOSTAWCAMI =====
+function buildSupplierList(){
+  var el=document.getElementById('sup-list');
+  var cnt=document.getElementById('sup-count');
+  if(!el) return;
+  var keys=Object.keys(SN).filter(function(k){return k!=='M';});
+  if(cnt) cnt.textContent=keys.length+' dostawców';
+  var html='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--mbm-dark);color:#fff"><th style="padding:5px 8px;text-align:left">Kod</th><th style="padding:5px 8px;text-align:left">Nazwa</th><th style="padding:5px 8px;text-align:left">Badge</th><th style="width:50px"></th></tr></thead><tbody>';
+  keys.forEach(function(k){
+    var badgeCls=SC[k]||'bM';
+    html+='<tr style="border-bottom:0.5px solid #eee">';
+    html+='<td style="padding:5px 8px;font-family:monospace;font-weight:600">'+k+'</td>';
+    html+='<td style="padding:5px 8px">'+SN[k]+'</td>';
+    html+='<td style="padding:5px 8px"><span class="badge '+badgeCls+'">'+k+'</span></td>';
+    html+='<td style="padding:5px 8px;text-align:center">';
+    // Prevent deleting built-in suppliers
+    var builtIn=['S','E','L','A','K','G','KL','KR'];
+    if(builtIn.indexOf(k)<0) html+='<button data-sk="'+k+'" onclick="removeSupplier(this.dataset.sk)" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:15px" title="Usuń">×</button>';
+    html+='</td></tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+async function syncSaveSuppliers(){
+  if(!supa) return;
+  var custom=JSON.parse(localStorage.getItem('abm_custom_suppliers')||'{}');
+  try{ await supa.from('shared_settings').upsert({key:'suppliers',value:custom,updated_at:new Date().toISOString()}); }catch(e){}
+}
+
+function addSupplier(){
+  var key=document.getElementById('new-sup-key').value.trim().toUpperCase();
+  var name=document.getElementById('new-sup-name').value.trim();
+  var color=document.getElementById('new-sup-color').value;
+  if(!key||key.length<1){alert('Wpisz kod dostawcy (np. ZD1).');return;}
+  if(!name){alert('Wpisz pełną nazwę dostawcy.');return;}
+  if(SN[key]){alert('Dostawca z kodem "'+key+'" już istnieje: '+SN[key]);return;}
+  SN[key]=name;
+  SC[key]=color;
+  // Save to localStorage
+  localStorage.setItem('abm_custom_suppliers',JSON.stringify(
+    Object.keys(SN).filter(function(k){return ['S','E','L','A','K','G','KL','KR','M'].indexOf(k)<0;}).reduce(function(obj,k){obj[k]={name:SN[k],color:SC[k]};return obj;},{})
+  ));
+  document.getElementById('new-sup-key').value='';
+  document.getElementById('new-sup-name').value='';
+  buildSupplierList();
+  // Rebuild all material dropdowns with new supplier
+  buildPriceTables();
+  alert('Dodano dostawcę: '+name+' ('+key+')');
+}
+
+function removeSupplier(key){
+  if(!confirm('Usunąć dostawcę '+SN[key]+'?')) return;
+  delete SN[key];
+  delete SC[key];
+  localStorage.setItem('abm_custom_suppliers',JSON.stringify(
+    Object.keys(SN).filter(function(k){return ['S','E','L','A','K','G','KL','KR','M'].indexOf(k)<0;}).reduce(function(obj,k){obj[k]={name:SN[k],color:SC[k]};return obj;},{})
+  ));
+  buildSupplierList();
+  buildPriceTables();
+}
+
+function loadCustomSuppliers(){
+  try{
+    var saved=localStorage.getItem('abm_custom_suppliers');
+    if(saved){
+      var custom=JSON.parse(saved);
+      Object.keys(custom).forEach(function(k){
+        SN[k]=custom[k].name;
+        SC[k]=custom[k].color||'bM';
+      });
+    }
+  }catch(e){}
+}
+
+function refreshSupSelect(){
+  var sel=document.getElementById('add-sup');
+  if(!sel) return;
+  var current=sel.value;
+  sel.innerHTML='';
+  Object.keys(SN).forEach(function(k){
+    var opt=document.createElement('option');
+    opt.value=k;
+    opt.textContent=SN[k];
+    sel.appendChild(opt);
+  });
+  if(current) sel.value=current;
+}
+
+
+
+
+async function syncSaveSuppliers(){
+  if(!supa) return;
+  var custom=JSON.parse(localStorage.getItem('abm_custom_suppliers')||'{}');
+  try{ await supa.from('shared_settings').upsert({key:'suppliers',value:custom,updated_at:new Date().toISOString()}); }catch(e){}
+}
+
+function addSupplier(){
+  var key=document.getElementById('new-sup-key').value.trim().toUpperCase();
+  var name=document.getElementById('new-sup-name').value.trim();
+  if(!key||key.length<1){alert('Wpisz kod dostawcy (max 4 znaki).');return;}
+  if(!name){alert('Wpisz nazwę dostawcy.');return;}
+  if(SN[key]){alert('Dostawca o kodzie "'+key+'" już istnieje: '+SN[key]);return;}
+  SN[key]=name;
+  SC[key]='bM'; // use generic badge style
+  // Save to localStorage
+  var custom=JSON.parse(localStorage.getItem('abm_custom_suppliers')||'{}');
+  custom[key]=name;
+  localStorage.setItem('abm_custom_suppliers',JSON.stringify(custom));
+  if(typeof syncSaveSuppliers==='function') syncSaveSuppliers();
+  document.getElementById('new-sup-key').value='';
+  document.getElementById('new-sup-name').value='';
+  buildSupplierList();
+}
+
+function removeSupplier(key){
+  if(!confirm('Usunąć dostawcę "'+SN[key]+'" ('+key+')?')) return;
+  delete SN[key];
+  delete SC[key];
+  var custom=JSON.parse(localStorage.getItem('abm_custom_suppliers')||'{}');
+  delete custom[key];
+  localStorage.setItem('abm_custom_suppliers',JSON.stringify(custom));
+  if(typeof syncSaveSuppliers==='function') syncSaveSuppliers();
+  buildSupplierList();
+}
+
+function rebuildSupplierDropdowns(){
+  // Rebuild add-sup dropdown
+  var addSup=document.getElementById('add-sup');
+  if(addSup){
+    var curr=addSup.value;
+    addSup.innerHTML='';
+    Object.keys(SN).forEach(function(k){
+      var o=document.createElement('option');
+      o.value=k;o.textContent=SN[k];
+      if(k===curr)o.selected=true;
+      addSup.appendChild(o);
+    });
+  }
+}
+
+
+
 </script>
 
 <!-- MODAL PODGLĄD WYCENY -->
@@ -3880,3 +3944,20 @@ function removeUser(idx){
 </div>
 </body>
 </html>
+
+  <!-- ZARZĄDZANIE DOSTAWCAMI -->
+  <div class="sec" style="margin-top:16px">
+    <div class="sh"><span class="st">Dostawcy materiałów</span><span class="ss" id="sup-count"></span></div>
+    <div class="sb">
+      <div id="sup-list" style="margin-bottom:12px"></div>
+      <div style="border-top:0.5px solid var(--mbm-pale);padding-top:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Dodaj nowego dostawcę</div>
+        <div style="display:grid;grid-template-columns:80px 1fr 80px;gap:6px;align-items:end;margin-bottom:6px">
+          <div><div class="sub">Kod (skrót)</div><input type="text" id="new-sup-key" placeholder="np. XYZ" maxlength="4" style="width:100%;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;padding:3px 8px;font-size:12px;text-transform:uppercase"></div>
+          <div><div class="sub">Pełna nazwa dostawcy</div><input type="text" id="new-sup-name" placeholder="np. Firma Drzewna Sp. z o.o." style="width:100%;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;padding:3px 8px;font-size:12px"></div>
+          <div><button class="btn grn" onclick="addSupplier()" style="width:100%;height:28px;font-size:12px">+ Dodaj</button></div>
+        </div>
+        <p style="font-size:11px;color:var(--mbm-mid)">Dodani dostawcy będą dostępni we wszystkich listach wyboru dostawcy w kalkulatorze i cennikach.</p>
+      </div>
+    </div>
+  </div>
