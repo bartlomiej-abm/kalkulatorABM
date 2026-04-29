@@ -1719,10 +1719,10 @@ function buildVariantHTML(s,vkey){
 
   // WYKOŃCZENIE
   vsec(tr('wykończenie'));
-  vrowMat(tr('boazeria'),s.b1&&s.b1.q>0?(s.b1.g||s.b1.name.split(' ')[0]):null);
-  if(s.b2&&s.b2.q>0)vrowMat('Boazeria (2)',s.b2.g||s.b2.name.split(' ')[0]);
-  if(!s.isZ)vrowMat(tr('zabudowa'),s.zb1&&s.zb1.q>0?(s.zb1.g||s.zb1.name.split(' ')[0]):null);
-  vrowMat(tr('lawki'),s.l1&&s.l1.q>0?(s.l1.g||s.l1.name.split(' ')[0]):null);
+  vrowMat(tr('boazeria'),s.b1&&s.b1.q>0?(s.b1.name?s.b1.name.split(' ').slice(0,3).join(' '):s.b1.g||null):null);
+  if(s.b2&&s.b2.q>0)vrowMat('Boazeria (2)',s.b2.name?s.b2.name.split(' ').slice(0,3).join(' '):s.b2.g||null);
+  if(!s.isZ)vrowMat(tr('zabudowa'),s.zb1&&s.zb1.q>0?(s.zb1.name?s.zb1.name.split(' ').slice(0,3).join(' '):s.zb1.g||null):null);
+  vrowMat(tr('lawki'),s.l1&&s.l1.q>0?(s.l1.name?s.l1.name.split(' ').slice(0,3).join(' '):s.l1.g||null):null);
   if(s.l2&&s.l2.q>0)vrowMat('Ławki (2)',s.l2.g||s.l2.name.split(' ')[0]);
   var szkloNazwa=(s.szkt||'').replace(/\([^)]*\)/g,'').trim().split(' ')[0]||'—';
   if(LANG==='EN'){var glassMap={'Grafitowe':'Graphite','Brązowe':'Smoked Glass','Float':'Float','Okno':'Double-pane window'};szkloNazwa=glassMap[szkloNazwa]||szkloNazwa;}
