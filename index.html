@@ -949,7 +949,7 @@ function showSyncStatus(mode,msg){
     <div class="sb">
       <div class="c4 row" style="margin-bottom:6px">
         <div><div class="sub">Cennik (lista)</div>
-          <select id="add-cat" onchange="toggleAddPieceRow()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+          <select id="add-cat" onchange="onAddCatChange()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
             <option value="boaz">Boazeria wewnętrzna</option>
             <option value="boaz-ext">Boazeria zewnętrzna / obicie</option>
             <option value="deski">Ławki i deski</option>
@@ -959,8 +959,14 @@ function showSyncStatus(mode,msg){
             <option value="piece">Piece</option>
           </select>
         </div>
-        <div><div class="sub">Grupa / gatunek drewna</div>
-          <input type="text" id="add-group" placeholder="np. Boazeria zewnętrzna" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
+        <div>
+          <div class="sub" id="add-group-label">Grupa / gatunek drewna</div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <select id="add-group" style="flex:1;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a" onchange="onAddGroupChange()">
+              <option value="">-- wybierz grupę --</option>
+            </select>
+            <input type="text" id="add-group-new" placeholder="+ Nowa grupa" style="width:110px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a">
+          </div>
         </div>
         <div><div class="sub">Nazwa materiału</div>
           <input type="text" id="add-name" placeholder="np. Modrzew 14x96mm 2,10m" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
@@ -2399,6 +2405,11 @@ function updatePrice(el){
   else if(key==='konstr')KONSTR[idx].p=val;
 }
 
+function onAddCatChange(){
+  toggleAddPieceRow();
+  refreshAddGroupDropdown();
+}
+
 function toggleAddPieceRow(){
   var cat=document.getElementById('add-cat').value;
   var pr=document.getElementById('add-piece-row');
@@ -2413,9 +2424,53 @@ function toggleAddPieceRow(){
   }
 }
 
+
+function getGroupsForCat(cat){
+  var arr = cat==='boaz'?BOAZ : cat==='boaz-ext'?BOAZ_EXT : cat==='deski'?DESKI : cat==='konstr'?KONSTR : [];
+  var groups = [];
+  arr.forEach(function(item){ if(item.g && groups.indexOf(item.g)<0) groups.push(item.g); });
+  return groups.sort();
+}
+
+function refreshAddGroupDropdown(){
+  var cat = document.getElementById('add-cat').value;
+  var sel = document.getElementById('add-group');
+  if(!sel) return;
+  var curr = sel.value;
+  sel.innerHTML = '<option value="">-- wybierz grupę --</option>';
+  getGroupsForCat(cat).forEach(function(g){
+    var o = document.createElement('option');
+    o.value = g; o.textContent = g;
+    if(g===curr) o.selected=true;
+    sel.appendChild(o);
+  });
+  // Add "+ Dodaj nową" option
+  var oNew = document.createElement('option');
+  oNew.value = '__new__'; oNew.textContent = '+ Dodaj nową grupę...';
+  sel.appendChild(oNew);
+}
+
+function onAddGroupChange(){
+  var sel = document.getElementById('add-group');
+  var newInp = document.getElementById('add-group-new');
+  if(!sel||!newInp) return;
+  if(sel.value==='__new__'){
+    newInp.style.display='block';
+    newInp.focus();
+    newInp.placeholder='Wpisz nazwę nowej grupy';
+    sel.value='';
+  }
+}
+
+function getAddGroupValue(){
+  var newInp = document.getElementById('add-group-new');
+  var sel = document.getElementById('add-group');
+  if(newInp && newInp.value.trim()) return newInp.value.trim();
+  return sel ? sel.value : '';
+}
 function addMaterial(){
   var cat=document.getElementById('add-cat').value;
-  var grp=document.getElementById(cat==='piece'?(document.getElementById('add-group2').value.trim()?'add-group2':'add-group'):'add-group').value.trim()||document.getElementById('add-group').value.trim();
+  var grp=cat==='piece'?(document.getElementById('add-group2').value.trim()||getAddGroupValue()):getAddGroupValue();
   var name=document.getElementById('add-name').value.trim();
   var price=parseFloat(document.getElementById('add-price').value)||0;
   var sup=document.getElementById('add-sup').value;
@@ -2466,7 +2521,9 @@ function addMaterial(){
   else if(cat==='konstr')KONSTR.push(item);
   document.getElementById('add-name').value='';
   document.getElementById('add-price').value='0';
+  var agn=document.getElementById('add-group-new');if(agn)agn.value='';
   buildPriceTables();
+  refreshAddGroupDropdown();
   savePricesQuiet();
 }
 
