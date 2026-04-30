@@ -1779,8 +1779,17 @@ function buildVariantHTML(s,vkey){
     if(s.pr7>0)vrowPrice('Promienniki 750W ×'+s.pr7,s.pr7*765*mG);
   }
 
+  // Sterownik FFES
+  if(s.sterVal>0){
+    var sterLbl=tr('sterownik');
+    if(s.sterModel&&s.sterModel!=='0'){
+      var sp2=s.sterSer==='Cmini'?'C mini ':s.sterSer==='C'?'C ':'Z ';
+      sterLbl+=' '+sp2+(s.sterModel||'');
+    }
+    vrowPrice(sterLbl,s.sterVal*mG);
+  } else vrowYN(tr('sterownik'),false);
   if(s.wifi)vrowPrice(tr('wifi'),400*mG); else vrowYN(tr('wifi'),false);
-  if(s.bt)vrowPrice(tr('bt'),300*mG); else vrowYN(tr('bt'),false);
+  if(s.bt)vrowYN(tr('bt'),s.bt||false);
   if(s.aw)vrowPrice(tr('awarying'),600*mG);
   if(s.ledtVal>0&&s.ledq>0){
     var ledDesc=tr('led');
@@ -3870,6 +3879,7 @@ function removeSupplier(key){
   localStorage.setItem('abm_custom_suppliers',JSON.stringify(custom));
   if(typeof syncSaveSuppliers==='function') syncSaveSuppliers();
   buildSupplierList();
+  rebuildSupplierDropdowns();
 }
 
 function rebuildSupplierDropdowns(){
