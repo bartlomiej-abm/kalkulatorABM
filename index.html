@@ -545,6 +545,7 @@ function showSyncStatus(mode,msg){
     </div>
     <div class="grp" id="gpBZ" style="display:none">
       <div class="gt">Boazeria zewnętrzna / obicie [Z]</div>
+      <div style="margin-bottom:6px"><label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="obicie-zew" onchange="r()" style="width:14px;height:14px"> Obicie zewnętrzne (TAK/NIE dla widoku klienta)</label></div>
       <div class="c5 row" style="margin-bottom:2px"><span class="ch">Materiał</span><span class="ch">szt.</span><span class="ch">dost.</span><span class="ch">koszt</span><span class="ch">sprzedaż</span></div>
       <div class="c5 row">
         <select id="bz-sel" onchange="onBZSel()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a"></select>
@@ -1588,7 +1589,7 @@ function r(){
     piec:{name:selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
     kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
     pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),pr3m:document.getElementById('pr3m')?.value||'660|350',pr5m:document.getElementById('pr5m')?.value||'710|500',pr7m:document.getElementById('pr7m')?.value||'765|750',moc:moc,
-    ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),aw:ck('aaw'),
+    ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),sty3:ck('asty3'),aw:ck('aaw'),pbez:ck('apbez'),
     ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),ledBarwa:gs('led-barwa'),
     audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
     solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
@@ -1760,7 +1761,16 @@ function buildVariantHTML(s,vkey){
   if(LANG==='EN'){var glassMap={'Grafitowe':'Graphite','Brązowe':'Smoked Glass','Float':'Float','Okno':'Double-pane window'};szkloNazwa=glassMap[szkloNazwa]||szkloNazwa;}
   if(s.szkm>0){html+='<div class="v-row"><span class="v-label">'+tr('szklenie')+' — '+szkloNazwa+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'YES':'TAK')+'</span></div>';}
   else vrowYN(tr('szklenie'),false);
-  // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
+  // Wykończenie zewnętrzne [Z]
+  if(s.isZ){
+    vsec(LANG==='EN'?'Exterior Finishing':'Wykończenie zewnętrzne');
+    vrowYN(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', s.obicieZew||s.bzq>0);
+    vrowYN(LANG==='EN'?'Structure BSH 100x100':'Konstrukcja BSH 100x100', (s.bshq||0)>0);
+    vrowYN(LANG==='EN'?'XPS insulation':'Płyta XPS', (s.styq||0)>0);
+    vrowYN(LANG==='EN'?'Ground protection':'Zabezpieczenie spodu', (s.plyq||0)>0);
+  }
+
+    // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
   var cenaSaunyAuto=(s.s1||0)+(s.s2||0)+(s.szkP||0)+(s.prmP||0)+(s.logist||0)+(s.nkw||0)+(s.dol||0);
   var cenaSauny=s.cenaSaunyOverride>0?s.cenaSaunyOverride:cenaSaunyAuto;
   var cenaWypos=(s.grzP||0)+(s.ledP||0)+(s.audP||0)+(s.dodP||0);
@@ -1779,17 +1789,20 @@ function buildVariantHTML(s,vkey){
     if(s.pr7>0)vrowPrice('Promienniki 750W ×'+s.pr7,s.pr7*765*mG);
   }
 
-  // Sterownik FFES
+  // Sterownik FFES - cena = sterownik + cichy X1X2 + cichy X3 (wbudowane)
   if(s.sterVal>0){
     var sterLbl=tr('sterownik');
     if(s.sterModel&&s.sterModel!=='0'){
       var sp2=s.sterSer==='Cmini'?'C mini ':s.sterSer==='C'?'C ':'Z ';
       sterLbl+=' '+sp2+(s.sterModel||'');
     }
-    vrowPrice(sterLbl,s.sterVal*mG);
+    // Include cichy X1X2 (sty) and cichy X3 (sty3) in sterownik price
+    var sterTotalPrice=s.sterVal+(s.sty?100:0)+(s.sty3?250:0);
+    vrowPrice(sterLbl,sterTotalPrice*mG);
   } else vrowYN(tr('sterownik'),false);
   if(s.wifi)vrowPrice(tr('wifi'),400*mG); else vrowYN(tr('wifi'),false);
-  if(s.bt)vrowYN(tr('bt'),s.bt||false);
+  if(s.bt)vrowPrice(tr('bt'),300*mG);
+  if(s.pbez)vrowPrice(LANG==='EN'?'Safety button (built-in)':'Przycisk bezpieczeństwa',220*mG);
   if(s.aw)vrowPrice(tr('awarying'),600*mG);
   if(s.ledtVal>0&&s.ledq>0){
     var ledDesc=tr('led');
