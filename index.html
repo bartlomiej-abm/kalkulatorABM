@@ -358,6 +358,11 @@ async function syncLoad(){
         try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
       }
     });
+    // Rebuild selects with cloud data
+    mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
+    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
+    mkSelBZ();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
     showSyncStatus('local','Tryb lokalny (brak połączenia)');
@@ -380,6 +385,22 @@ async function syncSaveLogo(logoData){
   }catch(e){console.error('syncSaveLogo:',e);}
 }
 
+
+async function syncSavePrices(){
+  if(!supa) return;
+  try{
+    // Save custom pieces separately (not overwrite all default pieces)
+    var customPiece=PIECE.filter(function(p){return p.custom;});
+    await Promise.all([
+      supa.from('shared_settings').upsert({key:'boaz',value:BOAZ,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'deski',value:DESKI,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'konstr',value:KONSTR,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'custom_piece',value:customPiece,updated_at:new Date().toISOString()})
+    ]);
+    showSyncStatus('cloud','Cenniki zsynchronizowane');
+  }catch(e){console.error('syncSavePrices:',e);}
+}
 async function syncSaveBoazExt(){
   if(!supa)return;
   try{
@@ -631,6 +652,7 @@ function showSyncStatus(mode,msg){
       <div class="c2 row">
         <div><div class="sub">Model pieca</div><select id="psel" onchange="onPS()" style="width:100%"></select><div id="pinfo" class="pinfo" style="display:none"></div></div>
         <div><div class="sub">Cena zakupu (zł)</div><input type="number" id="piec" value="0" min="0" onchange="r()"></div>
+        <div id="piec-name-wrap" style="display:none"><div class="sub">Nazwa modelu</div><input type="text" id="piec-name" placeholder="np. HUUM HIVE 12 kW" onchange="r()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;width:100%"></div>
       </div>
       <div class="c3 row" style="margin-top:4px">
         <div><div class="sub">Kamienie Diabez (paczki × 50 zł)</div><input type="number" id="kamd" value="0" min="0" onchange="r()"></div>
@@ -743,6 +765,8 @@ function showSyncStatus(mode,msg){
             <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="aaw" onchange="r()"> Awaryjne wyłącz. (600 zł)</label>
             <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="apbez" onchange="r()"> Przycisk bezp. (220 zł)</label>
           </div>
+          <div><label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="acpir-g2" onchange="r()"> Moduł CPiR G2 (350 zł)</label></div>
+          <div><label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="acpir-g4" onchange="r()"> Moduł CPiR G4 (400 zł)</label></div>
         </div>
         <div>
           <div class="sub">Cena sterownika (auto)</div>
@@ -1275,10 +1299,10 @@ var DEFAULT_KONSTR=[
   {g:'KVH',n:'Drewno KVH 40x60mm swierek 5,00m',p:24.48,s:'E'},{g:'KVH',n:'Drewno KVH 40x80mm swierek 5,00m',p:32.64,s:'E'}
 ];
 var PIECE=[
-  {g:'HUUM DROP',n:'HUUM DROP 4 (4,5 kW)',eur:315},{g:'HUUM DROP',n:'HUUM DROP 6 (6 kW)',eur:352.5},{g:'HUUM DROP',n:'HUUM DROP 7 (7 kW)',eur:382.5},{g:'HUUM DROP',n:'HUUM DROP 9 (9 kW)',eur:408.75},
-  {g:'HUUM STEEL',n:'HUUM STEEL 6 (6 kW)',eur:535},{g:'HUUM STEEL',n:'HUUM STEEL 9 (9 kW)',eur:585},{g:'HUUM STEEL',n:'HUUM STEEL 12 (12 kW)',eur:635},{g:'HUUM STEEL',n:'HUUM STEEL 15 (15 kW)',eur:695},
-  {g:'HUUM CLIFF',n:'HUUM CLIFF 6 (6 kW)',eur:620},{g:'HUUM CLIFF',n:'HUUM CLIFF 9 (9 kW)',eur:670},{g:'HUUM CLIFF',n:'HUUM CLIFF 12 (12 kW)',eur:720},{g:'HUUM CLIFF',n:'HUUM CLIFF 15 (15 kW)',eur:780},
-  {g:'HUUM HIVE',n:'HUUM HIVE Mini 6 (6 kW)',eur:561},{g:'HUUM HIVE',n:'HUUM HIVE Mini 9 (9 kW)',eur:609},{g:'HUUM HIVE',n:'HUUM HIVE mini 11 (11 kW)',eur:638.5},{g:'HUUM HIVE',n:'HUUM HIVE 16 (16 kW)',eur:890},{g:'HUUM HIVE',n:'HUUM HIVE 21 (21 kW)',eur:1050},
+  {g:'HUUM DROP',n:'HUUM DROP 4 (4 kW)',eur:329.01},{g:'HUUM DROP',n:'HUUM DROP 6 (6 kW)',eur:368.18},{g:'HUUM DROP',n:'HUUM DROP 7 (7 kW)',eur:399.51},{g:'HUUM DROP',n:'HUUM DROP 9 (9 kW)',eur:426.93},
+  {g:'HUUM STEEL',n:'HUUM STEEL Mini 4 (4 kW)',eur:391.68},{g:'HUUM STEEL',n:'HUUM STEEL 6 (6 kW)',eur:477.85},{g:'HUUM STEEL',n:'HUUM STEEL 9 (9 kW)',eur:520.93},{g:'HUUM STEEL',n:'HUUM STEEL 11 (11 kW)',eur:552.27},
+  {g:'HUUM CLIFF',n:'HUUM CLIFF Mini 4 (4 kW)',eur:454.35},{g:'HUUM CLIFF',n:'HUUM CLIFF 6 (6 kW)',eur:564.02},{g:'HUUM CLIFF',n:'HUUM CLIFF 9 (9 kW)',eur:611.02},{g:'HUUM CLIFF',n:'HUUM CLIFF 11 (11 kW)',eur:658.02},
+  {g:'HUUM HIVE',n:'HUUM HIVE Mini 6 (6 kW)',eur:585.95},{g:'HUUM HIVE',n:'HUUM HIVE Mini 9 (9 kW)',eur:636.09},{g:'HUUM HIVE',n:'HUUM HIVE Mini 11 (11 kW)',eur:666.64},{g:'HUUM HIVE',n:'HUUM HIVE 12 (12 kW)',eur:748.11},{g:'HUUM HIVE',n:'HUUM HIVE 15 (15 kW)',eur:797.46},{g:'HUUM HIVE',n:'HUUM HIVE 18 (18 kW)',eur:904.00},
   {g:'Harvia Vega',n:'Harvia Vega BC45 (4,5 kW)',eur:201.89},{g:'Harvia Vega',n:'Harvia Vega BC60 (6 kW)',eur:212.52},{g:'Harvia Vega',n:'Harvia Vega BC80 (8 kW)',eur:231.65},{g:'Harvia Vega',n:'Harvia Vega BC90 (9 kW)',eur:235.9},
   {g:'Harvia Vega',n:'Harvia Vega Combi BC60SE (6 kW)',eur:411.14},{g:'Harvia Vega',n:'Harvia Vega Combi BC90SE (9 kW)',eur:426.85},
   {g:'Harvia Cilindro',n:'Harvia Cilindro PC66 (6,6 kW)',eur:334.36},{g:'Harvia Cilindro',n:'Harvia Cilindro PC70 (6,8 kW)',eur:265.14},{g:'Harvia Cilindro',n:'Harvia Cilindro PC90 (9 kW)',eur:310.22},
@@ -1286,7 +1310,7 @@ var PIECE=[
   {g:'Harvia Glow',n:'Harvia Glow TRT70 (6,8 kW)',eur:371.17},{g:'Harvia Glow',n:'Harvia Glow TRT90 (9 kW)',eur:421.14},{g:'Harvia Glow',n:'Harvia Glow Corner TRC70 (6,8 kW)',eur:409.72},{g:'Harvia Glow',n:'Harvia Glow Corner TRC90 (9 kW)',eur:452.54},
   {g:'Harvia Virta',n:'Harvia Virta HL70 black (6 kW)',eur:690.69},{g:'Harvia Virta',n:'Harvia Virta HL90 black (9 kW)',eur:736.74},
   {g:'EOS Classic',n:'EOS Picco W 3,0 kW',eur:389.78},{g:'EOS Classic',n:'EOS Picco W 3,5 kW',eur:395.43},{g:'EOS Classic',n:'EOS Filius W 4,5 kW',eur:508.58},{g:'EOS Classic',n:'EOS Filius W 6,0 kW',eur:519.89},{g:'EOS Classic',n:'EOS Filius W 7,5 kW',eur:536.86},
-  {g:'Abachi Thermo',n:'EOS ThermoTec W 6,0 kW',eur:367.15},{g:'Abachi Thermo',n:'EOS ThermoTec W 7,5 kW',eur:395.43},{g:'Abachi Thermo',n:'EOS ThermoTec W 9,0 kW',eur:423.72},
+  {g:'EOS Classic',n:'EOS ThermoTec W 6,0 kW',eur:367.15},{g:'EOS Classic',n:'EOS ThermoTec W 7,5 kW',eur:395.43},{g:'EOS Classic',n:'EOS ThermoTec W 9,0 kW',eur:423.72},
   {g:'EOS Classic',n:'EOS Gracil W 6,0 kW',eur:678.29},{g:'EOS Classic',n:'EOS Gracil W 7,5 kW',eur:689.61},{g:'EOS Classic',n:'EOS Gracil W 9,0 kW',eur:706.58},
   {g:'EOS Classic',n:'EOS Euro 6,0 kW',eur:565.15},{g:'EOS Classic',n:'EOS Euro 7,5 kW',eur:587.78},{g:'EOS Classic',n:'EOS Euro 9,0 kW',eur:604.75},
   {g:'EOS Classic',n:'EOS FinnRock 7,5 kW',eur:1074.29},{g:'EOS Classic',n:'EOS FinnRock 9,0 kW',eur:1085.61},{g:'EOS Classic',n:'EOS FinnRock 12,0 kW',eur:1130.86},
@@ -1351,7 +1375,7 @@ function showTab(t){
   if(t==='order'){buildOrder();}
   if(t==='history'){buildHistory();}
   if(t==='actual'){buildActual(true);}
-  if(t==='prices'){buildSupplierList();}{buildPriceTables();}
+  if(t==='prices'){buildPriceTables();buildSupplierList();refreshAddGroupDropdown();rebuildSupplierDropdowns();}
   if(t==='settings'){loadSettings();}
 }
 
@@ -1421,6 +1445,7 @@ function rebP(){
 
 function onPS(){
   var sel=document.getElementById('psel');var v=parseFloat(sel.value)||0;
+  var pnw=document.getElementById('piec-name-wrap');if(pnw)pnw.style.display=sel.value==='-1'?'block':'none';
   var info=document.getElementById('pinfo');var ci=document.getElementById('piec');
   if(v>0){ci.value=String(v);var ev=parseFloat(sel.selectedOptions[0].dataset.eur)||0;
     if(ev>0){info.style.display='block';info.textContent=ev.toFixed(2)+' EUR x '+gv('eur')+' zl/EUR = '+v.toLocaleString('pl')+' zl';}
@@ -1546,7 +1571,7 @@ function r(){
   var p7moc=parseFloat((document.getElementById('pr7m')?.value||'0|750').split('|')[1])||750;
   var moc=(typ!=='F')?(gv('pr3')*p3moc+gv('pr5')*p5moc+gv('pr7')*p7moc):0;se('mocsum',moc+' W');
   var sterBase=gv('ster-val');
-  var sterModuly=(ck('awifi')?400:0)+(ck('abt')?300:0)+(ck('asty')?100:0)+(ck('asty3')?250:0)+(ck('aaw')?600:0)+(ck('apbez')?220:0);
+  var sterModuly=(ck('awifi')?400:0)+(ck('abt')?300:0)+(ck('asty')?100:0)+(ck('asty3')?250:0)+(ck('aaw')?600:0)+(ck('apbez')?220:0)+(ck('acpir-g2')?350:0)+(ck('acpir-g4')?400:0);
   var sterK=sterBase+sterModuly;
   se('ster-total',f(sterK));
   var grzK=piecK+promK+sterK,grzP=grzK*mG;se('grzk',f(grzK));se('grzp',f(grzP));se('sm5',f(grzP));
@@ -1586,16 +1611,16 @@ function r(){
     szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),
     zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),drzwi:selTxt('drz'),drzwiVal:gv('drz'),
     scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
-    piec:{name:selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
+    piec:{name:(document.getElementById('psel')&&document.getElementById('psel').value==='-1'&&document.getElementById('piec-name')&&document.getElementById('piec-name').value.trim())?document.getElementById('piec-name').value.trim():selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
     kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
     pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),pr3m:document.getElementById('pr3m')?.value||'660|350',pr5m:document.getElementById('pr5m')?.value||'710|500',pr7m:document.getElementById('pr7m')?.value||'765|750',moc:moc,
-    ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),sty3:ck('asty3'),aw:ck('aaw'),pbez:ck('apbez'),
+    ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),sty3:ck('asty3'),aw:ck('aaw'),pbez:ck('apbez'),cpirG2:ck('acpir-g2'),cpirG4:ck('acpir-g4'),
     ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),ledBarwa:gs('led-barwa'),
     audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
     solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
     transport:gv('trn'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
     klient:gs('klient'),opis:gs('opis'),mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,cenaSaunyOverride:0,
-    netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,logist:logist,
+    netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,logist:logist,minm:gv('minm')||12000,
     s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,logist:logist
   };
 }
@@ -1622,7 +1647,14 @@ function initVslots(){
     btn.textContent='Zapisz '+v;
     btn.onclick=function(){saveVariant(v);};
 
-    row.appendChild(inp);row.appendChild(btn);
+    var clrBtn=document.createElement('button');
+    clrBtn.className='vslot-btn';
+    clrBtn.style.cssText='background:none;color:#c00;border:0.5px solid #c00;padding:3px 6px;font-size:10px';
+    clrBtn.title='Wyczyść wariant '+v;
+    clrBtn.textContent='✕';
+    clrBtn.onclick=function(e){e.stopPropagation();clearOneVariant(v);};
+
+    row.appendChild(inp);row.appendChild(btn);row.appendChild(clrBtn);
 
     var loadLink=document.createElement('button');
     loadLink.id='vload-'+v;
@@ -1803,6 +1835,8 @@ function buildVariantHTML(s,vkey){
   if(s.wifi)vrowPrice(tr('wifi'),400*mG); else vrowYN(tr('wifi'),false);
   if(s.bt)vrowPrice(tr('bt'),300*mG);
   if(s.pbez)vrowPrice(LANG==='EN'?'Safety button (built-in)':'Przycisk bezpieczeństwa',220*mG);
+  if(s.cpirG2)vrowPrice(LANG==='EN'?'CPiR G2 module':'Moduł CPiR G2',350*mG);
+  if(s.cpirG4)vrowPrice(LANG==='EN'?'CPiR G4 module':'Moduł CPiR G4',400*mG);
   if(s.aw)vrowPrice(tr('awarying'),600*mG);
   if(s.ledtVal>0&&s.ledq>0){
     var ledDesc=tr('led');
@@ -1841,7 +1875,7 @@ function loadStateToCalc(s){
   function sc(id,val){var el=document.getElementById(id);if(el)el.checked=!!val;}
   function sso(id,val){var el=document.getElementById(id);if(!el)return;for(var i=0;i<el.options.length;i++){if(parseFloat(el.options[i].value)===parseFloat(val)){el.selectedIndex=i;break;}}}
 
-  sv('klient',s.klient);sv('opis',s.opis);sv('minm',s.minm||12000);sv('eur',s.eur||4.4);
+  sv('klient',s.klient);sv('opis',s.opis);sv('minm',s.minm!=null?s.minm:12000);sv('eur',s.eur||4.4);
   setWZ(s.isZ?'Z':'W');setTyp(s.typ||'F');setVAT(s.vat||8);
 
   // Margins
@@ -1936,7 +1970,7 @@ function loadToCalc(s){
 
   // Basic fields
   sv('klient',s.klient);sv('opis',s.opis||'');
-  sv('minm',s.minm||12000);sv('eur',s.eur||4.4);
+  sv('minm',s.minm!=null?s.minm:12000);sv('eur',s.eur||4.4);
 
   // Type/VAT switches (won't trigger r() due to _loading flag)
   setWZ(s.isZ?'Z':'W');
@@ -2405,7 +2439,7 @@ function renderPriceTable(containerId,data,key){
     html+='<td style="font-size:12px">'+item.n+'</td>';
     html+='<td><select data-key="'+key+'" data-idx="'+i+'" onchange="updateSupplier(this)" style="font-size:11px;height:24px;border:0.5px solid #ddd;border-radius:4px;width:100%;padding:0 3px">'+supOpts+'</select></td>';
     html+='<td><input type="number" value="'+item.p+'" step="0.01" min="0" data-key="'+key+'" data-idx="'+i+'" onchange="updatePrice(this)" style="width:82px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td>';
-    html+='<td style="text-align:center"><button onclick="deleteMaterial(\''+key+'\','+i+')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;padding:1px 4px" title="Usuń">×</button></td>';
+    html+='<td style="text-align:center"><button data-cat="'+key+'" data-idx="'+i+'" onclick="event.stopPropagation();deleteMaterial(this.dataset.cat,parseInt(this.dataset.idx))" style="background:none;border:none;cursor:pointer;color:#c00;font-size:15px;padding:1px 4px" title="Usuń">×</button></td>';
     html+='</tr>';
   });
   html+='</tbody></table>';
@@ -2487,8 +2521,11 @@ function onAddGroupChange(){
 function getAddGroupValue(){
   var newInp = document.getElementById('add-group-new');
   var sel = document.getElementById('add-group');
-  if(newInp && newInp.value.trim()) return newInp.value.trim();
-  return sel ? sel.value : '';
+  var newVal = newInp ? newInp.value.trim() : '';
+  // If new group input has value, use it (trimmed)
+  if(newVal && newVal!=='' ) return newVal;
+  // Use selected option value (which equals group name)
+  return sel && sel.value && sel.value!=='' && sel.value!=='__new__' ? sel.value : '';
 }
 function addMaterial(){
   var cat=document.getElementById('add-cat').value;
@@ -2541,6 +2578,13 @@ function addMaterial(){
   else if(cat==='boaz-ext')BOAZ_EXT.push(item);
   else if(cat==='deski')DESKI.push(item);
   else if(cat==='konstr')KONSTR.push(item);
+  else if(cat==='piece'){item.custom=true;PIECE.push(item);rebuildPieceSelect();}
+  // Sort arrays by group so same-named groups stay together
+  function sortByGroup(arr){arr.sort(function(a,b){return (a.g||'').localeCompare(b.g||'','pl');}); return arr;}
+  if(cat==='boaz')sortByGroup(BOAZ);
+  else if(cat==='boaz-ext')sortByGroup(BOAZ_EXT);
+  else if(cat==='deski')sortByGroup(DESKI);
+  else if(cat==='konstr')sortByGroup(KONSTR);
   document.getElementById('add-name').value='';
   document.getElementById('add-price').value='0';
   var agn=document.getElementById('add-group-new');if(agn)agn.value='';
@@ -2550,13 +2594,14 @@ function addMaterial(){
 }
 
 function deleteMaterial(key,idx){
-  if(!confirm('Usunąć ten materiał z listy?'))return;
+  // confirm() may be blocked in iframe - skip it
   if(key==='boaz')BOAZ.splice(idx,1);
   else if(key==='boaz-ext')BOAZ_EXT.splice(idx,1);
   else if(key==='deski')DESKI.splice(idx,1);
   else if(key==='konstr')KONSTR.splice(idx,1);
   buildPriceTables();
   savePricesQuiet();
+  if(typeof syncSavePrices==='function') syncSavePrices();
 }
 
 function togglePriceSection(key){
@@ -2687,6 +2732,7 @@ function savePricesQuiet(){
     localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
     localStorage.setItem('abm_deski',JSON.stringify(DESKI));
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
+    syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
@@ -2700,6 +2746,7 @@ function savePrices(){
     localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
     localStorage.setItem('abm_deski',JSON.stringify(DESKI));
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
+    syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
@@ -3784,7 +3831,7 @@ function buildSupplierList(){
     html+='<td style="padding:5px 8px;text-align:center">';
     // Prevent deleting built-in suppliers
     var builtIn=['S','E','L','A','K','G','KL','KR'];
-    if(builtIn.indexOf(k)<0) html+='<button data-sk="'+k+'" onclick="removeSupplier(this.dataset.sk)" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:15px" title="Usuń">×</button>';
+    if(builtIn.indexOf(k)<0) html+='<button data-sk="'+k+'" onclick="event.stopPropagation();removeSupplier(this.dataset.sk)" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:15px" title="Usuń">×</button>';
     html+='</td></tr>';
   });
   html+='</tbody></table>';
@@ -3819,14 +3866,18 @@ function addSupplier(){
 }
 
 function removeSupplier(key){
-  if(!confirm('Usunąć dostawcę '+SN[key]+'?')) return;
+  if(!key){alert('Brak klucza dostawcy.');return;}
+  var name=SN[key]||key;
   delete SN[key];
   delete SC[key];
-  localStorage.setItem('abm_custom_suppliers',JSON.stringify(
-    Object.keys(SN).filter(function(k){return ['S','E','L','A','K','G','KL','KR','M'].indexOf(k)<0;}).reduce(function(obj,k){obj[k]={name:SN[k],color:SC[k]};return obj;},{})
-  ));
+  // Save: remove from custom suppliers (handle both storage formats)
+  var custom=JSON.parse(localStorage.getItem('abm_custom_suppliers')||'{}');
+  delete custom[key];
+  localStorage.setItem('abm_custom_suppliers',JSON.stringify(custom));
+  if(typeof syncSaveSuppliers==='function') syncSaveSuppliers();
+  if(typeof syncSavePrices==='function') syncSavePrices();
   buildSupplierList();
-  buildPriceTables();
+  rebuildSupplierDropdowns();
 }
 
 function loadCustomSuppliers(){
@@ -3835,11 +3886,18 @@ function loadCustomSuppliers(){
     if(saved){
       var custom=JSON.parse(saved);
       Object.keys(custom).forEach(function(k){
-        SN[k]=custom[k].name;
-        SC[k]=custom[k].color||'bM';
+        var v=custom[k];
+        if(typeof v==='object'&&v!==null){
+          SN[k]=v.name||k;
+          SC[k]=v.color||'bM';
+        } else if(typeof v==='string'){
+          SN[k]=v;
+          SC[k]='bM';
+        }
       });
     }
   }catch(e){}
+  if(typeof rebuildSupplierDropdowns==='function') rebuildSupplierDropdowns();
 }
 
 function refreshSupSelect(){
@@ -3878,6 +3936,7 @@ function addSupplier(){
   custom[key]=name;
   localStorage.setItem('abm_custom_suppliers',JSON.stringify(custom));
   if(typeof syncSaveSuppliers==='function') syncSaveSuppliers();
+  if(typeof syncSavePrices==='function') syncSavePrices();
   document.getElementById('new-sup-key').value='';
   document.getElementById('new-sup-name').value='';
   buildSupplierList();
@@ -3891,10 +3950,11 @@ function removeSupplier(key){
   delete custom[key];
   localStorage.setItem('abm_custom_suppliers',JSON.stringify(custom));
   if(typeof syncSaveSuppliers==='function') syncSaveSuppliers();
+  if(typeof syncSavePrices==='function') syncSavePrices();
   buildSupplierList();
   rebuildSupplierDropdowns();
 }
-
+// NOTE: rebuildSupplierDropdowns is called from buildSupplierList above
 function rebuildSupplierDropdowns(){
   // Rebuild add-sup dropdown
   var addSup=document.getElementById('add-sup');
@@ -3911,6 +3971,17 @@ function rebuildSupplierDropdowns(){
 }
 
 
+
+
+function clearOneVariant(v){
+  VARIANTS[v]=null;
+  var inp=document.getElementById('vinp-'+v);
+  var btn=document.getElementById('vbtn-'+v);
+  var load=document.getElementById('vload-'+v);
+  if(inp){inp.value='';inp.dataset.saved='';}
+  if(btn){btn.textContent='Zapisz '+v;btn.classList.remove('saved');}
+  if(load){load.style.display='none';load.textContent='';}
+}
 
 </script>
 
