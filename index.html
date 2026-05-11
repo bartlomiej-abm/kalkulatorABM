@@ -1658,8 +1658,8 @@ function initVslots(){
 
     var loadLink=document.createElement('button');
     loadLink.id='vload-'+v;
-    loadLink.style.cssText='display:none;font-size:10px;background:none;border:none;color:var(--mbm-mid);cursor:pointer;padding:0 2px;text-align:left;font-family:inherit;text-decoration:underline';
-    loadLink.textContent='↩ wczytaj do kalkulatora';
+    loadLink.style.cssText='display:none;font-size:11px;background:none;border:0.5px solid var(--mbm-primary);color:var(--mbm-primary);cursor:pointer;padding:3px 8px;border-radius:5px;margin-top:3px;font-family:inherit;width:100%';
+    loadLink.textContent='↩ Wczytaj do kalkulatora';
     loadLink.onclick=function(){loadVariantToCalc(v);};
 
     wrap.appendChild(row);wrap.appendChild(loadLink);
@@ -3980,7 +3980,7 @@ function clearOneVariant(v){
   var load=document.getElementById('vload-'+v);
   if(inp){inp.value='';inp.dataset.saved='';}
   if(btn){btn.textContent='Zapisz '+v;btn.classList.remove('saved');}
-  if(load){load.style.display='none';load.textContent='';}
+  if(load)load.style.display='none';
 }
 
 </script>
