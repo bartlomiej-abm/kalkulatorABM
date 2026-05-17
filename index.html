@@ -531,6 +531,8 @@ function showSyncStatus(mode,msg){
     <div id="vslot-A" class="vslot"></div>
     <div id="vslot-B" class="vslot"></div>
     <div id="vslot-C" class="vslot"></div>
+    <div id="vslot-D" class="vslot"></div>
+    <div id="vslot-E" class="vslot"></div>
     <button onclick="clearVariants()" style="font-size:11px;color:var(--mbm-mid);background:none;border:0.5px solid var(--mbm-light);border-radius:4px;padding:3px 8px;cursor:pointer;font-family:inherit">✕ Wyczyść</button>
     <button onclick="clearCalc()" style="background:none;border:0.5px solid #c00;color:#c00;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px">🗑 Wyczyść kalkulator</button>
     <span style="flex:1"></span>
@@ -606,6 +608,14 @@ function showSyncStatus(mode,msg){
       <div class="cf row"><span class="lbl">Anemostat (szt. × cena zł)</span><input type="number" id="anoq" value="2" min="0" onchange="r()"><input type="number" id="anop" value="150" min="0" onchange="r()"><span class="dv" id="anok">0 zł</span><span class="dv hi" id="anop2">0 zł</span></div>
       <div class="cf row"><span class="lbl">Kabel piec (mb × 20 zł)</span><input type="number" id="kabq" value="10" min="0" onchange="r()"><span></span><span class="dv" id="kabk">0 zł</span><span class="dv hi" id="kabp">0 zł</span></div>
     </div>
+    <div class="grp" id="gpWent" style="display:none"><div class="gt">Wentylacja i kable [Z]</div>
+      <div class="cf row" style="gap:6px">
+        <span class="lbl">Skrzynka elektryczna</span>
+        <input type="number" id="skrzq" value="0" min="0" onchange="r()" style="width:60px">
+        <input type="number" id="skrzcena" placeholder="cena/szt." value="0" min="0" onchange="r()" style="width:90px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px">
+        <span class="dv hi" id="skrzep">0 zł</span>
+      </div>
+    </div>
     <div class="grp" id="gpDach" style="display:none"><div class="gt">Dach, podłoga i fundament [Z]</div>
       <div class="cf row"><span class="lbl">Dach — materiał (m² × 60 zł)</span><input type="number" id="dachq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dachk">0 zł</span><span class="dv hi" id="dachp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Dach — robocizna (m² × 110 zł)</span><input type="number" id="dacrq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dacrk">0 zł</span><span class="dv" style="color:#aaa">—</span></div>
@@ -613,6 +623,13 @@ function showSyncStatus(mode,msg){
       <div class="cf row"><span class="lbl">Podłoga zewnętrzna (m² × 140 zł)</span><input type="number" id="podq" value="4" min="0" onchange="r()"><span></span><span class="dv" id="podk">0 zł</span><span class="dv hi" id="podp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Płyta betonowa (szt. × 221,65 zł)</span><input type="number" id="plyq" value="2" min="0" onchange="r()"><span></span><span class="dv" id="plyk">0 zł</span><span class="dv hi" id="plyp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Styrodur 100mm XPS (m² × 49,40 zł)</span><input type="number" id="styq" value="0" min="0" onchange="r()"><span></span><span class="dv" id="styk">0 zł</span><span class="dv hi" id="styp">0 zł</span></div>
+      <div class="cf row" style="gap:6px">
+        <span class="lbl">Płyta OSB (szt.)</span>
+        <input type="number" id="osbq" value="0" min="0" onchange="r()" style="width:60px">
+        <input type="text" id="osbn" placeholder="nazwa np. OSB3 18mm" onchange="r()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;flex:1;min-width:0">
+        <input type="number" id="osbcena" placeholder="cena/szt." value="0" min="0" onchange="r()" style="width:75px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px">
+        <span class="dv hi" id="osbp">0 zł</span>
+      </div>
     </div>
   </div></div>
 
@@ -855,7 +872,20 @@ function showSyncStatus(mode,msg){
 
   <div class="sec"><div class="sh"><span class="st">9. Projekt i logistyka</span><span class="ss" id="sm8">0 zł</span></div><div class="sb">
     <div class="c4 row">
-      <div><div class="sub">Transport i montaż (zł)</div><input type="number" id="trn" value="5000" min="0" onchange="r()"></div>
+      <div>
+        <div class="sub">Transport (zł)</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px">
+          <input type="number" id="trn" value="5000" min="0" onchange="r()" style="width:90px">
+          <select id="trn-opt" onchange="r()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff">
+            <option value="w_cenie">W cenie</option>
+            <option value="nie_wliczono">Nie wliczono</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="sub">Montaż / Podłączenie</div>
+        <div style="font-size:12px;color:var(--mbm-primary);font-weight:500;margin-top:6px">W cenie</div>
+      </div>
       <div><div class="sub">Dostawa drewna (zł)</div><input type="number" id="dos" value="600" min="0" onchange="r()"></div>
       <div><div class="sub">Projekt 2D / wizualizacja</div><input type="number" id="prj" value="1200" min="0" onchange="r()"></div>
       <div><div class="sub">Roboczogodziny (h × 60 zł)</div><input type="number" id="gdz" value="30" min="0" onchange="r()"></div>
@@ -1553,6 +1583,8 @@ function r(){
   se('bshk',f(bshK));se('bshp',f(bshP));se('cnck',f(cncK));se('cncp',f(cncP));
   var dachSp=0,zewnLogist=0;
   if(isZ){var dM=gv('dachq')*60,dR=gv('dacrq')*110,ryK=gv('rynq')*1322,poK=gv('podq')*140,plK=gv('plyq')*221.65,stK=gv('styq')*49.4;
+    var osbK=gv('osbq')*(gv('osbcena')||0),osbP=osbK*mK;se('osbp',f(osbP));
+    var skrzeK=gv('skrzq')*(gv('skrzcena')||0),skrzeP=skrzeK*mK;se('skrzep',f(skrzeP));
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
     dachSp=(dM+ryK+poK+plK+stK)*mK;zewnLogist=dR;}
@@ -1586,9 +1618,11 @@ function r(){
   var audK=gv('audt')+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
   var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
-  var logist=gv('trn')+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
+  var trnOpt=document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie';
+  var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
+  var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
   var totalSp=s1+s2+szkP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -1626,10 +1660,10 @@ function r(){
 }
 
 // ===== WIDOK KLIENTA =====
-var VARIANTS = {A:null, B:null, C:null};
+var VARIANTS = {A:null, B:null, C:null, D:null, E:null};
 
 function initVslots(){
-  ['A','B','C'].forEach(function(v){
+  ['A','B','C','D','E'].forEach(function(v){
     var slot=document.getElementById('vslot-'+v);
     if(!slot)return;
     var wrap=document.createElement('div');
@@ -1684,8 +1718,8 @@ function saveVariant(v){
 }
 
 function clearVariants(){
-  VARIANTS={A:null,B:null,C:null};
-  ['A','B','C'].forEach(function(v){
+  VARIANTS={A:null,B:null,C:null,D:null,E:null};
+  ['A','B','C','D','E'].forEach(function(v){
     var btn=document.getElementById('vbtn-'+v);
     if(btn){btn.textContent='Zapisz '+v;btn.className='vslot-btn';}
     var inp=document.getElementById('vinp-'+v);
@@ -1796,10 +1830,13 @@ function buildVariantHTML(s,vkey){
   // Wykończenie zewnętrzne [Z]
   if(s.isZ){
     vsec(LANG==='EN'?'Exterior Finishing':'Wykończenie zewnętrzne');
-    vrowYN(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', s.obicieZew||s.bzq>0);
+    var obicieName=s.bzn||(s.obicieZew?(LANG==='EN'?'YES':'TAK'):null);
+    vrowMat(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', obicieName);
     vrowYN(LANG==='EN'?'Structure BSH 100x100':'Konstrukcja BSH 100x100', (s.bshq||0)>0);
     vrowYN(LANG==='EN'?'XPS insulation':'Płyta XPS', (s.styq||0)>0);
     vrowYN(LANG==='EN'?'Ground protection':'Zabezpieczenie spodu', (s.plyq||0)>0);
+    if(s.osbq>0)vrowMat(LANG==='EN'?'OSB board':'Płyta OSB', s.osbn||'OSB');
+    if(s.skrzq>0)vrowYN(LANG==='EN'?'Electrical box':'Skrzynka elektryczna', true);
   }
 
     // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
@@ -1862,7 +1899,10 @@ function buildVariantHTML(s,vkey){
 
   // LOGISTYKA I DODATKI (tylko TAK/NIE, bez cen - transport, cebrzyk, klepsydra)
   vsec(tr('logistyka'));
-  vrowYN(tr('transport'),s.transport>0);
+  var trnDisplay=s.trnOpt==='nie_wliczono'?'NIE':(LANG==='EN'?'Included':'W cenie');
+  html+='<div class="v-row"><span class="v-label">'+tr('transport')+'</span><span></span><span class="v-yn '+(s.trnOpt==='nie_wliczono'?'v-yn-n':'v-yn-y')+'">'+(LANG==='EN'?(s.trnOpt==='nie_wliczono'?'NOT INCLUDED':'Included'):(s.trnOpt==='nie_wliczono'?'Nie wliczono':'W cenie'))+'</span></div>';
+  // Montaz - always show
+  html+='<div class="v-row"><span class="v-label">'+(LANG==='EN'?'Assembly / Connection':'Montaż / Podłączenie')+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'Included':'W cenie')+'</span></div>';
   vrowYN(tr('cebrzyk'),s.akcC>0);
   vrowYN(tr('klepsydra'),s.klepC>0);
 
@@ -2281,7 +2321,7 @@ async function buildHistory(){
         }catch(ex){}
         if(savedVariants){
           VARIANTS=savedVariants;
-          ['A','B','C'].forEach(function(v){
+          ['A','B','C','D','E'].forEach(function(v){
             if(!VARIANTS[v])return;
             var btn=document.getElementById('vbtn-'+v);
             var inp=document.getElementById('vinp-'+v);
@@ -2365,7 +2405,7 @@ function loadQuote(id){
       try{
         var sv=typeof entry.variants==='string'?JSON.parse(entry.variants):entry.variants;
         VARIANTS=sv;
-        ['A','B','C'].forEach(function(v){
+        ['A','B','C','D','E'].forEach(function(v){
           if(!VARIANTS[v])return;
           var btn=document.getElementById('vbtn-'+v);
           var inp=document.getElementById('vinp-'+v);
@@ -3649,7 +3689,38 @@ function dimCalc(){
   // 10% waste
   deskCount=deskMat?Math.ceil(deskCount*1.10):0;
 
-  // ---- WEŁNA m2 ----
+  // ---- DESKI PODŁOGI ----
+  // Floor = total sauna floor minus bench footprints
+  // Bench depth in cm
+  var sdCm=Math.round(seatDepth/10); // e.g. 50 cm
+  var floorArea=0; // cm²
+  var sauna_area=wA*wB; // approximate using A×B
+
+  var calcPodloga=document.getElementById('dw-podloga')&&document.getElementById('dw-podloga').checked;
+  var floorBoardCount=0, floorAreaM2=0, floorArea=0;
+  if(calcPodloga){
+    var sauna_area=wA*wB;
+    var sdCm=Math.round(seatDepth/10);
+    if(lawki==='0'||lawki===''){ floorArea=sauna_area; }
+    else if(lawki==='1'||lawki==='2'){ floorArea=sauna_area - l1*sdCm; }
+    else if(lawki==='1L'||lawki==='2L'){ floorArea=sauna_area - l1*sdCm - l2adj*sdCm + sdCm*sdCm; }
+    else if(lawki==='1N'){ floorArea=sauna_area - l1*sdCm - l2*sdCm; }
+    floorArea=Math.max(0, floorArea);
+    floorAreaM2=Math.round(floorArea)/10000; // cm² to m²
+    if(deskMat && floorArea>0){
+      var floorW=0, floorL=0;
+      if(lawki==='0'||lawki===''){floorW=Math.min(wA,wB);floorL=Math.max(wA,wB);}
+      else if(lawki==='1'||lawki==='2'){floorW=wB-sdCm;floorL=l1;}
+      else if(lawki==='1L'||lawki==='2L'){floorW=wB-sdCm;floorL=wA-sdCm;}
+      else if(lawki==='1N'){floorW=wB-2*sdCm;floorL=l1;}
+      floorW=Math.max(0,floorW); floorL=Math.max(0,floorL);
+      var boardsAcross=floorW>0?Math.ceil(floorW*10/deskW):0;
+      var boardsAlong=floorL>0?Math.ceil(floorL/BOARD_LEN):0;
+      floorBoardCount=boardsAcross>0&&boardsAlong>0?Math.ceil(boardsAcross*boardsAlong*1.10):0;
+    }
+  }
+
+    // ---- WEŁNA m2 ----
   // Total wall + ceiling area in m2
   var welWalls=0;
   [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
@@ -3664,7 +3735,8 @@ function dimCalc(){
     boazWalls:boazWalls, boazCeiling:boazCeiling,
     deskMat:deskMat, deskIdx:deskIdx, deskCount:deskCount,
     seatDepth:seatDepth, coverage:coverage, deskW:deskW,
-    welTotal:welTotal, welWalls:Math.round(welWalls*100)/100, welCeil:Math.round(welCeil*100)/100
+    welTotal:welTotal, welWalls:Math.round(welWalls*100)/100, welCeil:Math.round(welCeil*100)/100,
+    floorBoardCount:floorBoardCount, floorAreaM2:Math.round(floorAreaM2*100)/100, sdCm:sdCm
   };
 
   // ---- RENDER RESULT ----
@@ -3682,6 +3754,8 @@ function dimCalc(){
   html+=resultRow('  — oparcie', '3 rzędy', 'zawsze 3 rzędy wzdłuż');
   if(isZab) html+=resultRow('  — front (zabudowane)', '5 rzędów', '+5 rzędów pionowo');
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
+  if(calcPodloga&&deskMat&&floorBoardCount>0) html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | dł. '+BOARD_LEN+'cm');
+  else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
   html+=resultRow('Wełna mineralna', welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
   rows.innerHTML=html;
 }
@@ -3721,11 +3795,23 @@ function applyDimCalc(){
   // Set wełna
   var welQ=document.getElementById('welq');
   if(welQ&&_dimResult.welTotal>0) welQ.value=_dimResult.welTotal;
-  // Note: podłoga not auto-calculated yet
+  // Set deski podłogowe
+  if(_dimResult.floorBoardCount>0){
+    var podlm=document.getElementById('podlm');
+    if(podlm&&_dimResult.deskIdx!==null){
+      // Use same material as ławki for podłoga
+      for(var i=0;i<podlm.options.length;i++){
+        if(_dimResult.deskMat&&podlm.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){podlm.selectedIndex=i;break;}
+      }
+    }
+    var podlq=document.getElementById('podlq');
+    if(podlq) podlq.value=_dimResult.floorBoardCount;
+    uM('podl');
+  }
 
   r();
   closeDimCalc();
-  alert('Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.');
+  alert('Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n• Deski podłogowe: '+(_dimResult.floorBoardCount||0)+' szt. ('+Math.round(_dimResult.floorAreaM2*100)/100+' m²)\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.');
 }
 
 
@@ -3968,6 +4054,18 @@ function rebuildSupplierDropdowns(){
       addSup.appendChild(o);
     });
   }
+  // Rebuild all supplier selects in price tables (updateSupplier dropdowns)
+  document.querySelectorAll('select[data-key]').forEach(function(sel){
+    if(!sel.dataset.idx) return; // only supplier selects have data-idx
+    var curr=sel.value;
+    sel.innerHTML=Object.keys(SN).map(function(k){
+      return '<option value="'+k+'"'+(k===curr?' selected':'')+'>'+SN[k]+'</option>';
+    }).join('');
+  });
+  // Rebuild price tables to pick up new suppliers
+  if(typeof buildPriceTables==='function' && document.getElementById('tab-prices') && document.getElementById('tab-prices').style.display!=='none'){
+    buildPriceTables();
+  }
 }
 
 
@@ -4079,6 +4177,12 @@ function clearOneVariant(v){
             <option value="lev">Lewitujące</option>
             <option value="zab">Zabudowane</option>
           </select>
+        </div>
+        <div style="display:flex;align-items:center;margin-top:6px">
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--mbm-dark)">
+            <input type="checkbox" id="dw-podloga" onchange="dimCalc()" style="width:14px;height:14px">
+            <span>Oblicz deski podłogowe</span>
+          </label>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
