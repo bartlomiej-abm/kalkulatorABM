@@ -97,6 +97,11 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .variants-grid.v1{grid-template-columns:1fr;max-width:600px;margin:0 auto}
 .variants-grid.v2{grid-template-columns:1fr 1fr}
 .variants-grid.v3{grid-template-columns:1fr 1fr 1fr}
+.variants-grid.v4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.variants-grid.v4 .vcard,.variants-grid.v5 .vcard{font-size:11px}
+.variants-grid.v4 .v-section,.variants-grid.v5 .v-section{font-size:10px;padding:4px 8px}
+.variants-grid.v4 .v-row,.variants-grid.v5 .v-row{padding:2px 8px;font-size:11px}
+.variants-grid.v5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .vcard{border:0.5px solid var(--mbm-light);border-radius:0;background:#fff;overflow:hidden}
 .vcard:first-child{border-radius:10px 0 0 10px}
 .vcard:last-child{border-radius:0 10px 10px 0}
@@ -252,6 +257,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 
   /* Widok klienta — single column na mobile */
   .variants-grid.v2,.variants-grid.v3{grid-template-columns:1fr!important}
+  .variants-grid.v4,.variants-grid.v5{grid-template-columns:1fr 1fr!important}
   .vcard:first-child{border-radius:10px 10px 0 0}
   .vcard:last-child{border-radius:0 0 10px 10px}
   .vcard+.vcard{border-left:0.5px solid var(--mbm-light);border-top:none}
@@ -296,6 +302,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 @media (min-width: 769px) and (max-width: 1024px){
   .c5{grid-template-columns:2fr 60px 80px 80px 80px}
   .variants-grid.v3{grid-template-columns:1fr 1fr!important}
+  .variants-grid.v4,.variants-grid.v5{grid-template-columns:repeat(2,1fr)!important}
 }
 
 @media print{
@@ -580,7 +587,7 @@ function showSyncStatus(mode,msg){
       <div style="margin-top:4px;display:flex;gap:8px;align-items:center">
         <span style="font-size:11px;color:#999">lub wpisz cenę ręcznie:</span>
         <input type="number" id="bzp" value="0" min="0" placeholder="zł/szt" onchange="r()" style="width:90px;font-size:12px;padding:3px 6px;height:24px;border:0.5px solid #ddd;border-radius:4px;text-align:right">
-        <input type="text" id="bzn" placeholder="Nazwa materiału" style="flex:1;font-size:12px;padding:3px 6px;height:24px;border:0.5px solid #ddd;border-radius:4px">
+        <input type="text" id="bzn" placeholder="Nazwa materiału" onchange="r()" oninput="r()" style="flex:1;font-size:12px;padding:3px 6px;height:24px;border:0.5px solid #ddd;border-radius:4px">
       </div>
       <div style="font-size:11px;color:#999;margin-top:4px">Dodaj materiały w zakładce <strong>Edytuj cenniki → Boazeria zewnętrzna</strong></div>
     </div>
@@ -1454,7 +1461,16 @@ function onBZSel(){
   var ni=document.getElementById('bzq');
   var pi=document.getElementById('bzp');
   var si=document.getElementById('bz-sup');
+  var bznInp=document.getElementById('bzn');
   if(p>0){if(pi)pi.value=p;}
+  // Auto-fill name from selected option text (e.g. "Termo Sosna STS 14x96...")
+  if(bznInp&&sel.selectedOptions[0]&&parseFloat(sel.value)>0){
+    var optTxt=sel.selectedOptions[0].textContent||'';
+    // Extract group name (first 2-3 words) as the display name
+    var mat=BOAZ_EXT[parseInt(sel.selectedOptions[0].dataset.idx)];
+    if(mat&&mat.g) bznInp.value=mat.g;
+    else if(optTxt) bznInp.value=optTxt.split(' ').slice(0,3).join(' ');
+  }
   if(si){si.className='bdg '+(SC[s]||'bM');si.textContent=SN[s]||s;}
   r();
 }
