@@ -92,16 +92,16 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .var-clear{font-size:11px;color:#ccc;background:none;border:none;cursor:pointer;padding:2px 6px}
 .var-clear:hover{color:#c00}
 /* Widok wariantów obok siebie */
-.variants-wrap{max-width:100%;overflow-x:auto;margin:0 auto}
+.variants-wrap{max-width:100%;overflow-x:auto;margin:0 auto;-webkit-overflow-scrolling:touch}
 .variants-grid{display:grid;gap:0;width:100%}
 .variants-grid.v1{grid-template-columns:1fr;max-width:600px;margin:0 auto}
 .variants-grid.v2{grid-template-columns:1fr 1fr}
 .variants-grid.v3{grid-template-columns:1fr 1fr 1fr}
-.variants-grid.v4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.variants-grid.v4{grid-template-columns:repeat(4,minmax(220px,1fr))}
+.variants-grid.v5{grid-template-columns:repeat(5,minmax(200px,1fr))}
 .variants-grid.v4 .vcard,.variants-grid.v5 .vcard{font-size:11px}
 .variants-grid.v4 .v-section,.variants-grid.v5 .v-section{font-size:10px;padding:4px 8px}
 .variants-grid.v4 .v-row,.variants-grid.v5 .v-row{padding:2px 8px;font-size:11px}
-.variants-grid.v5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .vcard{border:0.5px solid var(--mbm-light);border-radius:0;background:#fff;overflow:hidden}
 .vcard:first-child{border-radius:10px 0 0 10px}
 .vcard:last-child{border-radius:0 10px 10px 0}
@@ -2140,6 +2140,7 @@ function overrideCenaSauny(vkey,val){
 }
 
 function buildClient(){
+  setTimeout(function(){syncVariantRows();},50);
   var active=Object.keys(VARIANTS).filter(function(v){return VARIANTS[v]!==null;});
   var toShow=active.length>0
     ?active.map(function(v){return {key:v,s:VARIANTS[v]};})
@@ -4095,6 +4096,36 @@ function clearOneVariant(v){
   if(inp){inp.value='';inp.dataset.saved='';}
   if(btn){btn.textContent='Zapisz '+v;btn.classList.remove('saved');}
   if(load)load.style.display='none';
+}
+
+
+function syncVariantRows(){
+  // Find all v-section elements and group by their text content
+  var cards=document.querySelectorAll('.vcard');
+  if(cards.length<2) return;
+  
+  // Get all row elements from first card
+  var firstCard=cards[0];
+  var rows=firstCard.querySelectorAll('.v-section,.v-row,.v-subt,.v-total');
+  
+  rows.forEach(function(row,i){
+    // Get matching rows from all cards by index
+    var maxH=0;
+    cards.forEach(function(card){
+      var allRows=card.querySelectorAll('.v-section,.v-row,.v-subt,.v-total');
+      if(allRows[i]){
+        allRows[i].style.height='auto';
+        maxH=Math.max(maxH,allRows[i].offsetHeight);
+      }
+    });
+    // Apply same height to all matching rows
+    if(maxH>0){
+      cards.forEach(function(card){
+        var allRows=card.querySelectorAll('.v-section,.v-row,.v-subt,.v-total');
+        if(allRows[i]) allRows[i].style.height=maxH+'px';
+      });
+    }
+  });
 }
 
 </script>
