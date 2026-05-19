@@ -368,7 +368,7 @@ async function syncLoad(){
     // Rebuild selects with cloud data
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
-    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
+    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
     mkSelBZ();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
@@ -625,12 +625,48 @@ function showSyncStatus(mode,msg){
       </div>
     </div>
     <div class="grp" id="gpDach" style="display:none"><div class="gt">Dach, podłoga i fundament [Z]</div>
-      <div class="cf row"><span class="lbl">Dach — materiał (m² × 60 zł)</span><input type="number" id="dachq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dachk">0 zł</span><span class="dv hi" id="dachp">0 zł</span></div>
-      <div class="cf row"><span class="lbl">Dach — robocizna (m² × 110 zł)</span><input type="number" id="dacrq" value="5" min="0" onchange="r()"><span></span><span class="dv" id="dacrk">0 zł</span><span class="dv" style="color:#aaa">—</span></div>
-      <div class="cf row"><span class="lbl">Rynny (kpl. × 1322 zł)</span><input type="number" id="rynq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="rynk">0 zł</span><span class="dv hi" id="rynp">0 zł</span></div>
-      <div class="cf row"><span class="lbl">Podłoga zewnętrzna (m² × 140 zł)</span><input type="number" id="podq" value="4" min="0" onchange="r()"><span></span><span class="dv" id="podk">0 zł</span><span class="dv hi" id="podp">0 zł</span></div>
-      <div class="cf row"><span class="lbl">Płyta betonowa (szt. × 221,65 zł)</span><input type="number" id="plyq" value="2" min="0" onchange="r()"><span></span><span class="dv" id="plyk">0 zł</span><span class="dv hi" id="plyp">0 zł</span></div>
-      <div class="cf row"><span class="lbl">Styrodur 100mm XPS (m² × 49,40 zł)</span><input type="number" id="styq" value="0" min="0" onchange="r()"><span></span><span class="dv" id="styk">0 zł</span><span class="dv hi" id="styp">0 zł</span></div>
+      <div class="cf row">
+        <span class="lbl">Dach — materiał (m²)</span>
+        <input type="number" id="dachq" value="5" min="0" onchange="r()">
+        <input type="number" id="dachc" value="60" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="dachk">0 zł</span>
+        <span class="dv hi" id="dachp">0 zł</span>
+      </div>
+      <div class="cf row">
+        <span class="lbl">Dach — robocizna (m²)</span>
+        <input type="number" id="dacrq" value="5" min="0" onchange="r()">
+        <input type="number" id="dacrc" value="110" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="dacrk">0 zł</span>
+        <span class="dv" style="color:#aaa">—</span>
+      </div>
+      <div class="cf row">
+        <span class="lbl">Rynny (kpl.)</span>
+        <input type="number" id="rynq" value="1" min="0" onchange="r()">
+        <input type="number" id="rync" value="320" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="rynk">0 zł</span>
+        <span class="dv hi" id="rynp">0 zł</span>
+      </div>
+      <div class="cf row">
+        <span class="lbl">Podłoga zewnętrzna (m²)</span>
+        <input type="number" id="podq" value="4" min="0" onchange="r()">
+        <input type="number" id="podc" value="140" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="podk">0 zł</span>
+        <span class="dv hi" id="podp">0 zł</span>
+      </div>
+      <div class="cf row">
+        <span class="lbl">Płyta betonowa (szt.)</span>
+        <input type="number" id="plyq" value="2" min="0" onchange="r()">
+        <input type="number" id="plyc" value="221.65" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="plyk">0 zł</span>
+        <span class="dv hi" id="plyp">0 zł</span>
+      </div>
+      <div class="cf row">
+        <span class="lbl">Styrodur 100mm XPS (m²)</span>
+        <input type="number" id="styq" value="0" min="0" onchange="r()">
+        <input type="number" id="styc" value="49.4" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="styk">0 zł</span>
+        <span class="dv hi" id="styp">0 zł</span>
+      </div>
       <div class="cf row" style="gap:6px">
         <span class="lbl">Płyta OSB (szt.)</span>
         <input type="number" id="osbq" value="0" min="0" onchange="r()" style="width:60px">
@@ -657,9 +693,10 @@ function showSyncStatus(mode,msg){
       <div class="c3 row" style="align-items:center">
         <div><label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer">
           <input type="checkbox" id="pano-show" onchange="r()" style="width:14px;height:14px">
-          <span>Szyba panoramiczna (750 zł/m²)</span>
+          <span>Szyba panoramiczna</span>
         </label></div>
         <div><div class="sub">Ilość m²</div><input type="number" id="panoq" value="0" min="0" step="0.1" onchange="r()"></div>
+        <div><div class="sub">Cena zł/m²</div><input type="number" id="panoc" value="820" min="0" step="1" onchange="r()" style="width:75px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"></div>
         <span class="dv hi" id="panop">0 zł</span>
       </div>
     </div>
@@ -1613,7 +1650,7 @@ function r(){
   var bshK=isZ?gv('bshq')*36.25:0,bshP=bshK*mK,cncK=isZ?gv('cncq')*700:0,cncP=cncK*mK;
   se('bshk',f(bshK));se('bshp',f(bshP));se('cnck',f(cncK));se('cncp',f(cncP));
   var dachSp=0,zewnLogist=0;
-  if(isZ){var dM=gv('dachq')*60,dR=gv('dacrq')*110,ryK=gv('rynq')*1322,poK=gv('podq')*140,plK=gv('plyq')*221.65,stK=gv('styq')*49.4;
+  if(isZ){var dM=gv('dachq')*(gv('dachc')||60),dR=gv('dacrq')*(gv('dacrc')||110),ryK=gv('rynq')*(gv('rync')||320),poK=gv('podq')*(gv('podc')||140),plK=gv('plyq')*(gv('plyc')||221.65),stK=gv('styq')*(gv('styc')||49.4);
     var osbK=gv('osbq')*(gv('osbcena')||0),osbP=osbK*mK;se('osbp',f(osbP));
     var skrzeK=gv('skrzq')*(gv('skrzcena')||0),skrzeP=skrzeK*mK;se('skrzep',f(skrzeP));
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
@@ -1649,13 +1686,14 @@ function r(){
   var audK=gv('audt')+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
   var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
-  var panoK=isZ&&document.getElementById('pano-show')&&document.getElementById('pano-show').checked?(gv('panoq')||0)*750:0;
+  var panoCena=gv('panoc')||820;
+  var panoK=isZ&&document.getElementById('pano-show')&&document.getElementById('pano-show').checked?(gv('panoq')||0)*panoCena:0;
   var panoP=panoK*(parseFloat(document.getElementById('ms')?.value)||1.5);se('panop',f(panoP));
   var trnOpt=document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie';
   var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
   var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
   var totalSp=s1+s2+szkP+panoP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -1674,7 +1712,7 @@ function r(){
     bzn:gs('bzn'),bzq:gv('bzq'),bzp:gv('bzp'),katq:gv('katq'),
     bshq:gv('bshq'),cncq:gv('cncq'),folq:gv('folq'),tasq:gv('tasq'),welq:gv('welq'),
     anoq:gv('anoq'),anop:gv('anop'),kabq:gv('kabq'),
-    dachq:gv('dachq'),dacrq:gv('dacrq'),rynq:gv('rynq'),podq:gv('podq'),plyq:gv('plyq'),styq:gv('styq'),
+    dachq:gv('dachq'),dachc:gv('dachc')||60,dacrq:gv('dacrq'),dacrc:gv('dacrc')||110,rynq:gv('rynq'),rync:gv('rync')||320,podq:gv('podq'),podc:gv('podc')||140,plyq:gv('plyq'),plyc:gv('plyc')||221.65,styq:gv('styq'),styc:gv('styc')||49.4,
     szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),
     zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),drzwi:selTxt('drz'),drzwiVal:gv('drz'),
     scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
@@ -1685,7 +1723,7 @@ function r(){
     ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),ledBarwa:gs('led-barwa'),
     audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
     solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
-    panoq:gv('panoq')||0,panoShow:document.getElementById('pano-show')&&document.getElementById('pano-show').checked,transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
+    panoq:gv('panoq')||0,panoc:gv('panoc')||820,panoShow:document.getElementById('pano-show')&&document.getElementById('pano-show').checked,transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
     klient:gs('klient'),opis:gs('opis'),mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,cenaSaunyOverride:0,
     netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,logist:logist,minm:gv('minm')||12000,
     s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,logist:logist
@@ -2524,7 +2562,11 @@ function renderPriceTable(containerId,data,key){
 function updateSupplier(el){
   var key=el.dataset.key,idx=parseInt(el.dataset.idx),val=el.value;
   var arr=key==='boaz'?BOAZ:key==='boaz-ext'?BOAZ_EXT:key==='deski'?DESKI:KONSTR;
-  if(arr&&arr[idx]){arr[idx].s=val;savePricesQuiet();}
+  if(arr&&arr[idx]){
+    arr[idx].s=val;
+    savePricesQuiet();
+    if(typeof syncSavePrices==='function') syncSavePrices();
+  }
 }
 
 
@@ -2534,6 +2576,8 @@ function updatePrice(el){
   else if(key==='boaz-ext')BOAZ_EXT[idx].p=val;
   else if(key==='deski')DESKI[idx].p=val;
   else if(key==='konstr')KONSTR[idx].p=val;
+  savePricesQuiet();
+  if(typeof syncSavePrices==='function') syncSavePrices();
 }
 
 function onAddCatChange(){
