@@ -626,11 +626,18 @@ function showSyncStatus(mode,msg){
     </div>
     <div class="grp" id="gpDach" style="display:none"><div class="gt">Dach, podłoga i fundament [Z]</div>
       <div class="cf row">
-        <span class="lbl">Dach — materiał (m²)</span>
+        <span class="lbl">Dach — blacha na rąbek (m²)</span>
         <input type="number" id="dachq" value="5" min="0" onchange="r()">
         <input type="number" id="dachc" value="60" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
         <span class="dv" id="dachk">0 zł</span>
         <span class="dv hi" id="dachp">0 zł</span>
+      </div>
+      <div class="cf row">
+        <span class="lbl">Dach — arkusz blachy do obróbek (1250×2000mm)</span>
+        <input type="number" id="obrbq" value="0" min="0" onchange="r()">
+        <input type="number" id="obrbc" value="120" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
+        <span class="dv" id="obrbk">0 zł</span>
+        <span class="dv hi" id="obrbp">0 zł</span>
       </div>
       <div class="cf row">
         <span class="lbl">Dach — robocizna (m²)</span>
@@ -1693,7 +1700,7 @@ function r(){
   var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
   var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
   var totalSp=s1+s2+szkP+panoP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -1712,7 +1719,7 @@ function r(){
     bzn:gs('bzn'),bzq:gv('bzq'),bzp:gv('bzp'),katq:gv('katq'),
     bshq:gv('bshq'),cncq:gv('cncq'),folq:gv('folq'),tasq:gv('tasq'),welq:gv('welq'),
     anoq:gv('anoq'),anop:gv('anop'),kabq:gv('kabq'),
-    dachq:gv('dachq'),dachc:gv('dachc')||60,dacrq:gv('dacrq'),dacrc:gv('dacrc')||110,rynq:gv('rynq'),rync:gv('rync')||320,podq:gv('podq'),podc:gv('podc')||140,plyq:gv('plyq'),plyc:gv('plyc')||221.65,styq:gv('styq'),styc:gv('styc')||49.4,
+    dachq:gv('dachq'),dachc:gv('dachc')||60,obrbq:gv('obrbq')||0,obrbc:gv('obrbc')||120,dacrq:gv('dacrq'),dacrc:gv('dacrc')||110,rynq:gv('rynq'),rync:gv('rync')||320,podq:gv('podq'),podc:gv('podc')||140,plyq:gv('plyq'),plyc:gv('plyc')||221.65,styq:gv('styq'),styc:gv('styc')||49.4,
     szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),
     zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),drzwi:selTxt('drz'),drzwiVal:gv('drz'),
     scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
