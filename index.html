@@ -1945,9 +1945,10 @@ function buildVariantHTML(s,vkey){
   }
 
     // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
-  var cenaSaunyAuto=(s.s1||0)+(s.s2||0)+(s.szkP||0)+(s.prmP||0)+(s.logist||0)+(s.nkw||0)+(s.dol||0);
+  var cenaWyposCalc=(s.grzP||0)+(s.ledP||0)+(s.audP||0)+(s.dodP||0);
+  var cenaSaunyAuto=(s.netto||0)-cenaWyposCalc;
   var cenaSauny=s.cenaSaunyOverride>0?s.cenaSaunyOverride:cenaSaunyAuto;
-  var cenaWypos=(s.grzP||0)+(s.ledP||0)+(s.audP||0)+(s.dodP||0);
+  var cenaWypos=cenaWyposCalc;
   vsubt(tr('cena_sauny'),cenaSauny,true,vkey);
 
   // WYPOSAŻENIE SAUNY (ogrzewanie + sciana + dekoracje z ceną)
@@ -2008,8 +2009,8 @@ function buildVariantHTML(s,vkey){
   html+='<div class="v-row"><span class="v-label">'+tr('transport')+'</span><span></span><span class="v-yn '+(s.trnOpt==='nie_wliczono'?'v-yn-n':'v-yn-y')+'">'+(LANG==='EN'?(s.trnOpt==='nie_wliczono'?'NOT INCLUDED':'Included'):(s.trnOpt==='nie_wliczono'?'Nie wliczono':'W cenie'))+'</span></div>';
   // Montaz - always show
   html+='<div class="v-row"><span class="v-label">'+(LANG==='EN'?'Assembly / Connection':'Montaż / Podłączenie')+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'Included':'W cenie')+'</span></div>';
-  vrowYN(tr('cebrzyk'),s.akcC>0);
-  vrowYN(tr('klepsydra'),s.klepC>0);
+  if(s.akcC>0)vrowYN(tr('cebrzyk'),true);
+  if(s.klepC>0)vrowYN(tr('klepsydra'),true);
 
   return html;
 }
