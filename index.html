@@ -364,6 +364,24 @@ async function syncLoad(){
       if(row.key==='boaz_ext' && row.value){
         try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
       }
+      if(row.key==='boaz' && row.value){
+        try{
+          var bArr=Array.isArray(row.value)?row.value:JSON.parse(row.value);
+          if(bArr&&bArr.length>0){BOAZ=bArr;localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));}
+        }catch(e){}
+      }
+      if(row.key==='deski' && row.value){
+        try{
+          var dArr=Array.isArray(row.value)?row.value:JSON.parse(row.value);
+          if(dArr&&dArr.length>0){DESKI=dArr;localStorage.setItem('abm_deski',JSON.stringify(DESKI));}
+        }catch(e){}
+      }
+      if(row.key==='konstr' && row.value){
+        try{
+          var kArr=Array.isArray(row.value)?row.value:JSON.parse(row.value);
+          if(kArr&&kArr.length>0){KONSTR=kArr;localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));}
+        }catch(e){}
+      }
     });
     // Rebuild selects with cloud data
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
@@ -1644,11 +1662,11 @@ function r(){
   function mr(pfx,mar){var p=gv(pfx+'m'),q=gv(pfx+'q'),k=p*q,sp=k*mar;se(pfx+'k',f(k));se(pfx+'p',f(sp));return{k:k,sp:sp,q:q,name:selTxt(pfx+'m'),g:getG(pfx+'m')};}
   var b1=mr('b1',mK),b2=mr('b2',mK);
   var zb1=isZ?{k:0,sp:0,q:0,name:'',g:''}:mr('zb1',mK);
-  var l1=mr('l1',mK),l2=mr('l2',mK),k1=mr('k1',mK),k2=mr('k2',mK);
+  var l1=mr('l1',mK),l2=mr('l2',mK),podl=mr('podl',mK),k1=mr('k1',mK),k2=mr('k2',mK);
   var bzK=isZ?(gv('bzq')*gv('bzp')):0,bzP=bzK*mK;
   if(isZ){se('bzk',f(bzK));se('bzpp',f(bzP));}
   var katC=gv('kat-cena')||30;var katK=gv('katq')*katC,katP=katK*mK;se('katk',f(katK));se('katp',f(katP));
-  var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+katP;se('sm1',f(s1));
+  var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+podl.sp+katP;se('sm1',f(s1));
   var folK=gv('folq')*4,folP=folK*mK,tasK=gv('tasq')*20,tasP=tasK*mK;
   var welC=isZ?23.0:8.5,welK=gv('welq')*welC,welP=welK*mK;
   se('folk',f(folK));se('folp',f(folP));se('task',f(tasK));se('tasp',f(tasP));se('welk',f(welK));se('welp',f(welP));
@@ -1658,15 +1676,16 @@ function r(){
   se('bshk',f(bshK));se('bshp',f(bshP));se('cnck',f(cncK));se('cncp',f(cncP));
   var dachSp=0,zewnLogist=0;
   if(isZ){var dM=gv('dachq')*(gv('dachc')||60),dR=gv('dacrq')*(gv('dacrc')||110),ryK=gv('rynq')*(gv('rync')||320),poK=gv('podq')*(gv('podc')||140),plK=gv('plyq')*(gv('plyc')||221.65),stK=gv('styq')*(gv('styc')||49.4);
+    var obrbK=gv('obrbq')*(gv('obrbc')||120),obrbP=obrbK*mK;se('obrbk',f(obrbK));se('obrbp',f(obrbP));
     var osbK=gv('osbq')*(gv('osbcena')||0),osbP=osbK*mK;se('osbp',f(osbP));
     var skrzeK=gv('skrzq')*(gv('skrzcena')||0),skrzeP=skrzeK*mK;se('skrzep',f(skrzeP));
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
-    dachSp=(dM+ryK+poK+plK+stK)*mK;zewnLogist=dR;}
+    dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK;zewnLogist=dR;}
   var s2=k1.sp+k2.sp+bshP+cncP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
   var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
-  var prmK=gv('zawq')*240+gv('klm')+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
+  var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
   se('prmk',f(prmK));se('prmp',f(prmP));se('sm4',f(prmP));
   var piecK=(typ!=='I')?(gv('piec')+gv('kamd')*50+gv('kams')*130+gv('osl')):0;
   var p3cena=parseFloat((document.getElementById('pr3m')?.value||'660|350').split('|')[0])||660;
@@ -1688,9 +1707,9 @@ function r(){
   se('profk',f(profK));se('profp',f(profP));
   var kabLedK=gv('kabq-led')*7.9,kabLedP=kabLedK*mL;
   se('ledc-k',f(kabLedK));se('ledc-p',f(kabLedP));
-  var ledMat=ledQ*gv('ledt')+gv('zast')+gv('lstt'),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
+  var ledMat=ledQ*gv('ledt')+gv('zast')*(gv('zastq')||1)+gv('lstt')*(gv('lsttq')||1),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
   se('ledk',f(ledK));se('ledp',f(ledP));se('sm6',f(ledP));
-  var audK=gv('audt')+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
+  var audK=gv('audt')*(gv('audtq')||2)+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
   var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
   var panoCena=gv('panoc')||820;
@@ -1700,7 +1719,7 @@ function r(){
   var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
   var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
   var totalSp=s1+s2+szkP+panoP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+podl.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
