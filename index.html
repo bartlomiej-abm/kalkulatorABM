@@ -368,7 +368,7 @@ async function syncLoad(){
     // Rebuild selects with cloud data
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
-    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
+    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
     mkSelBZ();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
@@ -603,6 +603,7 @@ function showSyncStatus(mode,msg){
   <div class="sec"><div class="sh"><span class="st">2. Konstrukcja nośna</span><span class="ss" id="sm2">0 zł</span></div><div class="sb">
     <div class="grp"><div class="gt">Drewno konstrukcyjne</div>
       <div class="c5 row"><select id="k1m" onchange="uM('k1')"></select><input type="number" id="k1q" value="0" min="0" onchange="r()"><span class="bdg bM" id="k1s">—</span><span class="dv" id="k1k">0 zł</span><span class="dv hi" id="k1p">0 zł</span></div>
+      <div class="c5 row"><select id="k2m" onchange="uM('k2')"></select><input type="number" id="k2q" value="0" min="0" onchange="r()"><span class="bdg bM" id="k2s">—</span><span class="dv" id="k2k">0 zł</span><span class="dv hi" id="k2p">0 zł</span></div>
       <div id="rowBSH" style="display:none" class="cf row"><span class="lbl">BSH 100×100 (mb × 36,25 zł)</span><input type="number" id="bshq" value="0" min="0" onchange="r()"><span></span><span class="dv" id="bshk">0 zł</span><span class="dv hi" id="bshp">0 zł</span></div>
       <div id="rowCNC" style="display:none" class="cf row"><span class="lbl">Usługa CNC (szt. × 700 zł)</span><input type="number" id="cncq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="cnck">0 zł</span><span class="dv hi" id="cncp">0 zł</span></div>
     </div>
@@ -651,6 +652,16 @@ function showSyncStatus(mode,msg){
     <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
       <span class="lbl">Koszt:</span><span class="dv" id="szkk" style="min-width:75px">0 zł</span>
       <span class="lbl">Sprzedaż:</span><span class="dv hi" id="szkp" style="min-width:75px">0 zł</span>
+    </div>
+    <div id="row-pano" style="display:none;margin-top:8px;border-top:0.5px solid var(--mbm-pale);padding-top:8px">
+      <div class="c3 row" style="align-items:center">
+        <div><label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="pano-show" onchange="r()" style="width:14px;height:14px">
+          <span>Szyba panoramiczna (750 zł/m²)</span>
+        </label></div>
+        <div><div class="sub">Ilość m²</div><input type="number" id="panoq" value="0" min="0" step="0.1" onchange="r()"></div>
+        <span class="dv hi" id="panop">0 zł</span>
+      </div>
     </div>
   </div></div>
 
@@ -1518,6 +1529,10 @@ function setWZ(t){
   document.getElementById('rowBSH').style.display=isZ?'block':'none';
   document.getElementById('rowCNC').style.display=isZ?'block':'none';
   document.getElementById('rowDrzwZ').style.display=isZ?'block':'none';
+  ['gpK2','gpSzkZ','gpSkrz','gpWent','gpDach','row-pano'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display=isZ?'block':'none';
+  });
+  // gpDach is set above AND in loop - dedupe is fine (same value)
   var wl=document.getElementById('wellb');
   if(wl)wl.textContent=isZ?'[Z] Welna 100mm (m2 x 23,00 zl)':'[W] Welna 40mm (m2 x 8,50 zl)';
   setVAT(isZ?23:8);r();
@@ -1585,7 +1600,7 @@ function r(){
   function mr(pfx,mar){var p=gv(pfx+'m'),q=gv(pfx+'q'),k=p*q,sp=k*mar;se(pfx+'k',f(k));se(pfx+'p',f(sp));return{k:k,sp:sp,q:q,name:selTxt(pfx+'m'),g:getG(pfx+'m')};}
   var b1=mr('b1',mK),b2=mr('b2',mK);
   var zb1=isZ?{k:0,sp:0,q:0,name:'',g:''}:mr('zb1',mK);
-  var l1=mr('l1',mK),l2=mr('l2',mK),k1=mr('k1',mK);
+  var l1=mr('l1',mK),l2=mr('l2',mK),k1=mr('k1',mK),k2=mr('k2',mK);
   var bzK=isZ?(gv('bzq')*gv('bzp')):0,bzP=bzK*mK;
   if(isZ){se('bzk',f(bzK));se('bzpp',f(bzP));}
   var katC=gv('kat-cena')||30;var katK=gv('katq')*katC,katP=katK*mK;se('katk',f(katK));se('katp',f(katP));
@@ -1604,7 +1619,7 @@ function r(){
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
     dachSp=(dM+ryK+poK+plK+stK)*mK;zewnLogist=dR;}
-  var s2=k1.sp+bshP+cncP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
+  var s2=k1.sp+k2.sp+bshP+cncP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
   var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
   var prmK=gv('zawq')*240+gv('klm')+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
@@ -1634,11 +1649,13 @@ function r(){
   var audK=gv('audt')+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
   var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
+  var panoK=isZ&&document.getElementById('pano-show')&&document.getElementById('pano-show').checked?(gv('panoq')||0)*750:0;
+  var panoP=panoK*(parseFloat(document.getElementById('ms')?.value)||1.5);se('panop',f(panoP));
   var trnOpt=document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie';
   var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
   var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
-  var totalSp=s1+s2+szkP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalSp=s1+s2+szkP+panoP+prmP+grzP+ledP+audP+dodP;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+gv('dachq')*60+gv('dacrq')*110+gv('rynq')*1322+gv('podq')*140+gv('plyq')*221.65+gv('styq')*49.4+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -1668,7 +1685,7 @@ function r(){
     ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),ledBarwa:gs('led-barwa'),
     audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
     solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
-    transport:gv('trn'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
+    panoq:gv('panoq')||0,panoShow:document.getElementById('pano-show')&&document.getElementById('pano-show').checked,transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
     klient:gs('klient'),opis:gs('opis'),mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,cenaSaunyOverride:0,
     netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,logist:logist,minm:gv('minm')||12000,
     s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,logist:logist
@@ -1760,7 +1777,7 @@ var T={
     sterownik:'Sterownik FFES',wifi:'Zdalne sterowanie WiFi',bt:'Moduł Bluetooth do głośników',
     awarying:'System awaryjnego wyłączania',led:'Oświetlenie LED',audio:'Nagłośnienie',
     sciana_sol:'Ściana solna',aroma:'Aromaterapia',
-    logistyka:'Logistyka i dodatki',transport:'Transport i montaż',
+    logistyka:'Logistyka i dodatki',transport:'Transport',
     cebrzyk:'Cebrzyk i chochla',klepsydra:'Klepsydra',
     cena_sauny:'Cena sauny',cena_wypos:'Cena wyposażenia',
     cena_netto:'Cena netto',cena_brutto:'Cena brutto',
@@ -1776,7 +1793,7 @@ var T={
     sterownik:'FFES Controller',wifi:'Remote WiFi control',bt:'Bluetooth speaker module',
     awarying:'Emergency shutdown system',led:'LED lighting',audio:'Sound system',
     sciana_sol:'Salt wall',aroma:'Aromatherapy',
-    logistyka:'Logistics & extras',transport:'Delivery & installation',
+    logistyka:'Logistics & extras',transport:'Transport',
     cebrzyk:'Bucket & ladle',klepsydra:'Hourglass',
     cena_sauny:'Sauna price',cena_wypos:'Equipment price',
     cena_netto:'Total net price',cena_brutto:'Total gross price',
@@ -1841,6 +1858,7 @@ function buildVariantHTML(s,vkey){
   if(s.l2&&s.l2.q>0)vrowMat('Ławki (2)',s.l2.g||s.l2.name.split(' ')[0]);
   var szkloNazwa=(s.szkt||'').replace(/\([^)]*\)/g,'').trim().split(' ')[0]||'—';
   if(LANG==='EN'){var glassMap={'Grafitowe':'Graphite','Brązowe':'Smoked Glass','Float':'Float','Okno':'Double-pane window'};szkloNazwa=glassMap[szkloNazwa]||szkloNazwa;}
+  if(s.panoShow&&s.panoq>0)vrowMat(LANG==='EN'?'Panoramic glass':'Szyba panoramiczna',s.panoq+' m²');
   if(s.szkm>0){html+='<div class="v-row"><span class="v-label">'+tr('szklenie')+' — '+szkloNazwa+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'YES':'TAK')+'</span></div>';}
   else vrowYN(tr('szklenie'),false);
   // Wykończenie zewnętrzne [Z]
@@ -2113,7 +2131,7 @@ function loadToCalc(s){
 
   // Odśwież badge dostawców i przelicz
   _loading=false;
-  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');uM('podl');
+  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');uM('k2');uM('podl');
   r();
 }
 
@@ -2793,7 +2811,7 @@ function savePricesQuiet(){
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
-    mkSelG('k1m',KONSTR);
+    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
   }catch(e){}
 }
 
@@ -2807,7 +2825,7 @@ function savePrices(){
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
-    mkSelG('k1m',KONSTR);
+    mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
     alert('Ceny zapisane! Dropdowny w kalkulatorze zostaly zaktualizowane.');
   }catch(e){alert('Blad zapisu: '+e.message);}
 }
@@ -2821,7 +2839,7 @@ function resetPrices(){
     KONSTR=JSON.parse(JSON.stringify(DEFAULT_KONSTR));BOAZ_EXT=[];
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelBZ();
-    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);mkSelG('k1m',KONSTR);
+    mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
     buildPriceTables();
     alert('Ceny przywrocone do domyslnych.');
   }catch(e){}
@@ -2916,7 +2934,7 @@ loadPrices();
 mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
 mkSelBZ();
 mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
-mkSelG('k1m',KONSTR);
+mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
 rebP();r();
 initVslots();
 loadCustomSuppliers();loadSavedPiecePrices();loadSavedPromPrices();
@@ -3490,6 +3508,21 @@ function deleteActualEntry(id){
 var _dimResult = {};
 
 function openDimCalc(){
+  // Populate exterior boazeria selector
+  var beSel=document.getElementById('dw-boaz-ext');
+  if(beSel && BOAZ_EXT && BOAZ_EXT.length>0){
+    beSel.innerHTML='<option value="">-- wybierz z cennika --</option>';
+    BOAZ_EXT.forEach(function(item,i){
+      var o=document.createElement('option');
+      o.value=i;
+      // Extract board width from name (e.g. 32x146 -> 146)
+      var mw=item.n.match(/[x×](\d{2,3})(?:mm|\s|$)/i);
+      o.dataset.w=mw?parseInt(mw[1]):146;
+      o.textContent='['+item.g+'] '+item.n+' ('+item.p+' zł)';
+      beSel.appendChild(o);
+    });
+  }
+
   // Populate material dropdowns from BOAZ and DESKI arrays
   var bSel=document.getElementById('dw-boaz-mat');
   var dSel=document.getElementById('dw-desk-mat');
@@ -3737,6 +3770,83 @@ function dimCalc(){
     }
   }
 
+  
+  // ---- KONSTRUKCJA BSH i OBICIE ZEWNĘTRZNE [Z] ----
+  var calcZ = document.getElementById('dw-zconstr') && document.getElementById('dw-zconstr').checked;
+  var calcObit = document.getElementById('dw-obit') && document.getElementById('dw-obit').checked;
+  var bshMb=0, bshBeams=0, oBoardCount=0, oAreaM2=0;
+  var bshDetail='', numCross=2;
+
+  // Show/hide option panels
+  var zOpts=document.getElementById('dw-zconstr-opts');
+  if(zOpts) zOpts.style.display=calcZ?'block':'none';
+  var oOpts=document.getElementById('dw-obit-opts');
+  if(oOpts) oOpts.style.display=calcObit?'flex':'none';
+
+  if(calcZ||calcObit){
+    var eA=parseFloat(document.getElementById('dw-ea').value)||200; // external cm
+    var eB=parseFloat(document.getElementById('dw-eb').value)||200;
+    var eH=parseFloat(document.getElementById('dw-eh').value)||220;
+    var iA=eA-20, iB=eB-20, iH=eH-20; // internal cm
+
+    if(calcZ){
+      // 4 corner posts × internal height
+      var postMb = 4 * iH / 100;
+
+      // Floor frame: 2 beams × eA + 2 beams × eB (outer perimeter)
+      var floorFrameMb = (2*eA + 2*eB) / 100;
+
+      // Ceiling frame: same
+      var ceilFrameMb = floorFrameMb;
+
+      // Cross-beams in floor: span shorter internal dim, spaced along longer
+      var longI=Math.max(iA,iB), shortI=Math.min(iA,iB);
+      numCross = Math.max(2, Math.ceil(longI/70)-1);
+      var crossFloorMb = numCross * shortI / 100;
+      var crossCeilMb = crossFloorMb;
+
+      bshMb = Math.round((postMb + floorFrameMb + ceilFrameMb + crossFloorMb + crossCeilMb)*10)/10;
+      bshBeams = Math.ceil((postMb+floorFrameMb+ceilFrameMb+crossFloorMb+crossCeilMb)*100 / 1300);
+
+      bshDetail = '4 słupki '+Math.round(iH)+'cm | obwód podłogi/sufitu '+Math.round(2*eA+2*eB)+'cm | '+numCross+' rygle/poziom '+Math.round(shortI)+'cm';
+    }
+
+    if(calcObit){
+      var frontGlass = document.getElementById('dw-front-glass') && document.getElementById('dw-front-glass').checked;
+      // Get board width from selected material
+      var beSelEl = document.getElementById('dw-boaz-ext');
+      var oBoardWmm = 146; // default
+      var oBoardLcm = 240; // default board length
+      var oBoardPriceInfo = '';
+      if(beSelEl && beSelEl.value!==''){
+        var beOpt=beSelEl.selectedOptions[0];
+        oBoardWmm=parseFloat(beOpt.dataset.w)||146;
+        var beItem=BOAZ_EXT[parseInt(beSelEl.value)];
+        if(beItem){
+          // Try to extract length from name
+          var lm=beItem.n.match(/(\d)[,.](\d{1,2})\s*m/i)||beItem.n.match(/[xX](\d{3,4})/);
+          if(lm){
+            var l2=beItem.n.match(/(\d)[,.](\d{1,2})\s*m/i);
+            if(l2) oBoardLcm=parseFloat(l2[1]+'.'+l2[2])*100;
+            else { var l3=beItem.n.match(/[xX](\d{3,4})/); if(l3) oBoardLcm=parseInt(l3[1])/10; }
+          }
+          oBoardPriceInfo=' | '+beItem.g;
+        }
+      }
+
+      // Wall areas (external dims, boards run vertically)
+      var frontGlass2 = document.getElementById('dw-front-glass') && document.getElementById('dw-front-glass').checked;
+      var numAWalls=2, numBWalls=frontGlass2?1:2;
+      var aWallBoardsAcross=Math.ceil(eA*10/oBoardWmm);
+      var aWallBoardsRows=Math.ceil(eH/oBoardLcm);
+      var bWallBoardsAcross=Math.ceil(eB*10/oBoardWmm);
+      var bWallBoardsRows=Math.ceil(eH/oBoardLcm);
+      var rawCount=numAWalls*aWallBoardsAcross*aWallBoardsRows + numBWalls*bWallBoardsAcross*bWallBoardsRows;
+      oBoardCount=Math.ceil(rawCount*1.10);
+      oAreaM2=Math.round((numAWalls*eA*eH + numBWalls*eB*eH)/10000*100)/100;
+    }
+  }
+
     // ---- WEŁNA m2 ----
   // Total wall + ceiling area in m2
   var welWalls=0;
@@ -3753,7 +3863,8 @@ function dimCalc(){
     deskMat:deskMat, deskIdx:deskIdx, deskCount:deskCount,
     seatDepth:seatDepth, coverage:coverage, deskW:deskW,
     welTotal:welTotal, welWalls:Math.round(welWalls*100)/100, welCeil:Math.round(welCeil*100)/100,
-    floorBoardCount:floorBoardCount, floorAreaM2:Math.round(floorAreaM2*100)/100, sdCm:sdCm
+    floorBoardCount:floorBoardCount, floorAreaM2:Math.round(floorAreaM2*100)/100, sdCm:sdCm,
+    bshMb:bshMb, bshBeams:bshBeams, oBoardCount:oBoardCount, oAreaM2:oAreaM2, calcZ:calcZ
   };
 
   // ---- RENDER RESULT ----
@@ -3828,7 +3939,10 @@ function applyDimCalc(){
 
   r();
   closeDimCalc();
-  alert('Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n• Deski podłogowe: '+(_dimResult.floorBoardCount||0)+' szt. ('+Math.round(_dimResult.floorAreaM2*100)/100+' m²)\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.');
+  var msg='Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n• Deski podłogowe: '+(_dimResult.floorBoardCount||0)+' szt.';
+  if(_dimResult.calcZ) msg+='\n\nKonstrukcja zewnętrzna [Z]:\n• BSH 100×100: '+Math.round((_dimResult.bshMb||0)*10)/10+' mb ('+(_dimResult.bshBeams||0)+' belki × 13m)\n• Obicie zewnętrzne: '+(_dimResult.oBoardCount||0)+' szt.';
+  msg+='\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.';
+  alert(msg);
 }
 
 
@@ -4230,6 +4344,46 @@ function syncVariantRows(){
             <input type="checkbox" id="dw-podloga" onchange="dimCalc()" style="width:14px;height:14px">
             <span>Oblicz deski podłogowe</span>
           </label>
+        </div>
+                <div id="dw-zconstr-section" style="margin-top:10px;border-top:0.5px solid var(--mbm-pale);padding-top:10px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--mbm-dark)">
+              <input type="checkbox" id="dw-zconstr" onchange="dimCalc()" style="width:14px;height:14px">
+              <span>Oblicz konstrukcję BSH [Z]</span>
+            </label>
+          </div>
+          <div id="dw-zconstr-opts" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+              <div><div style="font-size:10px;color:var(--mbm-mid);margin-bottom:3px">Wymiar zewn. A (cm)</div>
+                <input type="number" id="dw-ea" value="200" min="100" onchange="dimCalc()" style="width:100%;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"></div>
+              <div><div style="font-size:10px;color:var(--mbm-mid);margin-bottom:3px">Wymiar zewn. B (cm)</div>
+                <input type="number" id="dw-eb" value="200" min="100" onchange="dimCalc()" style="width:100%;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"></div>
+              <div><div style="font-size:10px;color:var(--mbm-mid);margin-bottom:3px">Wysokość zewn. H (cm)</div>
+                <input type="number" id="dw-eh" value="220" min="150" onchange="dimCalc()" style="width:100%;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"></div>
+            </div>
+            <div style="font-size:10px;color:var(--mbm-mid);margin-bottom:8px;padding:4px 8px;background:var(--mbm-palest);border-radius:4px">
+              ℹ Wymiary wewnętrzne (boazeria) = zewnętrzne minus 20cm (2× ścianka BSH 100mm)
+            </div>
+          </div>
+          <div id="dw-obit-section" style="margin-top:6px">
+            <label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--mbm-dark);margin-bottom:6px">
+              <input type="checkbox" id="dw-obit" onchange="dimCalc()" style="width:14px;height:14px">
+              <span>Oblicz obicie zewnętrzne [Z]</span>
+            </label>
+            <div id="dw-obit-opts" style="display:none">
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <div><div style="font-size:10px;color:var(--mbm-mid);margin-bottom:3px">Materiał obicia</div>
+                  <select id="dw-boaz-ext" onchange="dimCalc()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:4px;background:#fff;min-width:180px">
+                    <option value="">-- wybierz z cennika --</option>
+                  </select>
+                </div>
+                <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer;margin-top:14px">
+                  <input type="checkbox" id="dw-front-glass" onchange="dimCalc()" style="width:13px;height:13px">
+                  <span>Front przeszklony (3 ściany)</span>
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
