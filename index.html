@@ -998,7 +998,14 @@ function showSyncStatus(mode,msg){
       <button class="btn" onclick="showTab('calc')">← Wróć</button>
       <span style="font-size:11px;color:#999;margin-left:8px">Aktywne warianty: <span id="active-variants-label">—</span></span>
     </div>
-    <div class="variants-wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0;padding:6px 10px;background:var(--mbm-palest);border-radius:6px">
+      <span style="font-size:11px;color:var(--mbm-mid);white-space:nowrap">Szerokość widoku:</span>
+      <input type="range" id="view-width-slider" min="600" max="2400" step="50" value="900"
+        oninput="setClientWidth(this.value)"
+        style="flex:1;accent-color:var(--mbm-primary);cursor:pointer">
+      <span id="view-width-label" style="font-size:11px;color:var(--mbm-mid);min-width:45px;text-align:right">900px</span>
+    </div>
+    <div class="variants-wrap" id="variants-wrap-el">
       <div id="variants-grid" class="variants-grid v1">
         <!-- filled by buildClient() -->
       </div>
@@ -1481,7 +1488,7 @@ function showTab(t){
   var map={calc:0,client:1,order:2,actual:3,history:4,prices:5,settings:6};
   var tabs=document.querySelectorAll('.tab');
   if(tabs[map[t]])tabs[map[t]].classList.add('on');
-  if(t==='client'){buildClient();}
+  if(t==='client'){buildClient();setTimeout(initClientWidth,50);}
   if(t==='order'){buildOrder();}
   if(t==='history'){buildHistory();}
   if(t==='actual'){buildActual(true);}
@@ -4336,6 +4343,26 @@ function syncVariantRows(){
       });
     }
   });
+}
+
+
+function setClientWidth(w){
+  w=parseInt(w);
+  var wrap=document.getElementById('variants-wrap-el');
+  var lbl=document.getElementById('view-width-label');
+  if(wrap) wrap.style.minWidth=w+'px';
+  if(lbl) lbl.textContent=w+'px';
+  // Also set min-width on grid so cards don't squeeze
+  var grid=document.getElementById('variants-grid');
+  if(grid) grid.style.minWidth=(w-20)+'px';
+  // Save preference
+  try{localStorage.setItem('abm_client_width',w);}catch(e){}
+}
+
+function initClientWidth(){
+  var saved=parseInt(localStorage.getItem('abm_client_width'))||900;
+  var slider=document.getElementById('view-width-slider');
+  if(slider){slider.value=saved;setClientWidth(saved);}
 }
 
 </script>
