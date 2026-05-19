@@ -3864,7 +3864,8 @@ function dimCalc(){
     seatDepth:seatDepth, coverage:coverage, deskW:deskW,
     welTotal:welTotal, welWalls:Math.round(welWalls*100)/100, welCeil:Math.round(welCeil*100)/100,
     floorBoardCount:floorBoardCount, floorAreaM2:Math.round(floorAreaM2*100)/100, sdCm:sdCm,
-    bshMb:bshMb, bshBeams:bshBeams, oBoardCount:oBoardCount, oAreaM2:oAreaM2, calcZ:calcZ
+    bshMb:bshMb, bshBeams:bshBeams, oBoardCount:oBoardCount, oAreaM2:oAreaM2, calcZ:calcZ, calcObit:calcObit,
+    obitIdx:(function(){var s=document.getElementById('dw-boaz-ext');return s&&s.value!==''?parseInt(s.value):null;})()
   };
 
   // ---- RENDER RESULT ----
@@ -3937,10 +3938,35 @@ function applyDimCalc(){
     uM('podl');
   }
 
+  // BSH 100x100 → bshq field (mb)
+  if(_dimResult.calcZ && _dimResult.bshMb>0){
+    var bshqEl=document.getElementById('bshq');
+    if(bshqEl) bshqEl.value=Math.round(_dimResult.bshMb*10)/10;
+  }
+
+  // Exterior cladding → bzq + bz-sel
+  if(_dimResult.calcObit && _dimResult.oBoardCount>0){
+    var bzq=document.getElementById('bzq');
+    if(bzq) bzq.value=_dimResult.oBoardCount;
+    // Set bz-sel to the selected material
+    if(_dimResult.obitIdx!=null){
+      var bzSel=document.getElementById('bz-sel');
+      if(bzSel){
+        for(var i=0;i<bzSel.options.length;i++){
+          var opt=bzSel.options[i];
+          if(parseFloat(opt.value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}
+        }
+        // Trigger onBZSel to update name and badge
+        if(typeof onBZSel==='function') onBZSel();
+      }
+    }
+  }
+
   r();
   closeDimCalc();
   var msg='Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n• Deski podłogowe: '+(_dimResult.floorBoardCount||0)+' szt.';
-  if(_dimResult.calcZ) msg+='\n\nKonstrukcja zewnętrzna [Z]:\n• BSH 100×100: '+Math.round((_dimResult.bshMb||0)*10)/10+' mb ('+(_dimResult.bshBeams||0)+' belki × 13m)\n• Obicie zewnętrzne: '+(_dimResult.oBoardCount||0)+' szt.';
+  if(_dimResult.calcZ) msg+='\n• BSH 100×100: '+Math.round((_dimResult.bshMb||0)*10)/10+' mb ('+(_dimResult.bshBeams||0)+' belek 13m)';
+  if(_dimResult.calcObit) msg+='\n• Obicie zewnętrzne: '+(_dimResult.oBoardCount||0)+' szt.';
   msg+='\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.';
   alert(msg);
 }
