@@ -2045,13 +2045,58 @@ function loadStateToCalc(s){
 
   // Piec
   sv('piec',s.piec?s.piec.cena:0);sv('kamd',s.kamd||0);sv('kams',s.kams||0);sv('osl',s.osl||0);
+  // Restore piec model selection
+  if(s.piec&&s.piec.name){
+    var pselEl=document.getElementById('psel');
+    if(pselEl){
+      var piecName=s.piec.name;
+      var found=false;
+      for(var i=0;i<pselEl.options.length;i++){
+        if(pselEl.options[i].text.indexOf(piecName.split('--')[0].trim())>=0){
+          pselEl.selectedIndex=i;found=true;break;
+        }
+      }
+      if(!found){
+        // Try matching by price
+        for(var i=0;i<pselEl.options.length;i++){
+          if(Math.abs(parseFloat(pselEl.options[i].value)-(s.piec.cena||0))<1){
+            pselEl.selectedIndex=i;found=true;break;
+          }
+        }
+      }
+      if(!found&&s.piec.cena>0) pselEl.value='-1'; // Inny model
+    }
+    if(typeof onPS==='function') onPS();
+  }
+  // Restore piec custom name
+  var pnw=document.getElementById('piec-name-wrap');
+  var pni=document.getElementById('piec-name');
+  if(pselEl&&pselEl.value==='-1'&&s.piec&&s.piec.name){
+    if(pnw) pnw.style.display='block';
+    if(pni) pni.value=s.piec.name;
+  }
 
   // Promienniki
   sv('pr3',s.pr3||0);sv('pr5',s.pr5||0);sv('pr7',s.pr7||0);
+  if(s.pr3m){var e3=document.getElementById('pr3m');if(e3)e3.value=s.pr3m;}
+  if(s.pr5m){var e5=document.getElementById('pr5m');if(e5)e5.value=s.pr5m;}
+  if(s.pr7m){var e7=document.getElementById('pr7m');if(e7)e7.value=s.pr7m;}
+  if(s.modIR!==undefined){var emi=document.getElementById('amod-ir');if(emi)emi.value=s.modIR||0;}
 
   // Sterownik
   sv('ster-val',s.sterVal||0);
+  // Restore sterownik model dropdown
+  if(s.sterModel!==undefined&&s.sterSer!==undefined){
+    var sterEl=document.getElementById('ster');
+    if(sterEl){
+      var sterTarget=s.sterSer+'|'+s.sterModel;
+      for(var i=0;i<sterEl.options.length;i++){
+        if(sterEl.options[i].value===sterTarget){sterEl.selectedIndex=i;break;}
+      }
+    }
+  }
   sc('awifi',s.wifi);sc('abt',s.bt);sc('asty',s.sty);sc('asty3',s.sty3);sc('aaw',s.aw);sc('apbez',s.pbez);
+  sc('acpir-g2',s.cpirG2);sc('acpir-g4',s.cpirG4);
 
   // LED
   sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
@@ -2170,6 +2215,10 @@ function loadToCalc(s){
 
   // Promienniki
   sv('pr3',s.pr3||0);sv('pr5',s.pr5||0);sv('pr7',s.pr7||0);
+  if(s.pr3m){var e3=document.getElementById('pr3m');if(e3)e3.value=s.pr3m;}
+  if(s.pr5m){var e5=document.getElementById('pr5m');if(e5)e5.value=s.pr5m;}
+  if(s.pr7m){var e7=document.getElementById('pr7m');if(e7)e7.value=s.pr7m;}
+  if(s.modIR!==undefined){var emi=document.getElementById('amod-ir');if(emi)emi.value=s.modIR||0;}
 
   // Sterownik
   sv('ster-val',s.sterVal||0);
