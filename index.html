@@ -730,7 +730,7 @@ function showSyncStatus(mode,msg){
   <div class="sec"><div class="sh"><span class="st">4. Wyposażenie premium</span><span class="ss" id="sm4">0 zł</span></div><div class="sb">
     <div class="c4 row">
       <div><div class="sub">Zawiasy (szt. × 240 zł)</div><input type="number" id="zawq" value="2" min="0" onchange="r()"></div>
-      <div><div class="sub">Antaba / klamka</div><select id="klm" onchange="r()"><option value="150">Made by ABM (150)</option><option value="479">ANTABA (479)</option><option value="0">Bez</option></select></div>
+      <div><div class="sub">Antaba / klamka</div><div style="display:flex;gap:5px;align-items:center"><select id="klm" onchange="r()" style="flex:1"><option value="150">Made by ABM (150)</option><option value="479">ANTABA (479)</option><option value="0">Bez</option></select><input type="number" id="klmq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div></div>
       <div><div class="sub">Drzwi do sauny</div><select id="drz" onchange="r()" style="display:none"><option value="0" selected>Bez</option></select><span style="font-size:11px;color:var(--mbm-mid)">—</span></div>
       <div><div class="sub">Ściana dekoracyjna</div><select id="scd" onchange="r()"><option value="0">Bez</option><option value="1000">Ściana z kamienia (1000)</option></select></div>
     </div>
@@ -882,8 +882,8 @@ function showSyncStatus(mode,msg){
     <div class="c4 row">
       <div><div class="sub">Taśma LED</div><select id="ledt" onchange="r()"><option value="0">Bez oświetlenia</option><option value="41.9">Taśma LED COB 6500K 480 LED 10W 900lm IP65 (24V) — 41,90/mb</option><option value="34.9">Taśma LED 4000K 120 SMD 2835 10W 950lm IP54 (24V) — 34,90/mb</option><option value="67">Taśma LED COB RGBCCT (RGB+CCT) 5w1 840 LED 16W IP65 (24V) — 67,00/mb</option><option value="49.86">Taśma LED RGBW +4000K 60 SMD 19W LAKIEROWANA IP54 — 49,86/mb</option><option value="89.2">NEONICA Sauna PRO RGB 600 24V IP68 5m SERIA PROFESJONALNA — 89,20/mb</option><option value="53.5">NEONICA Sauna PRO 600 24V IP68 5m SERIA PROFESJONALNA — 53,50/mb</option></select></div>
       <div><div class="sub">Ilość (mb/szt.)</div><input type="number" id="ledq" value="10" min="0" onchange="r()"></div>
-      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()"><option value="0">Bez zasilacza</option><option value="44.9">IP67 24V 1A 24W — 44,90</option><option value="63.9">IP67 24V 1.5A 36W — 63,90</option><option value="69.9">IP67 24V 1.875A 45W — 69,90</option><option value="75.9">IP67 24V 2.5A 60W — 75,90</option><option value="89.0">IP67 24V 3.33A 80W — 89,00</option><option value="117.0">IP67 24V 4.17A 100W — 117,00</option><option value="169.0">XLG MEAN WELL IP67 24V 6.25A 150W — 169,00</option><option value="230.0">XLG MEAN WELL IP67 24V 8.33A 200W — 230,00</option><option value="249.0">ELG MEAN WELL IP67 24V 10A 240W — 249,00</option><option value="309.0">XLG MEAN WELL IP67 24V 312W 13A — 309,00</option></select></div>
-      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option><option value="135">V4 4-kan. (135)</option><option value="159">WT5 WiFi (159)</option><option value="250">Moduł+ster. (250)</option></select></div>
+      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()"><option value="0">Bez zasilacza</option><option value="44.9">IP67 24V 1A 24W — 44,90</option><option value="63.9">IP67 24V 1.5A 36W — 63,90</option><option value="69.9">IP67 24V 1.875A 45W — 69,90</option><option value="75.9">IP67 24V 2.5A 60W — 75,90</option><option value="89.0">IP67 24V 3.33A 80W — 89,00</option><option value="117.0">IP67 24V 4.17A 100W — 117,00</option><option value="169.0">XLG MEAN WELL IP67 24V 6.25A 150W — 169,00</option><option value="230.0">XLG MEAN WELL IP67 24V 8.33A 200W — 230,00</option><option value="249.0">ELG MEAN WELL IP67 24V 10A 240W — 249,00</option><option value="309.0">XLG MEAN WELL IP67 24V 312W 13A — 309,00</option></select><input type="number" id="zastq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
+      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option><option value="135">V4 4-kan. (135)</option><option value="159">WT5 WiFi (159)</option><option value="250">Moduł+ster. (250)</option></select><input type="number" id="lsttq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
     </div>
     <div class="c2 row" style="margin-top:4px">
       <div><div class="sub">Umiejscowienie LED</div>
@@ -1488,7 +1488,7 @@ function showTab(t){
   var map={calc:0,client:1,order:2,actual:3,history:4,prices:5,settings:6};
   var tabs=document.querySelectorAll('.tab');
   if(tabs[map[t]])tabs[map[t]].classList.add('on');
-  if(t==='client'){buildClient();setTimeout(initClientWidth,50);}
+  if(t==='client'){r();buildClient();setTimeout(initClientWidth,50);}
   if(t==='order'){buildOrder();}
   if(t==='history'){buildHistory();}
   if(t==='actual'){buildActual(true);}
@@ -2310,7 +2310,7 @@ function buildClient(){
   var active=Object.keys(VARIANTS).filter(function(v){return VARIANTS[v]!==null;});
   var toShow=active.length>0
     ?active.map(function(v){return {key:v,s:VARIANTS[v]};})
-    :(STATE&&STATE.klient?[{key:'',s:STATE}]:[]);
+    :(STATE&&STATE.klient?[{key:'',s:JSON.parse(JSON.stringify(STATE))}]:[]);
 
   var grid=document.getElementById('variants-grid');
   if(!grid)return;
@@ -2341,7 +2341,7 @@ function buildClient(){
     else html+='<div style="flex-shrink:0"></div>';
     html+='<div style="text-align:right">';
     html+='<div style="font-size:15px;font-weight:500;color:#fff;line-height:1.2">'+(s.klient||'Klient')+'</div>';
-    var opisLabel=s.opis?saunaLabel+' · '+s.opis:saunaLabel;
+    var opisLabel=(s.opis&&s.opis.trim())?saunaLabel+' · '+s.opis.trim():saunaLabel;
     html+='<div style="font-size:10px;color:var(--mbm-light);margin-top:2px">'+opisLabel+'</div>';
     html+='</div>';
     html+='</div>';
