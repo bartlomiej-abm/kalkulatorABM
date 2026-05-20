@@ -2119,7 +2119,34 @@ function loadStateToCalc(s){
   // Dodatkowe
   sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
-  r();
+  // Re-apply heating selections after r() rebuilds
+  setTimeout(function(){
+    // Re-restore piec selection
+    var _s=STATE;
+    if(_s&&_s.piec&&_s.piec.name){
+      var pselEl=document.getElementById('psel');
+      if(pselEl){
+        var found=false;
+        for(var i=0;i<pselEl.options.length;i++){
+          if(pselEl.options[i].text.indexOf(_s.piec.name.split('--')[0].trim())>=0){pselEl.selectedIndex=i;found=true;break;}
+        }
+        if(!found&&_s.piec.cena>0){
+          for(var i=0;i<pselEl.options.length;i++){
+            if(Math.abs(parseFloat(pselEl.options[i].value)-_s.piec.cena)<1){pselEl.selectedIndex=i;found=true;break;}
+          }
+        }
+        if(!found&&_s.piec.cena>0) pselEl.value='-1';
+        if(typeof onPS==='function') onPS();
+      }
+    }
+    // Re-restore promienniki models
+    if(_s){
+      if(_s.pr3m){var e=document.getElementById('pr3m');if(e)e.value=_s.pr3m;}
+      if(_s.pr5m){var e=document.getElementById('pr5m');if(e)e.value=_s.pr5m;}
+      if(_s.pr7m){var e=document.getElementById('pr7m');if(e)e.value=_s.pr7m;}
+    }
+    r();
+  },100);
 }
 
 function loadToCalc(s){
@@ -2314,7 +2341,8 @@ function buildClient(){
     else html+='<div style="flex-shrink:0"></div>';
     html+='<div style="text-align:right">';
     html+='<div style="font-size:15px;font-weight:500;color:#fff;line-height:1.2">'+(s.klient||'Klient')+'</div>';
-    html+='<div style="font-size:10px;color:var(--mbm-light);margin-top:2px">'+saunaLabel+'</div>';
+    var opisLabel=s.opis?saunaLabel+' · '+s.opis:saunaLabel;
+    html+='<div style="font-size:10px;color:var(--mbm-light);margin-top:2px">'+opisLabel+'</div>';
     html+='</div>';
     html+='</div>';
     // Row 2: wariant centered
