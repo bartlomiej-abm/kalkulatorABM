@@ -1764,7 +1764,7 @@ function r(){
     osbq:gv('osbq')||0,osbcena:gv('osbcena')||0,osbn:(document.getElementById('osbn')?document.getElementById('osbn').value:''),
     skrzq:gv('skrzq')||0,skrzcena:gv('skrzcena')||0,
     // Section 3 - szklenie
-    szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),otwq2:gv('otwq2'),
+    szkt:parseFloat(document.getElementById('szkt')?.value)||160,szktTxt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),otwq2:gv('otwq2'),
     // Section 3 [Z] - szklenie zewnętrzne
     szkzm:gv('szkzm')||0,drzz:gv('drzz')||0,drzzq:gv('drzzq')||1,klmz:gv('klmz')||0,
     // Panoramic
@@ -2088,8 +2088,20 @@ function loadStateToCalc(s){
   sv('anoq',s.anoq||0);sv('anop',s.anop||150);sv('kabq',s.kabq||0);
   sv('dachq',s.dachq||0);sv('dacrq',s.dacrq||0);sv('rynq',s.rynq||0);sv('podq',s.podq||0);sv('plyq',s.plyq||0);sv('styq',s.styq||0);
 
-  // Szklenie
-  sso('szkt',s.szkt||160);sv('szkm',s.szkm||0);sv('szlq',s.szlq||0);sv('otwq',s.otwq||0);if(document.getElementById('otwq2'))sv('otwq2',s.otwq2||0);
+  // Szklenie - restore by matching text first, then value
+  (function(){
+    var szktEl=document.getElementById('szkt');
+    if(!szktEl) return;
+    // Try to match by saved text first (handles Grafitowe vs Brązowe)
+    if(s.szktTxt){
+      for(var i=0;i<szktEl.options.length;i++){
+        if(szktEl.options[i].text.indexOf(s.szktTxt.split(' ')[0])>=0){szktEl.selectedIndex=i;return;}
+      }
+    }
+    // Fallback: match by value
+    szktEl.value=s.szkt||160;
+  })();
+  sv('szkm',s.szkm||0);sv('szlq',s.szlq||0);sv('otwq',s.otwq||0);if(document.getElementById('otwq2'))sv('otwq2',s.otwq2||0);
 
   // Premium
   sv('zawq',s.zawq||0);sso('klm',s.klamkaVal||150);sso('drz',s.drzwiVal||540);sso('scd',s.scd||0);
