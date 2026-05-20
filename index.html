@@ -1759,8 +1759,27 @@ function r(){
     panoq:gv('panoq')||0,panoc:gv('panoc')||820,panoShow:document.getElementById('pano-show')&&document.getElementById('pano-show').checked,transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),
     klient:gs('klient'),opis:gs('opis'),mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,cenaSaunyOverride:0,
     netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,logist:logist,minm:gv('minm')||12000,
-    s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,logist:logist
-  };
+    s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,
+    // Material objects
+    k2:k2,podl:podl,k3:{name:selTxt('k3m'),q:gv('k3q'),g:getG('k3m')},
+    // Boazeria zewnętrzna
+    obicieZew:ck('obicie-zew'),bzSel:parseFloat(document.getElementById('bz-sel')?.value)||0,
+    // Kątownik
+    katCena:gv('kat-cena'),
+    // Glass
+    otwq2:gv('otwq2'),
+    // Quantities
+    klmq:gv('klmq')||1,audtq:gv('audtq')||2,zastq:gv('zastq')||1,lsttq:gv('lsttq')||1,
+    // External glazing [Z]
+    szkzm:gv('szkzm')||0,drzz:gv('drzz')||0,drzzq:gv('drzzq')||1,klmz:gv('klmz')||0,
+    // OSB, Skrzynka
+    osbq:gv('osbq')||0,osbcena:gv('osbcena')||0,osbn:(document.getElementById('osbn')?document.getElementById('osbn').value:''),
+    skrzq:gv('skrzq')||0,skrzcena:gv('skrzcena')||0,
+    // LED profil
+    profq:profQ,
+    // NKW auto
+    nkwAuto:!!(document.getElementById('nkw-auto')&&document.getElementById('nkw-auto').checked)
+};
 }
 
 // ===== WIDOK KLIENTA =====
@@ -2119,7 +2138,66 @@ function loadStateToCalc(s){
   // Dodatkowe
   sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
-  // Re-apply heating selections after r() rebuilds
+  // === COMPLETE FIELD RESTORATIONS ===
+  // Quantities
+  sv('klmq',s.klmq||1); sv('audtq',s.audtq||2); sv('zastq',s.zastq||1); sv('lsttq',s.lsttq||1);
+  sv('otwq2',s.otwq2||0);
+
+  // K2 drewno konstrukcyjne
+  if(s.k2&&s.k2.name){ssoByName('k2m',s.k2.name);sv('k2q',s.k2.q||0);}
+
+  // K3 drewno
+  if(s.k3&&s.k3.name){ssoByName('k3m',s.k3.name);sv('k3q',s.k3.q||0);}
+
+  // Podłoga material
+  if(s.podl&&s.podl.name){ssoByName('podlm',s.podl.name);sv('podlq',s.podl.q||0);}
+
+  // Kątownik
+  if(s.katCena!==undefined)sv('kat-cena',s.katCena);
+
+  // Boazeria zewnętrzna
+  sc('obicie-zew',s.obicieZew||false);
+  if(s.bzSel!==undefined){var bzSelEl=document.getElementById('bz-sel');if(bzSelEl){bzSelEl.value=s.bzSel;if(typeof onBZSel==='function')onBZSel();}}
+  sv('bzq',s.bzq||0); sv('bzp',s.bzp||0);
+  var bznEl=document.getElementById('bzn');if(bznEl)bznEl.value=s.bzn||'';
+
+  // OSB + Skrzynka elektryczna
+  sv('osbq',s.osbq||0); sv('osbcena',s.osbcena||0);
+  var osbnEl=document.getElementById('osbn'); if(osbnEl)osbnEl.value=s.osbn||'';
+  sv('skrzq',s.skrzq||0); sv('skrzcena',s.skrzcena||0);
+
+  // Szklenie zewnętrzne [Z]
+  sv('szkzm',s.szkzm||0); sv('drzz',s.drzz||0); sv('drzzq',s.drzzq||1); sv('klmz',s.klmz||0);
+
+  // Dach unit prices
+  sv('dachq',s.dachq||0); sv('dachc',s.dachc||60);
+  sv('obrbq',s.obrbq||0); sv('obrbc',s.obrbc||120);
+  sv('dacrq',s.dacrq||0); sv('dacrc',s.dacrc||110);
+  sv('rynq',s.rynq||0); sv('rync',s.rync||320);
+  sv('podq',s.podq||0); sv('podc',s.podc||140);
+  sv('plyq',s.plyq||0); sv('plyc',s.plyc||221.65);
+  sv('styq',s.styq||0); sv('styc',s.styc||49.4);
+
+  // Panoramic glass
+  sv('panoq',s.panoq||0); sv('panoc',s.panoc||820);
+  sc('pano-show',s.panoShow||false);
+
+  // Premium extras
+  sv('drzwz',s.drzwz||0);
+
+  // LED
+  sv('profq',s.profq||0);
+
+  // NKW
+  var nkwAutoEl2=document.getElementById('nkw-auto');
+  if(nkwAutoEl2)nkwAutoEl2.checked=!!(s.nkwAuto);
+  if(!s.nkwAuto)sv('nkw',s.nkw||0);
+
+  // Transport option
+  var trnOptEl=document.getElementById('trn-opt');
+  if(trnOptEl&&s.trnOpt)trnOptEl.value=s.trnOpt;
+
+    // Re-apply heating selections after r() rebuilds
   setTimeout(function(){
     // Re-restore piec selection
     var _s=STATE;
