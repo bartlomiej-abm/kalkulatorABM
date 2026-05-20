@@ -1741,43 +1741,75 @@ function r(){
   if(dol>0&&totalK>0){al.style.display='block';al.className='alrt w';al.innerHTML='Zysk '+f(zysk)+' ponizej minimum '+f(minM)+'. Doliczono <strong>'+f(dol)+'</strong>.';}
   else if(totalK>0){al.style.display='block';al.className='alrt o';al.textContent='Zysk '+f(zysk+dol)+' powyzej minimum '+f(minM)+' ✓';}
   else al.style.display='none';
-  STATE={isZ:isZ,typ:typ,vat:vat,b1:b1,b2:b2,zb1:zb1,l1:l1,l2:l2,k1:k1,
-    bzn:gs('bzn'),bzq:gv('bzq'),bzp:gv('bzp'),katq:gv('katq'),
+  STATE={isZ:isZ,typ:typ,vat:vat,
+    // Section 1 - materials as objects
+    b1:b1,b2:b2,zb1:zb1,l1:l1,l2:l2,podl:podl,
+    k1:k1,k2:k2,k3:{name:selTxt('k3m'),q:gv('k3q'),g:getG('k3m')},
+    // Section 1 - boazeria externa
+    bzn:gs('bzn'),bzq:gv('bzq'),bzp:gv('bzp'),bzSel:parseFloat(document.getElementById('bz-sel')?.value)||0,
+    obicieZew:ck('obicie-zew'),
+    // Section 1 - other
+    katq:gv('katq'),katCena:gv('kat-cena'),
+    // Section 2 - construction
     bshq:gv('bshq'),cncq:gv('cncq'),folq:gv('folq'),tasq:gv('tasq'),welq:gv('welq'),
     anoq:gv('anoq'),anop:gv('anop'),kabq:gv('kabq'),
-    dachq:gv('dachq'),dachc:gv('dachc')||60,obrbq:gv('obrbq')||0,obrbc:gv('obrbc')||120,dacrq:gv('dacrq'),dacrc:gv('dacrc')||110,rynq:gv('rynq'),rync:gv('rync')||320,podq:gv('podq'),podc:gv('podc')||140,plyq:gv('plyq'),plyc:gv('plyc')||221.65,styq:gv('styq'),styc:gv('styc')||49.4,
-    szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),
-    zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),drzwi:selTxt('drz'),drzwiVal:gv('drz'),
-    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
-    piec:{name:(document.getElementById('psel')&&document.getElementById('psel').value==='-1'&&document.getElementById('piec-name')&&document.getElementById('piec-name').value.trim())?document.getElementById('piec-name').value.trim():selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
-    kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
-    pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),pr3m:document.getElementById('pr3m')?.value||'660|350',pr5m:document.getElementById('pr5m')?.value||'710|500',pr7m:document.getElementById('pr7m')?.value||'765|750',moc:moc,
-    ster:selTxt('ster'),sterSer:gs('ster-ser'),sterModel:(document.getElementById('ster')?.value||'').split('|')[0],sterVal:gv('ster-val'),wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),sty3:ck('asty3'),aw:ck('aaw'),pbez:ck('apbez'),cpirG2:ck('acpir-g2'),cpirG4:ck('acpir-g4'),
-    ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,profq:profQ,zasil:selTxt('zast'),zasilVal:gv('zast'),lstt:selTxt('lstt'),lsttVal:gv('lstt'),kabLed:gv('kabq-led'),ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),ledBarwa:gs('led-barwa'),
-    audio:selTxt('audt'),audtVal:gv('audt'),btkt:gv('btkt'),
-    solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),dodP:dodP,
-    panoq:gv('panoq')||0,panoc:gv('panoc')||820,panoShow:document.getElementById('pano-show')&&document.getElementById('pano-show').checked,transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),
-    klient:gs('klient'),opis:gs('opis'),mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,cenaSaunyOverride:0,
-    netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,logist:logist,minm:gv('minm')||12000,
-    s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,
-    // Material objects
-    k2:k2,podl:podl,k3:{name:selTxt('k3m'),q:gv('k3q'),g:getG('k3m')},
-    // Boazeria zewnętrzna
-    obicieZew:ck('obicie-zew'),bzSel:parseFloat(document.getElementById('bz-sel')?.value)||0,
-    // Kątownik
-    katCena:gv('kat-cena'),
-    // Glass
-    otwq2:gv('otwq2'),
-    // Quantities
-    klmq:gv('klmq')||1,audtq:gv('audtq')||2,zastq:gv('zastq')||1,lsttq:gv('lsttq')||1,
-    // External glazing [Z]
-    szkzm:gv('szkzm')||0,drzz:gv('drzz')||0,drzzq:gv('drzzq')||1,klmz:gv('klmz')||0,
-    // OSB, Skrzynka
+    // Section 2 [Z] - dach/fundament
+    dachq:gv('dachq'),dachc:gv('dachc')||60,
+    obrbq:gv('obrbq')||0,obrbc:gv('obrbc')||120,
+    dacrq:gv('dacrq'),dacrc:gv('dacrc')||110,
+    rynq:gv('rynq'),rync:gv('rync')||320,
+    podq:gv('podq'),podc:gv('podc')||140,
+    plyq:gv('plyq'),plyc:gv('plyc')||221.65,
+    styq:gv('styq'),styc:gv('styc')||49.4,
     osbq:gv('osbq')||0,osbcena:gv('osbcena')||0,osbn:(document.getElementById('osbn')?document.getElementById('osbn').value:''),
     skrzq:gv('skrzq')||0,skrzcena:gv('skrzcena')||0,
-    // LED profil
+    // Section 3 - szklenie
+    szkt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),otwq2:gv('otwq2'),
+    // Section 3 [Z] - szklenie zewnętrzne
+    szkzm:gv('szkzm')||0,drzz:gv('drzz')||0,drzzq:gv('drzzq')||1,klmz:gv('klmz')||0,
+    // Panoramic
+    panoq:gv('panoq')||0,panoc:gv('panoc')||820,panoShow:ck('pano-show'),
+    // Section 4 - wyposażenie premium
+    zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),klmq:gv('klmq')||1,
+    drzwi:selTxt('drz'),drzwiVal:gv('drz'),
+    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
+    // Section 5 - ogrzewanie
+    piec:{name:(document.getElementById('psel')&&document.getElementById('psel').value==='-1'&&document.getElementById('piec-name')&&document.getElementById('piec-name').value.trim())?document.getElementById('piec-name').value.trim():selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
+    kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
+    pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),
+    pr3m:document.getElementById('pr3m')?.value||'660|350',
+    pr5m:document.getElementById('pr5m')?.value||'710|500',
+    pr7m:document.getElementById('pr7m')?.value||'765|750',
+    moc:moc,modIR:gv('amod-ir'),
+    ster:selTxt('ster'),sterSer:gs('ster-ser'),
+    sterModel:(document.getElementById('ster')?.value||'').split('|')[0],
+    sterVal:gv('ster-val'),
+    wifi:ck('awifi'),bt:ck('abt'),sty:ck('asty'),sty3:ck('asty3'),
+    aw:ck('aaw'),pbez:ck('apbez'),cpirG2:ck('acpir-g2'),cpirG4:ck('acpir-g4'),
+    // Section 6 - LED
+    ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,
     profq:profQ,
-    // NKW auto
+    zast:selTxt('zast'),zasilVal:gv('zast'),zastq:gv('zastq')||1,
+    lstt:selTxt('lstt'),lsttVal:gv('lstt'),lsttq:gv('lsttq')||1,
+    kabLed:gv('kabq-led'),
+    ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),
+    ledBarwa:gs('led-barwa'),
+    // Section 7 - audio
+    audio:selTxt('audt'),audtVal:gv('audt'),audtq:gv('audtq')||2,btkt:gv('btkt'),
+    // Section 8 - dodatkowe
+    solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),
+    // Section 9 - logistyka
+    transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),
+    dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
+    // Header
+    klient:gs('klient'),opis:gs('opis'),
+    // Margins
+    mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,
+    cenaSaunyOverride:0,
+    // Totals
+    netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,minm:gv('minm')||12000,
+    s1:s1,s2:s2,szkP:szkP,prmP:prmP,grzP:grzP,ledP:ledP,audP:audP,dodP:dodP,
+    // NKW
     nkwAuto:!!(document.getElementById('nkw-auto')&&document.getElementById('nkw-auto').checked)
 };
 }
