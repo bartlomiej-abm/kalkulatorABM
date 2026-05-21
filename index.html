@@ -2066,7 +2066,7 @@ function buildVariantHTML(s,vkey){
   return html;
 }
 
-function loadStateToCalc(s){
+function loadStateToCalc(s){ return loadToCalc(s); } function _loadStateToCalcOLD(s){
   // Set basic fields
   function sv(id,val){var el=document.getElementById(id);if(el&&val!==undefined&&val!==null)el.value=val;}
   function sc(id,val){var el=document.getElementById(id);if(el)el.checked=!!val;}
@@ -2286,123 +2286,170 @@ function loadToCalc(s){
   function ssoByName(id,name){
     if(!name||name.indexOf('wybierz')>=0)return;
     var el=document.getElementById(id);if(!el)return;
-    // Strategy 1: exact textContent match
+    var nameLow=name.toLowerCase();
     for(var i=0;i<el.options.length;i++){
-      if(el.options[i].textContent===name){el.selectedIndex=i;return;}
-    }
-    // Strategy 2: option text contains stored name (handles prefix changes)
-    for(var i=0;i<el.options.length;i++){
-      if(el.options[i].textContent.indexOf(name)>=0){el.selectedIndex=i;return;}
-    }
-    // Strategy 3: stored name contains option core text (strip supplier prefix)
-    for(var i=0;i<el.options.length;i++){
-      var optCore=el.options[i].textContent.replace(/^\s*\[[^\]]+\]\s*/,'').split('—')[0].trim();
-      if(optCore&&name.indexOf(optCore)>=0){el.selectedIndex=i;return;}
-    }
-    // Strategy 4: find by material name keywords (last resort)
-    var nameParts=name.replace(/^\s*\[[^\]]+\]\s*/,'').split(' ').slice(0,3).join(' ');
-    if(nameParts.length>3){
-      for(var i=0;i<el.options.length;i++){
-        if(el.options[i].textContent.indexOf(nameParts)>=0){el.selectedIndex=i;return;}
-      }
+      if(el.options[i].textContent.toLowerCase().indexOf(nameLow)>=0){el.selectedIndex=i;return;}
     }
   }
 
-  // Basic fields
-  sv('klient',s.klient);sv('opis',s.opis||'');
-  sv('minm',s.minm!=null?s.minm:12000);sv('eur',s.eur||4.4);
+  // Header
+  sv('klient',s.klient||'');sv('opis',s.opis||'');sv('minm',s.minm||12000);sv('eur',s.eur||0);
 
-  // Type/VAT switches (won't trigger r() due to _loading flag)
-  setWZ(s.isZ?'Z':'W');
-  setTyp(s.typ||'F');
-  setVAT(s.vat||8);
+  // W/Z + Typ + VAT
+  setWZ(s.isZ?'Z':'W');setTyp(s.typ||'F');setVAT(s.vat||8);
 
-  // Marże
-  sso('mk',s.mk||2.0);sso('mp',s.mp||1.5);
-  sso('mg',s.mg||1.4);sso('ml',s.ml||1.4);sso('md',s.md||1.5);
+  // Margins
+  sso('mk',s.mk||2.0);sso('mp',s.mp||2.0);sso('mg',s.mg||2.0);sso('ml',s.ml||2.0);sso('md',s.md||1.5);
 
-  // Boazeria i ławki - najpierw dropdown potem ilość
-  if(s.b1&&s.b1.name)ssoByName('b1m',s.b1.name);
-  sv('b1q',s.b1&&s.b1.q>0?s.b1.q:0);
-  if(s.b2&&s.b2.name)ssoByName('b2m',s.b2.name);
-  sv('b2q',s.b2&&s.b2.q>0?s.b2.q:0);
-  if(s.zb1&&s.zb1.name)ssoByName('zb1m',s.zb1.name);
-  sv('zb1q',s.zb1&&s.zb1.q>0?s.zb1.q:0);
-  if(s.l1&&s.l1.name)ssoByName('l1m',s.l1.name);
-  sv('l1q',s.l1&&s.l1.q>0?s.l1.q:0);
-  if(s.l2&&s.l2.name)ssoByName('l2m',s.l2.name);
-  sv('l2q',s.l2&&s.l2.q>0?s.l2.q:0);
-  if(s.k1&&s.k1.name)ssoByName('k1m',s.k1.name);
-  sv('k1q',s.k1&&s.k1.q>0?s.k1.q:0);
+  // Section 1 - Boazeria wewnętrzna
+  if(s.b1&&s.b1.name)ssoByName('b1m',s.b1.name);sv('b1q',s.b1?s.b1.q:0);
+  if(s.b2&&s.b2.name)ssoByName('b2m',s.b2.name);sv('b2q',s.b2?s.b2.q:0);
+  if(s.zb1&&s.zb1.name)ssoByName('zb1m',s.zb1.name);sv('zb1q',s.zb1?s.zb1.q:0);
+
+  // Section 1 - Ławki
+  if(s.l1&&s.l1.name)ssoByName('l1m',s.l1.name);sv('l1q',s.l1?s.l1.q:0);
+  if(s.l2&&s.l2.name)ssoByName('l2m',s.l2.name);sv('l2q',s.l2?s.l2.q:0);
+
+  // Section 1 - Podłoga
+  if(s.podl&&s.podl.name)ssoByName('podlm',s.podl.name);sv('podlq',s.podl?s.podl.q:0);
+
+  // Kątownik
+  sv('katq',s.katq||0);if(s.katCena!==undefined)sv('kat-cena',s.katCena||0);
 
   // Boazeria zewnętrzna
-  sv('bzn',s.bzn||'');sv('bzq',s.bzq||0);sv('bzp',s.bzp||0);
+  sc('obicie-zew',s.obicieZew||false);
+  sv('bzq',s.bzq||0);sv('bzp',s.bzp||0);
+  var bznEl=document.getElementById('bzn');if(bznEl)bznEl.value=s.bzn||'';
+  if(s.bzSel){var bzSelEl=document.getElementById('bz-sel');if(bzSelEl){bzSelEl.value=s.bzSel;if(typeof onBZSel==='function')onBZSel();}}
 
-  // Konstrukcja
-  sv('katq',s.katq||0);sv('bshq',s.bshq||0);sv('cncq',s.cncq||0);
-  sv('folq',s.folq||0);sv('tasq',s.tasq||0);sv('welq',s.welq||0);
-  sv('anoq',s.anoq||0);sv('anop',s.anop||150);sv('kabq',s.kabq||0);
-  sv('dachq',s.dachq||0);sv('dacrq',s.dacrq||0);sv('rynq',s.rynq||0);
-  sv('podq',s.podq||0);sv('plyq',s.plyq||0);sv('styq',s.styq||0);
+  // Section 2 - Konstrukcja
+  if(s.k1&&s.k1.name)ssoByName('k1m',s.k1.name);sv('k1q',s.k1?s.k1.q:0);
+  if(s.k2&&s.k2.name)ssoByName('k2m',s.k2.name);sv('k2q',s.k2?s.k2.q:0);
+  if(s.k3&&s.k3.name)ssoByName('k3m',s.k3.name);sv('k3q',s.k3?s.k3.q:0);
+  sv('bshq',s.bshq||0);sv('cncq',s.cncq||0);sv('folq',s.folq||0);
+  sv('tasq',s.tasq||0);sv('welq',s.welq||0);sv('anoq',s.anoq||0);
+  sv('anop',s.anop||150);sv('kabq',s.kabq||0);
 
-  // Szklenie
-  sso('szkt',s.szkt||160);sv('szkm',s.szkm||0);
-  sv('szlq',s.szlq||0);sv('otwq',s.otwq||0);
-  if(document.getElementById('otwq2'))sv('otwq2',s.otwq2||0);
+  // Section 2 [Z] - Dach/Fundament (unit prices)
+  sv('dachq',s.dachq||0);sv('dachc',s.dachc||60);
+  sv('obrbq',s.obrbq||0);sv('obrbc',s.obrbc||120);
+  sv('dacrq',s.dacrq||0);sv('dacrc',s.dacrc||110);
+  sv('rynq',s.rynq||0);sv('rync',s.rync||320);
+  sv('podq',s.podq||0);sv('podc',s.podc||140);
+  sv('plyq',s.plyq||0);sv('plyc',s.plyc||221.65);
+  sv('styq',s.styq||0);sv('styc',s.styc||49.4);
+  sv('osbq',s.osbq||0);sv('osbcena',s.osbcena||0);
+  var osbnEl=document.getElementById('osbn');if(osbnEl)osbnEl.value=s.osbn||'';
+  sv('skrzq',s.skrzq||0);sv('skrzcena',s.skrzcena||0);
 
-  // Premium
+  // Section 3 - Szklenie
+  (function(){
+    var szktEl=document.getElementById('szkt');if(!szktEl)return;
+    if(s.szktTxt){for(var i=0;i<szktEl.options.length;i++){if(szktEl.options[i].text.indexOf(s.szktTxt.split(' ')[0])>=0){szktEl.selectedIndex=i;return;}}}
+    if(s.szkt)szktEl.value=s.szkt;
+  })();
+  sv('szkm',s.szkm||0);sv('szlq',s.szlq||0);sv('otwq',s.otwq||0);sv('otwq2',s.otwq2||0);
+
+  // Section 3 [Z] - Szklenie zewnętrzne
+  sv('szkzm',s.szkzm||0);sv('drzz',s.drzz||0);sv('drzzq',s.drzzq||1);sv('klmz',s.klmz||0);
+
+  // Panoramic
+  sv('panoq',s.panoq||0);sv('panoc',s.panoc||820);sc('pano-show',s.panoShow||false);
+
+  // Section 4 - Wyposażenie premium
   sv('zawq',s.zawq||0);
-  sso('klm',s.klamkaVal||150);
-  sso('drz',s.drzwiVal||540);
+  sso('klm',s.klamkaVal||0);sv('klmq',s.klmq||1);
+  sso('drz',s.drzwiVal||0);
   sso('scd',s.scd||0);
-  if(document.getElementById('drzwz'))sso('drzwz',s.drzwz||0);
+  sso('drzwz',s.drzwz||0);
 
-  // Piec
-  if(s.piec&&s.piec.cena>0)sv('piec',s.piec.cena);
-  else sv('piec',0);
-  sv('kamd',s.kamd||0);sv('kams',s.kams||0);sv('osl',s.osl||0);
+  // Section 5 - Ogrzewanie (piec)
+  sv('piec',s.piec?s.piec.cena:0);sv('kamd',s.kamd||0);sv('kams',s.kams||0);sv('osl',s.osl||0);
+  (function(){
+    var pselEl=document.getElementById('psel');if(!pselEl)return;
+    var found=false;
+    if(s.piec&&s.piec.name){
+      for(var i=0;i<pselEl.options.length;i++){
+        if(pselEl.options[i].text.indexOf(s.piec.name.split('--')[0].trim())>=0){pselEl.selectedIndex=i;found=true;break;}
+      }
+    }
+    if(!found&&s.piec&&s.piec.cena>0){
+      for(var i=0;i<pselEl.options.length;i++){
+        if(Math.abs(parseFloat(pselEl.options[i].value)-s.piec.cena)<1){pselEl.selectedIndex=i;found=true;break;}
+      }
+    }
+    if(!found&&s.piec&&s.piec.cena>0)pselEl.value='-1';
+    if(typeof onPS==='function')onPS();
+  })();
+  var pnwEl=document.getElementById('piec-name-wrap');
+  var pniEl=document.getElementById('piec-name');
+  if(document.getElementById('psel')&&document.getElementById('psel').value==='-1'&&s.piec&&s.piec.name){
+    if(pnwEl)pnwEl.style.display='block';if(pniEl)pniEl.value=s.piec.name;
+  }
 
   // Promienniki
   sv('pr3',s.pr3||0);sv('pr5',s.pr5||0);sv('pr7',s.pr7||0);
   if(s.pr3m){var e3=document.getElementById('pr3m');if(e3)e3.value=s.pr3m;}
   if(s.pr5m){var e5=document.getElementById('pr5m');if(e5)e5.value=s.pr5m;}
   if(s.pr7m){var e7=document.getElementById('pr7m');if(e7)e7.value=s.pr7m;}
-  if(s.modIR!==undefined){var emi=document.getElementById('amod-ir');if(emi)emi.value=s.modIR||0;}
+  if(s.modIR!==undefined){var emiEl=document.getElementById('amod-ir');if(emiEl)emiEl.value=s.modIR||0;}
 
   // Sterownik
   sv('ster-val',s.sterVal||0);
-  sso('amod-ir',s.modIR||0);sc('awifi',s.wifi||false);sc('abt',s.bt||false);
-  sc('asty',s.sty||false);sc('asty3',s.sty3||false);
-  sc('aaw',s.aw||false);sc('apbez',s.pbez||false);
+  if(s.sterModel!==undefined&&s.sterSer!==undefined){
+    var sterEl=document.getElementById('ster');
+    if(sterEl){var sterTarget=s.sterSer+'|'+s.sterModel;for(var i=0;i<sterEl.options.length;i++){if(sterEl.options[i].value===sterTarget){sterEl.selectedIndex=i;break;}}}
+  }
+  sc('awifi',s.wifi);sc('abt',s.bt);sc('asty',s.sty);sc('asty3',s.sty3);
+  sc('aaw',s.aw);sc('apbez',s.pbez);sc('acpir-g2',s.cpirG2);sc('acpir-g4',s.cpirG4);
 
-  // LED
-  sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
-  // Restore LED miejsce checkboxes
+  // Section 6 - LED
+  sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);sv('profq',s.profq||0);
+  sso('zast',s.zasilVal||0);sv('zastq',s.zastq||1);
+  sso('lstt',s.lsttVal||0);sv('lsttq',s.lsttq||1);
+  sv('kabq-led',s.kabLed||0);sv('led-barwa',s.ledBarwa||'');
   var _ledM=s.ledMiejsce||'';
   ['led-m1','led-m2','led-m3'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el)el.checked=_ledM.indexOf(el.value)>=0;
+    var el=document.getElementById(id);if(!el)return;
+    el.checked=_ledM.indexOf(el.value)>=0;
   });
-  sv('led-barwa',s.ledBarwa||'');
-  sso('zast',s.zasilVal||0);sso('lstt',s.lsttVal||0);
-  if(document.getElementById('kabq-led'))sv('kabq-led',s.kabLed||0);
-  var pa=document.getElementById('profauto');if(pa)pa.checked=true;
+  var profAutoEl=document.getElementById('profauto');if(profAutoEl)profAutoEl.checked=!!(s.profAuto);
 
-  // Audio
-  sso('audt',s.audtVal||0);sso('btkt',s.btkt||0);
+  // Section 7 - Audio
+  sso('audt',s.audtVal||0);sv('audtq',s.audtq||2);sv('btkt',s.btkt||0);
 
-  // Logistyka
-  sv('trn',s.transport||0);sv('dos',s.dostawa||0);
-  sv('prj',s.projekt||0);sv('gdz',s.godz||0);
+  // Section 8 - Dodatkowe
+  sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
-  // Wyposażenie dodatkowe
-  sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);
-  sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+  // Section 9 - Logistyka
+  sv('trn',s.transport||0);sv('dos',s.dostawa||0);sv('prj',s.projekt||0);sv('gdz',s.godz||0);
+  var trnOptEl=document.getElementById('trn-opt');if(trnOptEl&&s.trnOpt)trnOptEl.value=s.trnOpt;
 
-  // Odśwież badge dostawców i przelicz
+  // NKW
+  var nkwAutoEl=document.getElementById('nkw-auto');if(nkwAutoEl)nkwAutoEl.checked=!!(s.nkwAuto);
+  if(!s.nkwAuto)sv('nkw',s.nkw||0);
+
   _loading=false;
-  uM('b1');uM('b2');uM('zb1');uM('l1');uM('l2');uM('k1');uM('k2');uM('podl');
   r();
+
+  // Re-apply piec + promienniki po przebudowie dropdownów
+  setTimeout(function(){
+    var _s=STATE;
+    if(_s&&_s.piec&&_s.piec.name){
+      var pselEl=document.getElementById('psel');if(pselEl){
+        var found=false;
+        for(var i=0;i<pselEl.options.length;i++){if(pselEl.options[i].text.indexOf(_s.piec.name.split('--')[0].trim())>=0){pselEl.selectedIndex=i;found=true;break;}}
+        if(!found&&_s.piec.cena>0)for(var i=0;i<pselEl.options.length;i++){if(Math.abs(parseFloat(pselEl.options[i].value)-_s.piec.cena)<1){pselEl.selectedIndex=i;break;}}
+        if(typeof onPS==='function')onPS();
+      }
+    }
+    if(_s){
+      if(s.pr3m){var e=document.getElementById('pr3m');if(e)e.value=s.pr3m;}
+      if(s.pr5m){var e=document.getElementById('pr5m');if(e)e.value=s.pr5m;}
+      if(s.pr7m){var e=document.getElementById('pr7m');if(e)e.value=s.pr7m;}
+    }
+    r();
+  },150);
 }
 
 
