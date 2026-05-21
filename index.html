@@ -1870,6 +1870,8 @@ function saveVariant(v){
   }
   var loadLink=document.getElementById('vload-'+v);
   if(loadLink)loadLink.style.display='block';
+  // Auto-refresh client view if visible
+  if(document.getElementById('tab-client').classList.contains('on'))buildClient();
 }
 
 function clearVariants(){
@@ -2475,11 +2477,12 @@ function overrideCenaSauny(vkey,val){
 }
 
 function buildClient(){
-  setTimeout(function(){syncVariantRows();},50);
+  // Note: syncVariantRows called after grid render
+
   var active=Object.keys(VARIANTS).filter(function(v){return VARIANTS[v]!==null;});
   var toShow=active.length>0
     ?active.map(function(v){return {key:v,s:VARIANTS[v]};})
-    :(STATE&&STATE.klient?[{key:'',s:JSON.parse(JSON.stringify(STATE))}]:[]);
+    :(STATE?[{key:'',s:JSON.parse(JSON.stringify(STATE))}]:[]);
 
   var grid=document.getElementById('variants-grid');
   if(!grid)return;
@@ -2519,13 +2522,14 @@ function buildClient(){
     html+='<div style="font-size:11px;font-weight:600;color:#fff;letter-spacing:0.04em">'+vLabel+'</div>';
     html+='</div>';
     html+='</div>';
-    html+=buildVariantHTML(s,item.key);
+    try{html+=buildVariantHTML(s,item.key);}catch(err){console.error('BVH error:',err,s);html+='<div style="padding:10px;color:#c00;font-size:11px">Błąd: '+err.message+'</div>';}
     html+=firmFooter;
     html+='<div class="v-total"><span style="font-size:12px;color:#aaa">'+tr('cena_netto')+'</span><span style="font-size:16px;font-weight:500;color:#fff">'+fC(s.netto)+'</span></div>';
     html+='<div class="v-total-b"><span style="font-size:12px;color:var(--mbm-pale)">'+tr('cena_brutto')+' (VAT '+s.vat+'%)</span><span style="font-size:16px;font-weight:500;color:#fff">'+fC(s.brutto)+'</span></div>';
     html+='</div>';
   });
   grid.innerHTML=html;
+  setTimeout(function(){try{syncVariantRows();}catch(e){}},50);
 }
 
 // helper to get value from form element for buildClient (reads live)
