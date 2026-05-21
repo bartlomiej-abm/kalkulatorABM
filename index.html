@@ -1993,8 +1993,7 @@ function buildVariantHTML(s,vkey){
     vrowYN(LANG==='EN'?'Structure BSH 100x100':'Konstrukcja BSH 100x100', (s.bshq||0)>0);
     vrowYN(LANG==='EN'?'XPS insulation':'Płyta XPS', (s.styq||0)>0);
     vrowYN(LANG==='EN'?'Ground protection':'Zabezpieczenie spodu', (s.plyq||0)>0);
-    if(s.osbq>0)vrowMat(LANG==='EN'?'OSB board':'Płyta OSB', s.osbn||'OSB');
-    if(s.skrzq>0)vrowYN(LANG==='EN'?'Electrical box':'Skrzynka elektryczna', true);
+    // OSB and skrzynka elektryczna included in price but not shown to client
   }
 
     // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
