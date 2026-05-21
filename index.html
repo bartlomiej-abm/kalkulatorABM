@@ -1980,7 +1980,7 @@ function buildVariantHTML(s,vkey){
   if(!s.isZ)vrowMat(tr('zabudowa'),s.zb1&&s.zb1.q>0?(s.zb1.g||null):null);
   vrowMat(tr('lawki'),s.l1&&s.l1.q>0?(s.l1.g||null):null);
   if(s.l2&&s.l2.q>0)vrowMat('Ławki (2)',s.l2.g||s.l2.name.split(' ')[0]);
-  var szkloNazwa=(s.szkt||'').replace(/\([^)]*\)/g,'').trim().split(' ')[0]||'—';
+  var szkloNazwa=((s.szktTxt||s.szkt||'')+'').replace(/\([^)]*\)/g,'').trim().split(' ')[0]||'—';
   if(LANG==='EN'){var glassMap={'Grafitowe':'Graphite','Brązowe':'Smoked Glass','Float':'Float','Okno':'Double-pane window'};szkloNazwa=glassMap[szkloNazwa]||szkloNazwa;}
   if(s.panoShow&&s.panoq>0)vrowMat(LANG==='EN'?'Panoramic glass':'Szyba panoramiczna',s.panoq+' m²');
   if(s.szkm>0){html+='<div class="v-row"><span class="v-label">'+tr('szklenie')+' — '+szkloNazwa+'</span><span></span><span class="v-yn v-yn-y">'+(LANG==='EN'?'YES':'TAK')+'</span></div>';}
