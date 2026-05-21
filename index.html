@@ -2727,8 +2727,18 @@ async function buildHistory(){
 
 async function loadQuoteFromCloud(entry,btn){
   if(!entry||!entry.data){alert('Nie mozna wczytac wyceny.');return;}
+  // Clear and restore VARIANTS from saved entry
+  VARIANTS={A:null,B:null,C:null,D:null,E:null};
+  if(entry.variants){
+    try{
+      var sv2=typeof entry.variants==='string'?JSON.parse(entry.variants):entry.variants;
+      ['A','B','C','D','E'].forEach(function(v){if(sv2[v])VARIANTS[v]=sv2[v];});
+    }catch(ex){}
+  }
   loadToCalc(entry.data);
+  if(typeof initVslots==='function')initVslots();
   showTab('calc');
+  setTimeout(function(){if(typeof buildClient==='function')buildClient();},200);
 }
 
 async function deleteQuoteFromCloud(entry,btn){
