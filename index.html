@@ -361,6 +361,12 @@ async function syncLoad(){
       if(row.key==='suppliers' && row.value){
         try{var sup=typeof row.value==='object'?row.value:JSON.parse(row.value);Object.keys(sup).forEach(function(k){SN[k]=sup[k];SC[k]='bM';});}catch(e){}
       }
+      if(row.key==='podl_ext' && row.value){
+        try{
+          var pArr=Array.isArray(row.value)?row.value:JSON.parse(row.value);
+          if(pArr&&pArr.length>0){PODL_EXT=pArr;localStorage.setItem('abm_podl_ext',JSON.stringify(PODL_EXT));}
+        }catch(e){}
+      }
       if(row.key==='boaz_ext' && row.value){
         try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
       }
@@ -387,7 +393,7 @@ async function syncLoad(){
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
     showSyncStatus('local','Tryb lokalny (brak połączenia)');
@@ -420,6 +426,7 @@ async function syncSavePrices(){
       supa.from('shared_settings').upsert({key:'boaz',value:BOAZ,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'deski',value:DESKI,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'konstr',value:KONSTR,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'podl_ext',value:PODL_EXT,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'custom_piece',value:customPiece,updated_at:new Date().toISOString()})
     ]);
@@ -429,7 +436,8 @@ async function syncSavePrices(){
 async function syncSaveBoazExt(){
   if(!supa)return;
   try{
-    await supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()});
+    await supa.from('shared_settings').upsert({key:'podl_ext',value:PODL_EXT,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()});
   }catch(e){console.error('syncSaveBoazExt:',e);}
 }
 
@@ -626,6 +634,7 @@ function showSyncStatus(mode,msg){
       <div id="rowCNC" style="display:none" class="cf row"><span class="lbl">Usługa CNC (szt. × 700 zł)</span><input type="number" id="cncq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="cnck">0 zł</span><span class="dv hi" id="cncp">0 zł</span></div>
     </div>
     <div class="grp"><div class="gt">Izolacja i folia</div>
+      <div class="cf row"><span class="lbl">Folia hydroizolacyjna EPDM (m²)</span><input type="number" id="epdmq" value="0" min="0" onchange="r()"><input type="number" id="epdmc" placeholder="cena/m²" value="0" min="0" step="0.01" onchange="r()" style="width:75px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"><span class="dv" id="epdmk">0 zł</span><span class="dv hi" id="epdmp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Folia paraizolacyjna (rolki × 4 zł)</span><input type="number" id="folq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="folk">0 zł</span><span class="dv hi" id="folp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Taśma do folii para (szt. × 20 zł)</span><input type="number" id="tasq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="task">0 zł</span><span class="dv hi" id="tasp">0 zł</span></div>
       <div class="cf row"><span class="lbl" id="wellb">[W] Wełna 40mm (m² × 8,50 zł)</span><input type="number" id="welq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="welk">0 zł</span><span class="dv hi" id="welp">0 zł</span></div>
@@ -671,12 +680,18 @@ function showSyncStatus(mode,msg){
         <span class="dv" id="rynk">0 zł</span>
         <span class="dv hi" id="rynp">0 zł</span>
       </div>
-      <div class="cf row">
-        <span class="lbl">Podłoga zewnętrzna (m²)</span>
-        <input type="number" id="podq" value="4" min="0" onchange="r()">
-        <input type="number" id="podc" value="140" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
-        <span class="dv" id="podk">0 zł</span>
-        <span class="dv hi" id="podp">0 zł</span>
+      <div class="grp-sub" style="margin:4px 0 2px">
+        <div class="sub" style="margin-bottom:3px">Podłoga zewnętrzna</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="podl-ext-sel" onchange="onPodlExtSel()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff;min-width:150px;flex:1"></select>
+          <span class="bdg bM" id="podl-ext-sup">—</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+          <input type="number" id="podq" value="0" min="0" onchange="r()" style="width:60px" placeholder="m²">
+          <input type="number" id="podc" value="0" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px" placeholder="cena/m²">
+          <span class="dv" id="podk">0 zł</span>
+          <span class="dv hi" id="podp">0 zł</span>
+        </div>
       </div>
       <div class="cf row">
         <span class="lbl">Płyta betonowa (szt.)</span>
@@ -1515,6 +1530,30 @@ function mkSelG(id,cat){
   });
 }
 
+
+function mkSelPodlExt(){
+  var el=document.getElementById('podl-ext-sel');
+  if(!el)return;
+  el.innerHTML='';
+  var o0=document.createElement('option');o0.value='0';o0.textContent='-- wybierz --';el.appendChild(o0);
+  if(!PODL_EXT||PODL_EXT.length===0){o0.textContent='-- brak cennika (wpisz ręcznie) --';return;}
+  var lastG='';
+  PODL_EXT.forEach(function(item,i){
+    if(item.g!==lastG){var og=document.createElement('optgroup');og.label=item.g;el.appendChild(og);lastG=item.g;}
+    var o=document.createElement('option');o.value=String(item.p);o.dataset.s=item.s||'M';o.dataset.idx=i;
+    o.textContent=item.n+' ('+item.p+' zł)';el.appendChild(o);
+  });
+}
+
+function onPodlExtSel(){
+  var sel=document.getElementById('podl-ext-sel');if(!sel)return;
+  var p=parseFloat(sel.value)||0;
+  var s=sel.selectedOptions[0]?sel.selectedOptions[0].dataset.s||'M':'M';
+  var si=document.getElementById('podl-ext-sup');
+  if(p>0){var pi=document.getElementById('podc');if(pi)pi.value=p;}
+  if(si){si.className='bdg '+(SC[s]||'bM');si.textContent=SN[s]||s;}
+  r();
+}
 function mkSelBZ(){
   // Fill boazeria zewnetrzna dropdown in calculator
   var el=document.getElementById('bz-sel');
@@ -1689,7 +1728,7 @@ function r(){
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
     dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK;zewnLogist=dR;}
-  var s2=k1.sp+k2.sp+bshP+cncP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
+  var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
   var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
   var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
@@ -1726,7 +1765,7 @@ function r(){
   var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
   var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
   var totalSp=s1+s2+szkP+panoP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+podl.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+podl.k+k1.k+k2.k+katK+bshK+cncK+epdmK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -2219,7 +2258,9 @@ function loadStateToCalc(s){ return loadToCalc(s); } function _loadStateToCalcOL
   sv('obrbq',s.obrbq||0); sv('obrbc',s.obrbc||120);
   sv('dacrq',s.dacrq||0); sv('dacrc',s.dacrc||110);
   sv('rynq',s.rynq||0); sv('rync',s.rync||320);
-  sv('podq',s.podq||0); sv('podc',s.podc||140);
+  sv('podq',s.podq||0); sv('podc',s.podc||0);
+  if(s.podlExtSel){var peSel=document.getElementById('podl-ext-sel');if(peSel)peSel.value=s.podlExtSel;}
+  sv('epdmq',s.epdmq||0);sv('epdmc',s.epdmc||0);
   sv('plyq',s.plyq||0); sv('plyc',s.plyc||221.65);
   sv('styq',s.styq||0); sv('styc',s.styc||49.4);
 
@@ -2811,6 +2852,7 @@ async function clearHistory(){
 
 // ===== CENNIKI =====
 var BOAZ_EXT=[];
+var PODL_EXT=[];
 
 function loadPricesExt(){
   try{var be=localStorage.getItem('abm_boaz_ext');BOAZ_EXT=be?JSON.parse(be):[];}catch(e){BOAZ_EXT=[];}
@@ -2818,6 +2860,7 @@ function loadPricesExt(){
 
 function buildPriceTables(){
   renderPriceTable('price-boaz',BOAZ,'boaz');
+  renderPriceTable('price-podl-ext',PODL_EXT,'podl-ext');
   renderPriceTable('price-boaz-ext',BOAZ_EXT,'boaz-ext');
   renderPriceTable('price-deski',DESKI,'deski');
   renderPriceTable('price-konstr',KONSTR,'konstr');
@@ -3142,11 +3185,12 @@ function savePricesQuiet(){
   try{
     localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));
     localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
+    localStorage.setItem('abm_podl_ext',JSON.stringify(PODL_EXT));
     localStorage.setItem('abm_deski',JSON.stringify(DESKI));
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
   }catch(e){}
@@ -3156,11 +3200,12 @@ function savePrices(){
   try{
     localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));
     localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
+    localStorage.setItem('abm_podl_ext',JSON.stringify(PODL_EXT));
     localStorage.setItem('abm_deski',JSON.stringify(DESKI));
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
     alert('Ceny zapisane! Dropdowny w kalkulatorze zostaly zaktualizowane.');
@@ -3175,7 +3220,7 @@ function resetPrices(){
     BOAZ=JSON.parse(JSON.stringify(DEFAULT_BOAZ));DESKI=JSON.parse(JSON.stringify(DEFAULT_DESKI));
     KONSTR=JSON.parse(JSON.stringify(DEFAULT_KONSTR));BOAZ_EXT=[];
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
     buildPriceTables();
     alert('Ceny przywrocone do domyslnych.');
@@ -3269,7 +3314,7 @@ function gs(id){var el=document.getElementById(id);if(!el)return '';return el.va
 migrateBoazGroups();
 loadPrices();
 mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-mkSelBZ();
+mkSelBZ();mkSelPodlExt();
 mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
 mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
 rebP();r();
@@ -4548,6 +4593,9 @@ function rebuildSupplierDropdowns(){
       addSup.appendChild(o);
     });
   }
+  // Rebuild add-podl-sup
+  var addPodlSup=document.getElementById('add-podl-sup');
+  if(addPodlSup){var cp2=addPodlSup.value;addPodlSup.innerHTML=Object.keys(SN).map(function(k){return '<option value="'+k+'"'+(k===cp2?' selected':'')+'>'+SN[k]+'</option>';}).join('');}
   // Rebuild all supplier selects in price tables (updateSupplier dropdowns)
   document.querySelectorAll('select[data-key]').forEach(function(sel){
     if(!sel.dataset.idx) return; // only supplier selects have data-idx
@@ -4827,4 +4875,17 @@ function initClientWidth(){
         <p style="font-size:11px;color:var(--mbm-mid)">Dodani dostawcy będą dostępni we wszystkich listach wyboru dostawcy w kalkulatorze i cennikach.</p>
       </div>
     </div>
-  </div>
+  </div><div class="pt-section">
+        <div class="pt-hd">
+          Podłoga zewnętrzna [Z]
+          <span id="count-podl-ext" style="font-size:10px;color:var(--mbm-mid);margin-left:8px"></span>
+        </div>
+        <div id="price-podl-ext"></div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input id="add-podl-name" type="text" placeholder="Nazwa (np. Taras drewniany 28mm)" style="flex:1;font-size:12px;padding:3px 6px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px">
+          <input id="add-podl-price" type="number" placeholder="Cena" min="0" step="0.01" style="width:80px;font-size:12px;padding:3px 6px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px">
+          <select id="add-podl-sup" style="font-size:11px;padding:2px 5px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff"></select>
+          <button class="btn act" onclick="addPriceItem('podl-ext')" style="height:28px;font-size:12px">+ Dodaj</button>
+        </div>
+      </div>
+      
