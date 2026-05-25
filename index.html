@@ -144,6 +144,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .dim-modal-body{padding:18px 20px}
 .dim-sec{margin-bottom:16px}
 .dim-sec-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mbm-mid);margin-bottom:8px}
+.dim-model-btn{display:flex;flex-direction:column;padding:6px 8px;border:1px solid var(--mbm-light);border-radius:6px;cursor:pointer;background:#fff}.dim-model-btn:hover,.dim-model-btn.active{border-color:var(--mbm-primary);background:var(--mbm-palest)}.dim-model-name{font-size:11px;font-weight:600;color:var(--mbm-dark)}.dim-model-dims{font-size:10px;color:var(--mbm-mid);margin-top:1px}
 .dim-wall{display:grid;grid-template-columns:80px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
 .dim-wall-lbl{font-size:12px;font-weight:500;color:var(--mbm-dark)}
 .dim-input{font-size:12px;padding:4px 8px;height:28px;border:0.5px solid var(--mbm-light);border-radius:5px;width:100%;background:#fff}
@@ -361,6 +362,9 @@ async function syncLoad(){
       if(row.key==='suppliers' && row.value){
         try{var sup=typeof row.value==='object'?row.value:JSON.parse(row.value);Object.keys(sup).forEach(function(k){SN[k]=sup[k];SC[k]='bM';});}catch(e){}
       }
+      if(row.key==='podl_ext' && row.value){
+        try{var pa=Array.isArray(row.value)?row.value:[];if(pa.length>0){PODL_EXT=pa;localStorage.setItem('abm_podl_ext',JSON.stringify(PODL_EXT));}}catch(e){}
+      }
       if(row.key==='boaz_ext' && row.value){
         try{BOAZ_EXT=Array.isArray(row.value)?row.value:[];}catch(e){}
       }
@@ -420,6 +424,7 @@ async function syncSavePrices(){
       supa.from('shared_settings').upsert({key:'boaz',value:BOAZ,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'deski',value:DESKI,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'konstr',value:KONSTR,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'podl_ext',value:PODL_EXT,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'custom_piece',value:customPiece,updated_at:new Date().toISOString()})
     ]);
@@ -626,6 +631,7 @@ function showSyncStatus(mode,msg){
       <div id="rowCNC" style="display:none" class="cf row"><span class="lbl">Usługa CNC (szt. × 700 zł)</span><input type="number" id="cncq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="cnck">0 zł</span><span class="dv hi" id="cncp">0 zł</span></div>
     </div>
     <div class="grp"><div class="gt">Izolacja i folia</div>
+      <div class="cf row"><span class="lbl">Folia hydroizolacyjna EPDM (m²)</span><input type="number" id="epdmq" value="0" min="0" onchange="r()"><input type="number" id="epdmc" value="55" min="0" step="0.01" onchange="r()" style="width:65px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"><span class="dv" id="epdmk">0 zł</span><span class="dv hi" id="epdmp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Folia paraizolacyjna (rolki × 4 zł)</span><input type="number" id="folq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="folk">0 zł</span><span class="dv hi" id="folp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Taśma do folii para (szt. × 20 zł)</span><input type="number" id="tasq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="task">0 zł</span><span class="dv hi" id="tasp">0 zł</span></div>
       <div class="cf row"><span class="lbl" id="wellb">[W] Wełna 40mm (m² × 8,50 zł)</span><input type="number" id="welq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="welk">0 zł</span><span class="dv hi" id="welp">0 zł</span></div>
@@ -671,12 +677,16 @@ function showSyncStatus(mode,msg){
         <span class="dv" id="rynk">0 zł</span>
         <span class="dv hi" id="rynp">0 zł</span>
       </div>
-      <div class="cf row">
-        <span class="lbl">Podłoga zewnętrzna (m²)</span>
-        <input type="number" id="podq" value="4" min="0" onchange="r()">
-        <input type="number" id="podc" value="140" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
-        <span class="dv" id="podk">0 zł</span>
-        <span class="dv hi" id="podp">0 zł</span>
+      <div style="margin:4px 0">
+        <div style="font-size:11px;color:var(--mbm-mid);margin-bottom:3px">Podłoga zewnętrzna</div>
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+          <select id="podl-ext-sel" onchange="onPodlExtSel()" style="flex:1;min-width:130px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff"></select>
+          <span class="bdg bM" id="podl-ext-sup">—</span>
+          <input type="number" id="podq" value="0" min="0" onchange="r()" style="width:55px" placeholder="m²">
+          <input type="number" id="podc" value="0" min="0" step="0.01" onchange="r()" style="width:65px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px" placeholder="zł/m²">
+          <span class="dv" id="podk">0 zł</span>
+          <span class="dv hi" id="podp">0 zł</span>
+        </div>
       </div>
       <div class="cf row">
         <span class="lbl">Płyta betonowa (szt.)</span>
@@ -1094,6 +1104,7 @@ function showSyncStatus(mode,msg){
           <select id="add-cat" onchange="onAddCatChange()" style="font-size:12px;padding:3px 6px;height:26px;border:0.5px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;width:100%">
             <option value="boaz">Boazeria wewnętrzna</option>
             <option value="boaz-ext">Boazeria zewnętrzna / obicie</option>
+            <option value="podl-ext">Podłoga zewnętrzna</option>
             <option value="deski">Ławki i deski</option>
             <option value="konstr">Drewno konstrukcyjne</option>
             <option value="glass">Szklenie</option>
@@ -1148,7 +1159,8 @@ function showSyncStatus(mode,msg){
   </div>
 
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('boaz')"><span class="st">Boazeria wewnętrzna</span><span style="font-size:11px;color:#666" id="count-boaz"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-boaz">▸ rozwiń</span></div><div id="price-boaz-wrap" style="display:none"><div class="sb"><div id="price-boaz"></div></div></div></div>
-  <div class="sec"><div class="sh"><span class="st" style="color:#633806">Boazeria zewnętrzna / obicie [Z]</span><span style="font-size:11px;color:#666" id="count-boaz-ext"></span></div><div class="sb"><div id="price-boaz-ext"><p style="font-size:12px;color:#999;padding:6px 0">Brak pozycji. Dodaj materiały powyżej wybierając "Boazeria zewnętrzna / obicie".</p></div></div></div>
+  <div class="sec"><div class="sh"><span class="st" style="color:#633806">Podłoga zewnętrzna [Z]</span><span style="font-size:11px;color:#666" id="count-podl-ext"></span></div><div class="sb"><div id="price-podl-ext"><p style="font-size:12px;color:#999;padding:6px 0">Brak pozycji.</p></div></div></div>
+    <div class="sec"><div class="sh"><span class="st" style="color:#633806">Boazeria zewnętrzna / obicie [Z]</span><span style="font-size:11px;color:#666" id="count-boaz-ext"></span></div><div class="sb"><div id="price-boaz-ext"><p style="font-size:12px;color:#999;padding:6px 0">Brak pozycji. Dodaj materiały powyżej wybierając "Boazeria zewnętrzna / obicie".</p></div></div></div>
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('deski')"><span class="st">Ławki i deski</span><span style="font-size:11px;color:#666" id="count-deski"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-deski">▸ rozwiń</span></div><div id="price-deski-wrap" style="display:none"><div class="sb"><div id="price-deski"></div></div></div></div>
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('konstr')"><span class="st">Drewno konstrukcyjne</span><span style="font-size:11px;color:#666" id="count-konstr"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-konstr">▸ rozwiń</span></div><div id="price-konstr-wrap" style="display:none"><div class="sb"><div id="price-konstr"></div></div></div></div>
 
@@ -1515,6 +1527,34 @@ function mkSelG(id,cat){
   });
 }
 
+
+function mkSelPodlExt(){
+  var el=document.getElementById('podl-ext-sel');
+  if(!el)return;
+  el.innerHTML='<option value="0">-- wybierz --</option>';
+  if(!PODL_EXT||PODL_EXT.length===0)return;
+  var lastG='';
+  PODL_EXT.forEach(function(item,i){
+    if(item.g!==lastG){var og=document.createElement('optgroup');og.label=item.g;el.appendChild(og);lastG=item.g;}
+    var o=document.createElement('option');
+    o.value=String(item.p);o.dataset.s=item.s||'M';o.dataset.idx=i;
+    o.textContent=item.n+' ('+item.p+' zl)';
+    el.appendChild(o);
+  });
+}
+
+function onPodlExtSel(){
+  var sel=document.getElementById('podl-ext-sel');if(!sel)return;
+  var p=parseFloat(sel.value)||0;
+  var opt=sel.selectedOptions[0];
+  var s=opt?opt.dataset.s||'M':'M';
+  var si=document.getElementById('podl-ext-sup');
+  var pi=document.getElementById('podc');
+  if(p>0&&pi)pi.value=p;
+  if(si){si.className='bdg '+(SC[s]||'bM');si.textContent=SN[s]||s;}
+  r();
+}
+
 function mkSelBZ(){
   // Fill boazeria zewnetrzna dropdown in calculator
   var el=document.getElementById('bz-sel');
@@ -1674,6 +1714,7 @@ function r(){
   if(isZ){se('bzk',f(bzK));se('bzpp',f(bzP));}
   var katC=gv('kat-cena')||30;var katK=gv('katq')*katC,katP=katK*mK;se('katk',f(katK));se('katp',f(katP));
   var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+podl.sp+katP;se('sm1',f(s1));
+  var epdmK=gv('epdmq')*(gv('epdmc')||55),epdmP=epdmK*mK;se('epdmk',f(epdmK));se('epdmp',f(epdmP));
   var folK=gv('folq')*4,folP=folK*mK,tasK=gv('tasq')*20,tasP=tasK*mK;
   var welC=isZ?23.0:8.5,welK=gv('welq')*welC,welP=welK*mK;
   se('folk',f(folK));se('folp',f(folP));se('task',f(tasK));se('tasp',f(tasP));se('welk',f(welK));se('welp',f(welP));
@@ -1689,7 +1730,7 @@ function r(){
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
     dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK;zewnLogist=dR;}
-  var s2=k1.sp+k2.sp+bshP+cncP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
+  var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
   var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
   var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
@@ -1726,7 +1767,7 @@ function r(){
   var trnVal=trnOpt==='w_cenie'?gv('trn'):0;
   var logist=trnVal+gv('dos')+gv('prj')+gv('gdz')*60+zewnLogist;se('sm8',f(logist));
   var totalSp=s1+s2+szkP+panoP+prmP+grzP+ledP+audP+dodP;
-  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+podl.k+k1.k+k2.k+katK+bshK+cncK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
+  var totalK=b1.k+b2.k+zb1.k+bzK+l1.k+l2.k+podl.k+k1.k+k2.k+katK+bshK+cncK+epdmK+folK+tasK+welK+anoK+kabK+(isZ?panoK+dM+dR+obrbK+ryK+poK+plK+stK+osbK+skrzeK:0)+szkK+prmK+grzK+ledK+audK+dodK;
   var zysk=totalSp-totalK,minM=gv('minm'),dol=0;
   if(zysk<minM&&totalK>0)dol=minM-zysk;
   var nkwAuto=document.getElementById('nkw-auto');
@@ -1751,14 +1792,14 @@ function r(){
     // Section 1 - other
     katq:gv('katq'),katCena:gv('kat-cena'),
     // Section 2 - construction
-    bshq:gv('bshq'),cncq:gv('cncq'),folq:gv('folq'),tasq:gv('tasq'),welq:gv('welq'),
+    bshq:gv('bshq'),cncq:gv('cncq'),epdmq:gv('epdmq')||0,epdmc:gv('epdmc')||55,folq:gv('folq'),tasq:gv('tasq'),welq:gv('welq'),
     anoq:gv('anoq'),anop:gv('anop'),kabq:gv('kabq'),
     // Section 2 [Z] - dach/fundament
     dachq:gv('dachq'),dachc:gv('dachc')||60,
     obrbq:gv('obrbq')||0,obrbc:gv('obrbc')||120,
     dacrq:gv('dacrq'),dacrc:gv('dacrc')||110,
     rynq:gv('rynq'),rync:gv('rync')||320,
-    podq:gv('podq'),podc:gv('podc')||140,
+    podq:gv('podq'),podc:gv('podc')||0,podlExtSel:parseFloat(document.getElementById('podl-ext-sel')?.value)||0,
     plyq:gv('plyq'),plyc:gv('plyc')||221.65,
     styq:gv('styq'),styc:gv('styc')||49.4,
     osbq:gv('osbq')||0,osbcena:gv('osbcena')||0,osbn:(document.getElementById('osbn')?document.getElementById('osbn').value:''),
@@ -1778,8 +1819,11 @@ function r(){
     kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
     pr3:gv('pr3'),pr5:gv('pr5'),pr7:gv('pr7'),
     pr3m:document.getElementById('pr3m')?.value||'660|350',
+    pr3name:(function(){var e=document.getElementById('pr3m');if(!e||e.selectedIndex<=0)return '';return e.options[e.selectedIndex].textContent.replace(/\s*\([^)]*\)$/,'').trim();})(),
     pr5m:document.getElementById('pr5m')?.value||'710|500',
+    pr5name:(function(){var e=document.getElementById('pr5m');if(!e||e.selectedIndex<=0)return '';return e.options[e.selectedIndex].textContent.replace(/\s*\([^)]*\)$/,'').trim();})(),
     pr7m:document.getElementById('pr7m')?.value||'765|750',
+    pr7name:(function(){var e=document.getElementById('pr7m');if(!e||e.selectedIndex<=0)return '';return e.options[e.selectedIndex].textContent.replace(/\s*\([^)]*\)$/,'').trim();})(),
     moc:moc,modIR:gv('amod-ir'),
     ster:selTxt('ster'),sterSer:gs('ster-ser'),
     sterModel:(document.getElementById('ster')?.value||'').split('|')[0],
@@ -2011,9 +2055,9 @@ function buildVariantHTML(s,vkey){
   if(s.kams>0)vrowPrice(tr('kamienie_s')+' PREMIUM  ('+s.kams*15+' kg)',s.kams*130*mG);
   if(s.osl>0)vrowPrice('Osłona na piec',s.osl*mG);
   if(s.typ!=='F'){
-    if(s.pr3>0)vrowPrice('Promienniki 350W ×'+s.pr3,s.pr3*660*mG);
-    if(s.pr5>0)vrowPrice('Promienniki 500W ×'+s.pr5,s.pr5*710*mG);
-    if(s.pr7>0)vrowPrice('Promienniki 750W ×'+s.pr7,s.pr7*765*mG);
+    if(s.pr3>0){var pr3l=(s.pr3name&&s.pr3name!=='Bez'?s.pr3name:'Promienniki 350W')+' × '+s.pr3;vrowPrice(pr3l,(parseFloat((s.pr3m||'660').split('|')[0])||660)*s.pr3*mG);}
+    if(s.pr5>0){var pr5l=(s.pr5name&&s.pr5name!=='Bez'?s.pr5name:'Promienniki 500W')+' × '+s.pr5;vrowPrice(pr5l,(parseFloat((s.pr5m||'710').split('|')[0])||710)*s.pr5*mG);}
+    if(s.pr7>0){var pr7l=(s.pr7name&&s.pr7name!=='Bez'?s.pr7name:'Promienniki 750W')+' × '+s.pr7;vrowPrice(pr7l,(parseFloat((s.pr7m||'765').split('|')[0])||765)*s.pr7*mG);}
   }
 
   // Sterownik FFES - cena = sterownik + cichy X1X2 + cichy X3 (wbudowane)
@@ -2327,7 +2371,7 @@ function loadToCalc(s){
   if(s.k1&&s.k1.name)ssoByName('k1m',s.k1.name);sv('k1q',s.k1?s.k1.q:0);
   if(s.k2&&s.k2.name)ssoByName('k2m',s.k2.name);sv('k2q',s.k2?s.k2.q:0);
   if(s.k3&&s.k3.name)ssoByName('k3m',s.k3.name);sv('k3q',s.k3?s.k3.q:0);
-  sv('bshq',s.bshq||0);sv('cncq',s.cncq||0);sv('folq',s.folq||0);
+  sv('bshq',s.bshq||0);sv('cncq',s.cncq||0);sv('epdmq',s.epdmq||0);sv('epdmc',s.epdmc||55);sv('folq',s.folq||0);
   sv('tasq',s.tasq||0);sv('welq',s.welq||0);sv('anoq',s.anoq||0);
   sv('anop',s.anop||150);sv('kabq',s.kabq||0);
 
@@ -2336,7 +2380,8 @@ function loadToCalc(s){
   sv('obrbq',s.obrbq||0);sv('obrbc',s.obrbc||120);
   sv('dacrq',s.dacrq||0);sv('dacrc',s.dacrc||110);
   sv('rynq',s.rynq||0);sv('rync',s.rync||320);
-  sv('podq',s.podq||0);sv('podc',s.podc||140);
+  sv('podq',s.podq||0);sv('podc',s.podc||0);
+  if(s.podlExtSel>0&&document.getElementById('podl-ext-sel')){document.getElementById('podl-ext-sel').value=s.podlExtSel;onPodlExtSel();}
   sv('plyq',s.plyq||0);sv('plyc',s.plyc||221.65);
   sv('styq',s.styq||0);sv('styc',s.styc||49.4);
   sv('osbq',s.osbq||0);sv('osbcena',s.osbcena||0);
@@ -2811,13 +2856,16 @@ async function clearHistory(){
 
 // ===== CENNIKI =====
 var BOAZ_EXT=[];
+var PODL_EXT=[];
 
 function loadPricesExt(){
   try{var be=localStorage.getItem('abm_boaz_ext');BOAZ_EXT=be?JSON.parse(be):[];}catch(e){BOAZ_EXT=[];}
+  try{var pe=localStorage.getItem('abm_podl_ext');PODL_EXT=pe?JSON.parse(pe):[];}catch(e){PODL_EXT=[];}
 }
 
 function buildPriceTables(){
   renderPriceTable('price-boaz',BOAZ,'boaz');
+  renderPriceTable('price-podl-ext',PODL_EXT,'podl-ext');
   renderPriceTable('price-boaz-ext',BOAZ_EXT,'boaz-ext');
   renderPriceTable('price-deski',DESKI,'deski');
   renderPriceTable('price-konstr',KONSTR,'konstr');
@@ -2988,6 +3036,7 @@ function addMaterial(){
   var item={g:grp,n:name,p:price,s:sup};
   if(cat==='boaz')BOAZ.push(item);
   else if(cat==='boaz-ext')BOAZ_EXT.push(item);
+  else if(cat==='podl-ext')PODL_EXT.push(item);
   else if(cat==='deski')DESKI.push(item);
   else if(cat==='konstr')KONSTR.push(item);
   else if(cat==='piece'){item.custom=true;PIECE.push(item);rebuildPieceSelect();}
@@ -3142,11 +3191,12 @@ function savePricesQuiet(){
   try{
     localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));
     localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
+    localStorage.setItem('abm_podl_ext',JSON.stringify(PODL_EXT));
     localStorage.setItem('abm_deski',JSON.stringify(DESKI));
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
   }catch(e){}
@@ -3156,11 +3206,12 @@ function savePrices(){
   try{
     localStorage.setItem('abm_boaz',JSON.stringify(BOAZ));
     localStorage.setItem('abm_boaz_ext',JSON.stringify(BOAZ_EXT));
+    localStorage.setItem('abm_podl_ext',JSON.stringify(PODL_EXT));
     localStorage.setItem('abm_deski',JSON.stringify(DESKI));
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
     alert('Ceny zapisane! Dropdowny w kalkulatorze zostaly zaktualizowane.');
@@ -3175,7 +3226,7 @@ function resetPrices(){
     BOAZ=JSON.parse(JSON.stringify(DEFAULT_BOAZ));DESKI=JSON.parse(JSON.stringify(DEFAULT_DESKI));
     KONSTR=JSON.parse(JSON.stringify(DEFAULT_KONSTR));BOAZ_EXT=[];
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();
+    mkSelBZ();mkSelPodlExt();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
     buildPriceTables();
     alert('Ceny przywrocone do domyslnych.');
@@ -3270,6 +3321,7 @@ migrateBoazGroups();
 loadPrices();
 mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
 mkSelBZ();
+mkSelPodlExt();
 mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
 mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
 rebP();r();
@@ -3875,6 +3927,17 @@ function openDimCalc(){
   document.getElementById('dim-modal-overlay').classList.add('on');
 }
 
+
+function applyDimModel(el){
+  document.querySelectorAll('.dim-model-btn').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  var d=el.dataset;
+  ['ea','eb','eh'].forEach(function(k){var e=document.getElementById('dw-'+k);if(e)e.value=d[k];});
+  var m={'a':d.ia,'b':d.ib,'c':d.ia,'d':d.ib,'h':d.ih};
+  Object.keys(m).forEach(function(k){var e=document.getElementById('dw-'+k);if(e)e.value=m[k];});
+  var zc=document.getElementById('dw-zconstr');if(zc&&!zc.checked)zc.checked=true;
+  dimCalc();
+}
 function closeDimCalc(){
   document.getElementById('dim-modal-overlay').classList.remove('on');
 }
@@ -4227,6 +4290,17 @@ function dimCalc(){
 }
 
 function applyDimCalc(){
+  var am=document.querySelector('.dim-model-btn.active');
+  if(am){var d=am.dataset;
+    var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+    sv2('bshq',d.bsh);sv2('dachq',d.dach);sv2('dachc','60');
+    sv2('obrbq',d.obrb);sv2('obrbc','120');
+    sv2('rynq',d.ryn);sv2('rync','320');
+    sv2('plyq',d.ply);sv2('plyc','221.65');
+    sv2('styq',d.sty);sv2('styc','49.4');
+    sv2('osbq',d.osb);sv2('folq',d.fol);
+    sv2('epdmq',d.epdm);sv2('epdmc','55');sv2('welq',d.wel);
+  }
   if(!_dimResult.boazMat && !_dimResult.deskMat){
     alert('Uzupełnij kalkulator — brak materiałów w cennikach boazerii lub desek.');
     return;
@@ -4258,9 +4332,9 @@ function applyDimCalc(){
     uM('l1');
   }
 
-  // Set wełna
+  // Set wełna — skip if model preset active
   var welQ=document.getElementById('welq');
-  if(welQ&&_dimResult.welTotal>0) welQ.value=_dimResult.welTotal;
+  if(!am && welQ&&_dimResult.welTotal>0) welQ.value=_dimResult.welTotal;
   // Set deski podłogowe
   if(_dimResult.floorBoardCount>0){
     var podlm=document.getElementById('podlm');
@@ -4275,8 +4349,8 @@ function applyDimCalc(){
     uM('podl');
   }
 
-  // BSH 100x100 → bshq field (mb)
-  if(_dimResult.calcZ && _dimResult.bshMb>0){
+  // BSH 100x100 → bshq field (mb) — skip if model preset active (already set)
+  if(!am && _dimResult.calcZ && _dimResult.bshMb>0){
     var bshqEl=document.getElementById('bshq');
     if(bshqEl) bshqEl.value=Math.round(_dimResult.bshMb*10)/10;
   }
@@ -4655,7 +4729,15 @@ function initClientWidth(){
   </div>
   <div class="dim-modal-body">
 
-    <!-- ŚCIANY -->
+    <div class="dim-sec" style="margin-bottom:10px"><div class="dim-sec-title">Szybki wybór modelu [Z]</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="dim-model-btn" data-ea="230" data-eb="230" data-eh="230" data-ia="210" data-ib="210" data-ih="210" data-bsh="34" data-dach="5.75" data-obrb="2" data-ryn="1" data-ply="2" data-sty="6" data-osb="2" data-fol="15" data-epdm="6" data-wel="15" onclick="applyDimModel(this)"><span class="dim-model-name">Sama sauna</span><span class="dim-model-dims">230x230x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem</span><span class="dim-model-dims">230x330x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="430" data-eh="230" data-ia="210" data-ib="410" data-ih="210" data-bsh="56" data-dach="10.5" data-obrb="3" data-ryn="1" data-ply="4" data-sty="10.5" data-osb="3" data-fol="15" data-epdm="10.5" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem i prysznicem</span><span class="dim-model-dims">230x430x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="600" data-eh="230" data-ia="210" data-ib="580" data-ih="210" data-bsh="65" data-dach="14" data-obrb="4" data-ryn="1" data-ply="4" data-sty="14" data-osb="4" data-fol="15" data-epdm="14" data-wel="38" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie</span><span class="dim-model-dims">230x600x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="700" data-eh="230" data-ia="210" data-ib="680" data-ih="210" data-bsh="78" data-dach="16" data-obrb="4" data-ryn="1" data-ply="4" data-sty="16" data-osb="4" data-fol="15" data-epdm="16" data-wel="46" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie i przedsionkiem</span><span class="dim-model-dims">230x700x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z prysznicem</span><span class="dim-model-dims">230x330x230</span></div>
+</div></div>
+
+        <!-- ŚCIANY -->
     <div class="dim-sec">
       <div class="dim-sec-title">Wymiary ścian (cm) i typ</div>
       <div style="display:grid;grid-template-columns:60px 80px 1fr;gap:6px;font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;margin-bottom:4px">
@@ -4753,6 +4835,10 @@ function initClientWidth(){
               <input type="checkbox" id="dw-obit" onchange="dimCalc()" style="width:14px;height:14px">
               <span>Oblicz obicie zewnętrzne [Z]</span>
             </label>
+            <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer;margin-top:5px;color:var(--mbm-dark)">
+              <input type="checkbox" id="dw-front-glass" onchange="dimCalc()" style="width:13px;height:13px">
+              <span>&#127358; Okno panoramiczne (front szklany → 3 ściany obicia)</span>
+            </label>
             <div id="dw-obit-opts" style="display:none">
               <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 <div><div style="font-size:10px;color:var(--mbm-mid);margin-bottom:3px">Materiał obicia</div>
@@ -4760,10 +4846,7 @@ function initClientWidth(){
                     <option value="">-- wybierz z cennika --</option>
                   </select>
                 </div>
-                <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer;margin-top:14px">
-                  <input type="checkbox" id="dw-front-glass" onchange="dimCalc()" style="width:13px;height:13px">
-                  <span>Front przeszklony (3 ściany)</span>
-                </label>
+
               </div>
             </div>
           </div>
