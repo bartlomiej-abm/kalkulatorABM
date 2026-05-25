@@ -2885,12 +2885,13 @@ function renderPriceTable(containerId,data,key){
   var html='<table class="price-table"><thead><tr><th>Materiał</th><th style="width:130px">Dostawca</th><th style="width:90px">Cena (zł)</th><th style="width:32px"></th></tr></thead><tbody>';
   var lastG='';
   data.forEach(function(item,i){
-    if(item.g!==lastG){html+='<tr><td class="cat-row" colspan="4">'+item.g+'</td></tr>';lastG=item.g;}
+    if(item.g!==lastG){html+='<tr><td class="cat-row" colspan="5">'+item.g+'</td></tr>';lastG=item.g;}
     var supOpts=Object.keys(SN).map(function(k){
       return '<option value="'+k+'"'+(item.s===k?' selected':'')+'>'+SN[k]+'</option>';
     }).join('');
     html+='<tr>';
     html+='<td style="font-size:12px">'+item.n+'</td>';
+    html+='<td style="font-size:11px;color:var(--mbm-mid);text-align:center">'+(item.u||'szt.')+'</td>';
     html+='<td><select data-key="'+key+'" data-idx="'+i+'" onchange="updateSupplier(this)" style="font-size:11px;height:24px;border:0.5px solid #ddd;border-radius:4px;width:100%;padding:0 3px">'+supOpts+'</select></td>';
     html+='<td><input type="number" value="'+item.p+'" step="0.01" min="0" data-key="'+key+'" data-idx="'+i+'" onchange="updatePrice(this)" style="width:82px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td>';
     html+='<td style="text-align:center"><button data-cat="'+key+'" data-idx="'+i+'" onclick="event.stopPropagation();deleteMaterial(this.dataset.cat,parseInt(this.dataset.idx))" style="background:none;border:none;cursor:pointer;color:#c00;font-size:15px;padding:1px 4px" title="Usuń">×</button></td>';
@@ -4234,16 +4235,27 @@ function dimCalc(){
         }
       }
 
-      // Wall areas (external dims, boards run vertically)
+      // Wall areas
       var frontGlass2 = document.getElementById('dw-front-glass') && document.getElementById('dw-front-glass').checked;
       var numAWalls=2, numBWalls=frontGlass2?1:2;
-      var aWallBoardsAcross=Math.ceil(eA*10/oBoardWmm);
-      var aWallBoardsRows=Math.ceil(eH/oBoardLcm);
-      var bWallBoardsAcross=Math.ceil(eB*10/oBoardWmm);
-      var bWallBoardsRows=Math.ceil(eH/oBoardLcm);
-      var rawCount=numAWalls*aWallBoardsAcross*aWallBoardsRows + numBWalls*bWallBoardsAcross*bWallBoardsRows;
-      oBoardCount=Math.ceil(rawCount*1.10);
       oAreaM2=Math.round((numAWalls*eA*eH + numBWalls*eB*eH)/10000*100)/100;
+
+      // Detect if material is m2 (e.g. blacha) or szt (boards)
+      var beItem2=beSelEl&&beSelEl.value!==''?BOAZ_EXT[parseInt(beSelEl.value)]:null;
+      var oUnit=beItem2&&beItem2.u==='m2'?'m2':'szt';
+
+      if(oUnit==='m2'){
+        // m2 material (blacha etc.) - just return area + 10% waste
+        oBoardCount=Math.round(oAreaM2*1.10*100)/100; // stored as m2 value
+      } else {
+        // Board material - count pieces
+        var aWallBoardsAcross=Math.ceil(eA*10/oBoardWmm);
+        var aWallBoardsRows=Math.ceil(eH/oBoardLcm);
+        var bWallBoardsAcross=Math.ceil(eB*10/oBoardWmm);
+        var bWallBoardsRows=Math.ceil(eH/oBoardLcm);
+        var rawCount=numAWalls*aWallBoardsAcross*aWallBoardsRows + numBWalls*bWallBoardsAcross*bWallBoardsRows;
+        oBoardCount=Math.ceil(rawCount*1.10);
+      }
     }
   }
 
