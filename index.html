@@ -4302,97 +4302,73 @@ function dimCalc(){
 }
 
 function applyDimCalc(){
+  var ck2=function(id){return document.getElementById(id)&&document.getElementById(id).checked;};
+  var insBoaz=ck2('ins-boaz');
+  var insDeski=ck2('ins-deski');
+  var insPodl=ck2('ins-podl');
+  var insWelna=ck2('ins-welna');
+  var insBsh=ck2('ins-bsh');
+  var insObit=ck2('ins-obit');
+
+  var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+
+  // Model preset values (BSH + dach + fundament)
   var am=document.querySelector('.dim-model-btn.active');
-  if(am){var d=am.dataset;
-    var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  if(am&&insBsh){var d=am.dataset;
     sv2('bshq',d.bsh);sv2('dachq',d.dach);sv2('dachc','60');
     sv2('obrbq',d.obrb);sv2('obrbc','120');
     sv2('rynq',d.ryn);sv2('rync','320');
     sv2('plyq',d.ply);sv2('plyc','221.65');
     sv2('styq',d.sty);sv2('styc','49.4');
     sv2('osbq',d.osb);sv2('folq',d.fol);
-    sv2('epdmq',d.epdm);sv2('epdmc','55');sv2('welq',d.wel);
-  }
-  if(!_dimResult.boazMat && !_dimResult.deskMat){
-    alert('Uzupełnij kalkulator — brak materiałów w cennikach boazerii lub desek.');
-    return;
-  }
-
-  // Set boazeria
-  if(_dimResult.boazMat){
-    var b1m=document.getElementById('b1m');
-    if(b1m){
-      for(var i=0;i<b1m.options.length;i++){
-        if(b1m.options[i].textContent.indexOf(_dimResult.boazMat.n)>=0){b1m.selectedIndex=i;break;}
-      }
-    }
-    var b1q=document.getElementById('b1q');
-    if(b1q) b1q.value=_dimResult.boazCount;
-    uM('b1');
+    sv2('epdmq',d.epdm);sv2('epdmc','55');
+    if(insWelna)sv2('welq',d.wel);
+  } else if(!am&&insBsh){
+    // BSH from dimCalc result (without model)
+    if(_dimResult.calcZ&&_dimResult.bshMb>0){var bshqEl=document.getElementById('bshq');if(bshqEl)bshqEl.value=Math.round(_dimResult.bshMb*10)/10;}
   }
 
-  // Set deski
-  if(_dimResult.deskMat){
-    var l1m=document.getElementById('l1m');
-    if(l1m){
-      for(var i=0;i<l1m.options.length;i++){
-        if(l1m.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){l1m.selectedIndex=i;break;}
-      }
-    }
-    var l1q=document.getElementById('l1q');
-    if(l1q) l1q.value=_dimResult.deskCount;
-    uM('l1');
+  // Boazeria wewnętrzna
+  if(insBoaz&&_dimResult.boazMat){
+    var boazSel=document.getElementById('b1m');
+    if(boazSel){for(var i=0;i<boazSel.options.length;i++){if(boazSel.options[i].textContent.indexOf(_dimResult.boazMat.n)>=0){boazSel.selectedIndex=i;break;}}}
+    sv2('b1q',_dimResult.boazCount);uM('b1');
   }
 
-  // Set wełna — skip if model preset active
-  var welQ=document.getElementById('welq');
-  if(!am && welQ&&_dimResult.welTotal>0) welQ.value=_dimResult.welTotal;
-  // Set deski podłogowe
-  if(_dimResult.floorBoardCount>0){
-    var podlm=document.getElementById('podlm');
-    if(podlm&&_dimResult.deskIdx!==null){
-      // Use same material as ławki for podłoga
-      for(var i=0;i<podlm.options.length;i++){
-        if(_dimResult.deskMat&&podlm.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){podlm.selectedIndex=i;break;}
-      }
-    }
-    var podlq=document.getElementById('podlq');
-    if(podlq) podlq.value=_dimResult.floorBoardCount;
-    uM('podl');
+  // Deski ławkowe
+  if(insDeski&&_dimResult.deskMat){
+    var l1Sel=document.getElementById('l1m');
+    if(l1Sel){for(var i=0;i<l1Sel.options.length;i++){if(l1Sel.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){l1Sel.selectedIndex=i;break;}}}
+    sv2('l1q',_dimResult.deskCount);uM('l1');
   }
 
-  // BSH 100x100 → bshq field (mb) — skip if model preset active (already set)
-  if(!am && _dimResult.calcZ && _dimResult.bshMb>0){
-    var bshqEl=document.getElementById('bshq');
-    if(bshqEl) bshqEl.value=Math.round(_dimResult.bshMb*10)/10;
+  // Podłoga wewnętrzna
+  if(insPodl&&_dimResult.floorBoardCount>0){
+    if(_dimResult.deskMat){var pSel=document.getElementById('podlm');if(pSel){for(var i=0;i<pSel.options.length;i++){if(pSel.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){pSel.selectedIndex=i;break;}}}}
+    sv2('podlq',_dimResult.floorBoardCount);uM('podl');
   }
 
-  // Exterior cladding → bzq + bz-sel
-  if(_dimResult.calcObit && _dimResult.oBoardCount>0){
-    var bzq=document.getElementById('bzq');
-    if(bzq) bzq.value=_dimResult.oBoardCount;
-    // Set bz-sel to the selected material
-    if(_dimResult.obitIdx!=null){
-      var bzSel=document.getElementById('bz-sel');
-      if(bzSel){
-        for(var i=0;i<bzSel.options.length;i++){
-          var opt=bzSel.options[i];
-          if(parseFloat(opt.value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}
-        }
-        // Trigger onBZSel to update name and badge
-        if(typeof onBZSel==='function') onBZSel();
-      }
-    }
+  // Wełna (if no model or model doesn't set it)
+  if(insWelna&&!am&&_dimResult.welTotal>0){sv2('welq',_dimResult.welTotal);}
+
+  // Obicie zewnętrzne
+  if(insObit&&_dimResult.calcObit&&_dimResult.oBoardCount>0){
+    sv2('bzq',_dimResult.oBoardCount);
+    if(_dimResult.obitIdx!=null){var bzSel=document.getElementById('bz-sel');if(bzSel){for(var i=0;i<bzSel.options.length;i++){if(parseFloat(bzSel.options[i].value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}}if(typeof onBZSel==='function')onBZSel();}}
   }
 
   r();
   closeDimCalc();
-  var msg='Wstawiono do kalkulatora:\n• Boazeria: '+_dimResult.boazCount+' szt.\n• Deski ławkowe: '+_dimResult.deskCount+' szt.\n• Deski podłogowe: '+(_dimResult.floorBoardCount||0)+' szt.';
-  if(_dimResult.calcZ) msg+='\n• BSH 100×100: '+Math.round((_dimResult.bshMb||0)*10)/10+' mb ('+(_dimResult.bshBeams||0)+' belek 13m)';
-  if(_dimResult.calcObit) msg+='\n• Obicie zewnętrzne: '+(_dimResult.oBoardCount||0)+' szt.';
-  msg+='\n\nSprawdź i uzupełnij pozostałe pozycje ręcznie.';
-  alert(msg);
+
+  var parts=[];
+  if(insBoaz&&_dimResult.boazCount>0)parts.push('Boazeria: '+_dimResult.boazCount+' szt.');
+  if(insDeski&&_dimResult.deskCount>0)parts.push('Ławki: '+_dimResult.deskCount+' szt.');
+  if(insPodl&&_dimResult.floorBoardCount>0)parts.push('Podłoga: '+_dimResult.floorBoardCount+' szt.');
+  if(insBsh&&am)parts.push('BSH+dach wg modelu '+am.querySelector('.dim-model-name').textContent);
+  if(insObit&&_dimResult.oBoardCount>0)parts.push('Obicie: '+_dimResult.oBoardCount+(oUnit==='m2'?' m²':' szt.'));
+  if(parts.length>0)alert('Wstawiono: '+parts.join(', '));
 }
+
 
 
 function clearCalc(){
@@ -4897,7 +4873,18 @@ function initClientWidth(){
       <div id="dim-result-rows"></div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+    <div style="margin-top:14px;padding:10px 12px;background:var(--mbm-palest);border-radius:6px;border:0.5px solid var(--mbm-pale)">
+      <div style="font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Co wstawić do kalkulatora:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-boaz" checked style="width:13px;height:13px"> Boazeria wewnętrzna</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-deski" checked style="width:13px;height:13px"> Ławki / deski</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-podl" checked style="width:13px;height:13px"> Podłoga wewnętrzna</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-welna" checked style="width:13px;height:13px"> Wełna</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-bsh" checked style="width:13px;height:13px"> BSH + dach + fundament</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-obit" checked style="width:13px;height:13px"> Obicie zewnętrzne</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
       <button class="btn" onclick="closeDimCalc()">Anuluj</button>
       <button class="btn act" onclick="applyDimCalc()" style="font-size:13px;padding:7px 18px">✓ Wstaw do kalkulatora</button>
     </div>
