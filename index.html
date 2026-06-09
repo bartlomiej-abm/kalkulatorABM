@@ -144,6 +144,13 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .dim-modal-body{padding:18px 20px}
 .dim-sec{margin-bottom:16px}
 .dim-sec-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mbm-mid);margin-bottom:8px}
+.zone-row{display:flex;align-items:center;gap:4px;padding:3px 0;flex-wrap:wrap;width:100%}
+.zone-row input{width:58px!important;font-size:11px!important;padding:2px 4px!important;height:22px!important;border:0.5px solid var(--mbm-light)!important;border-radius:4px!important;text-align:center}
+.zone-row select{font-size:11px;padding:1px 4px;height:22px;border:0.5px solid var(--mbm-light);border-radius:4px;background:#fff;min-width:130px;flex:1}
+.zone-add{font-size:10px;color:var(--mbm-primary);cursor:pointer;background:none;border:0.5px dashed var(--mbm-primary);border-radius:3px;padding:1px 8px;margin-top:1px;width:100%}
+.zone-add:hover{background:var(--mbm-palest)}
+.zone-remove{background:none;border:none;color:#c00;cursor:pointer;font-size:13px;padding:0 4px;line-height:1;flex-shrink:0}
+#zones-A,#zones-B,#zones-C,#zones-D,#zones-E,#zones-F{width:100%;padding-left:0}
 .dim-model-btn{display:flex;flex-direction:column;padding:6px 8px;border:1px solid var(--mbm-light);border-radius:6px;cursor:pointer;background:#fff}.dim-model-btn:hover,.dim-model-btn.active{border-color:var(--mbm-primary);background:var(--mbm-palest)}.dim-model-name{font-size:11px;font-weight:600;color:var(--mbm-dark)}.dim-model-dims{font-size:10px;color:var(--mbm-mid);margin-top:1px}
 .dim-wall{display:grid;grid-template-columns:80px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
 .dim-wall-lbl{font-size:12px;font-weight:500;color:var(--mbm-dark)}
@@ -1729,7 +1736,7 @@ function r(){
     var skrzeK=gv('skrzq')*(gv('skrzcena')||0),skrzeP=skrzeK*mK;se('skrzep',f(skrzeP));
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
-    dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK;zewnLogist=dR;}
+    dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK+dR;zewnLogist=0;}
   var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
   var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
@@ -3939,6 +3946,54 @@ function applyDimModel(el){
   var zc=document.getElementById('dw-zconstr');if(zc&&!zc.checked)zc.checked=true;
   dimCalc();
 }
+
+// ===== WALL ZONES =====
+var _zoneCounters = {A:0,B:0,C:0,D:0,E:0,F:0};
+
+function addZone(wallId){
+  var container = document.getElementById('zones-'+wallId);
+  if(!container) return;
+  var existing = container.querySelectorAll('.zone-row').length;
+  if(existing >= 3){alert('Maksymalnie 3 strefy na ścianę.');return;}
+  var idx = ++_zoneCounters[wallId];
+  var row = document.createElement('div');
+  row.className = 'zone-row';
+  row.id = 'zone-'+wallId+'-'+idx;
+  row.innerHTML =
+    '<span style="font-size:10px;color:var(--mbm-mid);min-width:40px">Strefa '+idx+':</span>'+
+    '<input type="number" min="0" placeholder="szer.cm" class="zone-w" oninput="dimCalc()" style="width:60px">'+
+    '<span style="font-size:10px;color:var(--mbm-mid)">×</span>'+
+    '<input type="number" min="0" placeholder="wys.cm" class="zone-h" oninput="dimCalc()" style="width:60px">'+
+    '<select class="zone-t" onchange="dimCalc()">'+
+      '<option value="glass">Szyba panoram.</option>'+
+      '<option value="door_al">Drzwi aluminiowe</option>'+
+      '<option value="ext">Obicie zewn.</option>'+
+      '<option value="open">Otwarte</option>'+
+    '</select>'+
+    '<button class="zone-remove" onclick="removeZone(this)">×</button>';
+  container.appendChild(row);
+  dimCalc();
+}
+
+function removeZone(btn){
+  var row = btn.parentElement;
+  row.parentElement.removeChild(row);
+  dimCalc();
+}
+
+function getWallZones(wallId){
+  var container = document.getElementById('zones-'+wallId);
+  if(!container) return [];
+  var zones = [];
+  container.querySelectorAll('.zone-row').forEach(function(row){
+    var w = parseFloat(row.querySelector('.zone-w').value)||0;
+    var h = parseFloat(row.querySelector('.zone-h').value)||0;
+    var t = row.querySelector('.zone-t').value;
+    if(w>0&&h>0) zones.push({w:w,h:h,t:t});
+  });
+  return zones;
+}
+
 function closeDimCalc(){
   document.getElementById('dim-modal-overlay').classList.remove('on');
 }
@@ -4052,11 +4107,45 @@ function dimCalc(){
 
   // Vertical boards (ściany): each board 2100mm, cut to 2000mm (wH)
   var wallMult=wallBoardMult();
-  var boazWalls=0;
-  if(boazMat){
-    [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
-      boazWalls+=boardsForWall(wallBoazWidth(pair[0],pair[1]),coverage,0.10)*wallMult;
+  var wE=parseFloat(document.getElementById('dw-e')?.value)||0;
+  var tE=document.getElementById('dw-et')?document.getElementById('dw-et').value:'full';
+  var wF=parseFloat(document.getElementById('dw-f')?.value)||0;
+  var tF=document.getElementById('dw-ft')?document.getElementById('dw-ft').value:'full';
+  var showE=wE>0;
+  var showF=wF>0;
+
+  // Helper: boards with zone deductions
+  function boardsWithZones(wallW,wallH,wallId,cov,waste,mult){
+    var zones=getWallZones(wallId);
+    if(zones.length===0) return {boards:boardsForWall(wallW,cov,waste)*mult,glassArea:0,extBoards:0};
+    var bWcm=(typeof boazW!=='undefined'?boazW:146)/10;
+    var bLcm=(typeof BOARD_LEN!=='undefined'?BOARD_LEN:210);
+    var boazArea=wallW*wallH,glassArea=0,extBoards=0;
+    zones.forEach(function(z){
+      var zA=z.w*z.h; boazArea-=zA;
+      if(z.t==='glass') glassArea+=zA/10000;
+      else if(z.t==='ext') extBoards+=Math.ceil(z.w*10/(typeof boazW!=='undefined'?boazW:146))*Math.ceil(z.h/bLcm);
     });
+    boazArea=Math.max(0,boazArea);
+    return {boards:Math.ceil(boazArea/(bWcm*bLcm)*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards};
+  }
+
+  var boazWalls=0,zoneGlassArea=0,zoneExtBoards=0;
+  if(boazMat){
+    [['A',wA,tA],['B',wB,tB],['C',wC,tC],['D',wD,tD]].forEach(function(w){
+      var wid=w[0],wd=w[1],tp=w[2];
+      if(tp==='glass') return;
+      var res=boardsWithZones(wallBoazWidth(wd,tp),wH,wid,coverage,0.10,wallMult);
+      boazWalls+=res.boards; zoneGlassArea+=res.glassArea; zoneExtBoards+=res.extBoards;
+    });
+    if(showE&&wE>0){
+      var eSides=tE==='p2'?2:tE==='p1'||tE==='p1ext1'?1:0;
+      if(eSides>0){var resE=boardsWithZones(wE,wH,'E',coverage,0.10,wallMult);boazWalls+=eSides*resE.boards;zoneGlassArea+=resE.glassArea;zoneExtBoards+=resE.extBoards;}
+    }
+    if(showF&&wF>0){
+      var fSides=tF==='p2'?2:tF==='p1'||tF==='p1ext1'?1:0;
+      if(fSides>0){var resF=boardsWithZones(wF,wH,'F',coverage,0.10,wallMult);boazWalls+=fSides*resF.boards;zoneGlassArea+=resF.glassArea;zoneExtBoards+=resF.extBoards;}
+    }
   }
   var boazLen2=boazMat?Math.min(BOAZ_LEN,MAX_BOAZ):240;
   var wallNote=boazMat?(wallMult>1?'łączenie ('+wallMult+' deski/pion)':'deski '+boazLen2+'cm (bez łączenia)'):'— wybierz materiał —';
@@ -4261,12 +4350,22 @@ function dimCalc(){
 
     // ---- WEŁNA m2 ----
   // Total wall + ceiling area in m2
+  // Wełna: raw wall area from internal dims, exclude glazed wall
+  var welFrontGlass=document.getElementById('dw-front-glass')&&document.getElementById('dw-front-glass').checked;
   var welWalls=0;
-  [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair){
-    welWalls+=wallBoazWidth(pair[0],pair[1])*wH/10000; // cm*cm -> m2
+  [[wA,tA],[wB,tB],[wC,tC],[wD,tD]].forEach(function(pair,idx){
+    // Exclude front wall if panoramic (B wall = idx 1 = front)
+    if(welFrontGlass&&idx===1) return;
+    var wType=pair[1];
+    if(wType==='glass') return; // already marked as glass
+    welWalls+=pair[0]*wH/10000; // full wall area cm² → m²
   });
-  var welCeil=wA*wB/10000; // one ceiling rectangle (shorter dims)
-  var welTotal=Math.ceil((welWalls+welCeil)*1.10); // +10% overlap
+  var welCeil=wA*wB/10000;
+  // Add partition walls to welna (insulated from one side)
+  var welPartitions=0;
+  if(showE&&wE>0) welPartitions+=wE*wH/10000;
+  if(showF&&wF>0) welPartitions+=wF*wH/10000;
+  var welTotal=Math.ceil((welWalls+welCeil+welPartitions)*1.10);
 
   // ---- STORE RESULTS ----
   _dimResult={
@@ -4275,6 +4374,7 @@ function dimCalc(){
     deskMat:deskMat, deskIdx:deskIdx, deskCount:deskCount,
     seatDepth:seatDepth, coverage:coverage, deskW:deskW,
     welTotal:welTotal, welWalls:Math.round(welWalls*100)/100, welCeil:Math.round(welCeil*100)/100,
+    welFrontGlass:welFrontGlass,
     floorBoardCount:floorBoardCount, floorAreaM2:Math.round(floorAreaM2*100)/100, sdCm:sdCm,
     bshMb:bshMb, bshBeams:bshBeams, oBoardCount:oBoardCount, oAreaM2:oAreaM2, calcZ:calcZ, calcObit:calcObit,
     obitIdx:(function(){var s=document.getElementById('dw-boaz-ext');return s&&s.value!==''?parseInt(s.value):null;})()
@@ -4297,7 +4397,7 @@ function dimCalc(){
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
   if(calcPodloga&&deskMat&&floorBoardCount>0) html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | dł. '+BOARD_LEN+'cm');
   else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
-  html+=resultRow('Wełna mineralna', welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
+  html+=resultRow('Wełna (ciany+sufit'+(welFrontGlass?' -front szk.':'')+') +10%', welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
   rows.innerHTML=html;
 }
 
@@ -4322,7 +4422,6 @@ function applyDimCalc(){
     sv2('styq',d.sty);sv2('styc','49.4');
     sv2('osbq',d.osb);sv2('folq',d.fol);
     sv2('epdmq',d.epdm);sv2('epdmc','55');
-    if(insWelna)sv2('welq',d.wel);
   } else if(!am&&insBsh){
     // BSH from dimCalc result (without model)
     if(_dimResult.calcZ&&_dimResult.bshMb>0){var bshqEl=document.getElementById('bshq');if(bshqEl)bshqEl.value=Math.round(_dimResult.bshMb*10)/10;}
@@ -4348,15 +4447,29 @@ function applyDimCalc(){
     sv2('podlq',_dimResult.floorBoardCount);uM('podl');
   }
 
-  // Wełna (if no model or model doesn't set it)
-  if(insWelna&&!am&&_dimResult.welTotal>0){sv2('welq',_dimResult.welTotal);}
+  // Wełna - always from dimResult (calculated from wall/ceiling area)
+  if(insWelna&&_dimResult.welTotal>0){sv2('welq',_dimResult.welTotal);}
 
-  // Obicie zewnętrzne
+  // Obicie zewnętrzne + ściana F (jednostronna obicie zewn.)
   if(insObit&&_dimResult.calcObit&&_dimResult.oBoardCount>0){
     sv2('bzq',_dimResult.oBoardCount);
-    if(_dimResult.obitIdx!=null){var bzSel=document.getElementById('bz-sel');if(bzSel){for(var i=0;i<bzSel.options.length;i++){if(parseFloat(bzSel.options[i].value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}}if(typeof onBZSel==='function')onBZSel();}}
+    if(_dimResult.obitIdx!=null){var bzSel=document.getElementById('bz-sel');if(bzSel){for(var i=0;i<bzSel.options.length;i++){if(parseFloat(bzSel.options[i].value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}}if(typeof onBZSel==='function')onBZSel();}
+    // Add F wall exterior cladding
+    if(_dimResult.fWallExtBoards>0){var bzqEl=document.getElementById('bzq');if(bzqEl)bzqEl.value=parseInt(bzqEl.value||0)+_dimResult.fWallExtBoards;}}
   }
 
+  // Add zone glass area to szkm
+  if(_dimResult.zoneGlassArea>0){
+    var szEl=document.getElementById('szkm');
+    if(szEl)szEl.value=Math.round(((parseFloat(szEl.value)||0)+_dimResult.zoneGlassArea)*100)/100;
+  }
+  // Add zone ext boards to bzq
+  if(_dimResult.zoneExtBoards>0){
+    var bzEl=document.getElementById('bzq');
+    if(bzEl)bzEl.value=(parseInt(bzEl.value)||0)+_dimResult.zoneExtBoards;
+  }
+  if(_dimResult.zoneGlassArea>0){var szEl=document.getElementById('szkm');if(szEl)szEl.value=Math.round(((parseFloat(szEl.value)||0)+_dimResult.zoneGlassArea)*100)/100;}
+  if(_dimResult.zoneExtBoards>0){var bzEl=document.getElementById('bzq');if(bzEl)bzEl.value=(parseInt(bzEl.value)||0)+_dimResult.zoneExtBoards;}
   r();
   closeDimCalc();
 
@@ -4731,37 +4844,68 @@ function initClientWidth(){
       <div style="display:grid;grid-template-columns:60px 80px 1fr;gap:6px;font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;margin-bottom:4px">
         <div></div><div>Szerokość (cm)</div><div>Typ ściany</div>
       </div>
-      <div class="dim-wall"><span class="dim-wall-lbl">Ściana A</span>
+      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana A</span>
         <input type="number" id="dw-a" class="dim-input" value="200" min="50" oninput="dimCalc()">
         <select id="dw-at" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
           <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
+    </div>  <div id="zones-A" style="margin-top:2px"></div>
+      <button class="zone-add" onclick="addZone('A')">+ strefa</button>
       </div>
-      <div class="dim-wall"><span class="dim-wall-lbl">Ściana B</span>
+      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana B</span>
         <input type="number" id="dw-b" class="dim-input" value="150" min="50" oninput="dimCalc()">
         <select id="dw-bt" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
           <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
+    </div>  <div id="zones-B" style="margin-top:2px"></div>
+      <button class="zone-add" onclick="addZone('B')">+ strefa</button>
       </div>
-      <div class="dim-wall"><span class="dim-wall-lbl">Ściana C</span>
+      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana C</span>
         <input type="number" id="dw-c" class="dim-input" value="200" min="50" oninput="dimCalc()">
         <select id="dw-ct" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
           <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
+    </div>  <div id="zones-C" style="margin-top:2px"></div>
+      <button class="zone-add" onclick="addZone('C')">+ strefa</button>
       </div>
-      <div class="dim-wall"><span class="dim-wall-lbl">Ściana D</span>
+      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana D</span>
         <input type="number" id="dw-d" class="dim-input" value="150" min="50" oninput="dimCalc()">
         <select id="dw-dt" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
           <option value="door">Boazeria + drzwi</option>
           <option value="glass">Cała szklana</option>
         </select>
+    </div>  <div id="zones-D" style="margin-top:2px"></div>
+      <button class="zone-add" onclick="addZone('D')">+ strefa</button>
+      </div>
+      <div id="dw-wall-e" class="dim-wall" style="margin-top:4px;border-top:1px dashed var(--mbm-pale);padding-top:4px"><div class="dim-wall-row">
+        <span class="dim-wall-lbl" style="color:var(--mbm-primary);font-weight:600">Ściana E <span style="font-size:9px;font-weight:400">(działowa)</span></span>
+        <input type="number" id="dw-e" class="dim-input" value="210" min="50" oninput="dimCalc()">
+        <select id="dw-et" class="dim-select" onchange="dimCalc()">
+          <option value="p2">2× boazeria wewnętrzna</option>
+          <option value="p1">1× boazeria wewnętrzna</option>
+          <option value="open">Otwarta / brak</option>
+        </select>
+    </div>  <div id="zones-E" style="margin-top:2px"></div>
+      <button class="zone-add" onclick="addZone('E')">+ strefa</button>
+      </div>
+      <div id="dw-wall-f" class="dim-wall" style="margin-top:4px"><div class="dim-wall-row">
+        <span class="dim-wall-lbl" style="color:var(--mbm-primary);font-weight:600">Ściana F <span style="font-size:9px;font-weight:400">(działowa)</span></span>
+        <input type="number" id="dw-f" class="dim-input" value="210" min="50" oninput="dimCalc()">
+        <select id="dw-ft" class="dim-select" onchange="dimCalc()">
+          <option value="p1ext1">1× boazeria + 1× obicie zewn.</option>
+          <option value="p2">2× boazeria wewnętrzna</option>
+          <option value="p1">1× boazeria wewnętrzna</option>
+          <option value="open">Otwarta / brak</option>
+        </select>
+    </div>  <div id="zones-F" style="margin-top:2px"></div>
+      <button class="zone-add" onclick="addZone('F')">+ strefa</button>
       </div>
       <div class="dim-wall" style="margin-top:4px"><span class="dim-wall-lbl" style="color:var(--mbm-mid)">Szer. drzwi</span>
         <input type="number" id="dw-door" class="dim-input" value="600" min="400" max="1200" oninput="dimCalc()">
@@ -4879,7 +5023,7 @@ function initClientWidth(){
         <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-boaz" checked style="width:13px;height:13px"> Boazeria wewnętrzna</label>
         <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-deski" checked style="width:13px;height:13px"> Ławki / deski</label>
         <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-podl" checked style="width:13px;height:13px"> Podłoga wewnętrzna</label>
-        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-welna" checked style="width:13px;height:13px"> Wełna</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-welna" checked style="width:13px;height:13px"> Wełna (z wymiarów)</label>
         <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-bsh" checked style="width:13px;height:13px"> BSH + dach + fundament</label>
         <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="ins-obit" checked style="width:13px;height:13px"> Obicie zewnętrzne</label>
       </div>
