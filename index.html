@@ -4049,6 +4049,7 @@ function dimCalc(){
   var wC=parseFloat(document.getElementById('dw-c').value)||200;
   var wD=parseFloat(document.getElementById('dw-d').value)||150;
   var wH=parseFloat(document.getElementById('dw-h').value)||200;
+  var wHBoaz=Math.max(wH-10,100); // boazeria height: wH minus 10cm raised floor
   var tA=document.getElementById('dw-at').value;
   var tB=document.getElementById('dw-bt').value;
   var tC=document.getElementById('dw-ct').value;
@@ -4118,16 +4119,21 @@ function dimCalc(){
   function boardsWithZones(wallW,wallH,wallId,cov,waste,mult){
     var zones=getWallZones(wallId);
     if(zones.length===0) return {boards:boardsForWall(wallW,cov,waste)*mult,glassArea:0,extBoards:0};
-    var bWcm=(typeof boazW!=='undefined'?boazW:146)/10;
-    var bLcm=(typeof BOARD_LEN!=='undefined'?BOARD_LEN:210);
+    // Use coverage (mm) - same as boardsForWall, and actual BOAZ_LEN
+    var covMm=cov; // coverage in mm (e.g. 86mm for 14x96)
+    var bLcm=Math.min(BOAZ_LEN,MAX_BOAZ); // board length in cm
     var boazArea=wallW*wallH,glassArea=0,extBoards=0;
     zones.forEach(function(z){
       var zA=z.w*z.h; boazArea-=zA;
       if(z.t==='glass') glassArea+=zA/10000;
-      else if(z.t==='ext') extBoards+=Math.ceil(z.w*10/(typeof boazW!=='undefined'?boazW:146))*Math.ceil(z.h/bLcm);
+      else if(z.t==='ext') extBoards+=Math.ceil(z.w*10/covMm)*Math.ceil(z.h/bLcm);
     });
     boazArea=Math.max(0,boazArea);
-    return {boards:Math.ceil(boazArea/(bWcm*bLcm)*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards};
+    // Convert area to boards: cols = area_width_mm / covMm, rows = area_height / bLcm
+    // Approximation: boards = ceil(boazArea_mm2 / (covMm * bLcm*10)) * (1+waste) * mult
+    var boardArea=covMm*(bLcm*10); // mm * mm (bLcm*10 = mm)
+    var boazAreaMm2=boazArea*100; // cm2 -> mm2
+    return {boards:Math.ceil(boazAreaMm2/boardArea*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards};
   }
 
   var boazWalls=0,zoneGlassArea=0,zoneExtBoards=0;
@@ -4135,16 +4141,16 @@ function dimCalc(){
     [['A',wA,tA],['B',wB,tB],['C',wC,tC],['D',wD,tD]].forEach(function(w){
       var wid=w[0],wd=w[1],tp=w[2];
       if(tp==='glass') return;
-      var res=boardsWithZones(wallBoazWidth(wd,tp),wH,wid,coverage,0.10,wallMult);
+      var res=boardsWithZones(wallBoazWidth(wd,tp),wHBoaz,wid,coverage,0.10,wallMult);
       boazWalls+=res.boards; zoneGlassArea+=res.glassArea; zoneExtBoards+=res.extBoards;
     });
     if(showE&&wE>0){
       var eSides=tE==='p2'?2:tE==='p1'||tE==='p1ext1'?1:0;
-      if(eSides>0){var resE=boardsWithZones(wE,wH,'E',coverage,0.10,wallMult);boazWalls+=eSides*resE.boards;zoneGlassArea+=resE.glassArea;zoneExtBoards+=resE.extBoards;}
+      if(eSides>0){var resE=boardsWithZones(wE,wHBoaz,'E',coverage,0.10,wallMult);boazWalls+=eSides*resE.boards;zoneGlassArea+=resE.glassArea;zoneExtBoards+=resE.extBoards;}
     }
     if(showF&&wF>0){
       var fSides=tF==='p2'?2:tF==='p1'||tF==='p1ext1'?1:0;
-      if(fSides>0){var resF=boardsWithZones(wF,wH,'F',coverage,0.10,wallMult);boazWalls+=fSides*resF.boards;zoneGlassArea+=resF.glassArea;zoneExtBoards+=resF.extBoards;}
+      if(fSides>0){var resF=boardsWithZones(wF,wHBoaz,'F',coverage,0.10,wallMult);boazWalls+=fSides*resF.boards;zoneGlassArea+=resF.glassArea;zoneExtBoards+=resF.extBoards;}
     }
   }
   var boazLen2=boazMat?Math.min(BOAZ_LEN,MAX_BOAZ):240;
