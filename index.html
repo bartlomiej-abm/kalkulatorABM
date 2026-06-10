@@ -4047,6 +4047,16 @@ function dimCalc(){
   var wA=parseFloat(document.getElementById('dw-a').value)||200;
   var wB=parseFloat(document.getElementById('dw-b').value)||150;
   var wC=parseFloat(document.getElementById('dw-c').value)||200;
+
+  // Auto-sync external dims from internal (+20cm BSH walls) when no model active or dims differ
+  (function(){
+    var eaEl=document.getElementById('dw-ea');
+    var ebEl=document.getElementById('dw-eb');
+    var ehEl=document.getElementById('dw-eh');
+    if(eaEl && Math.abs(parseFloat(eaEl.value||0)-(wA+20))>1) eaEl.value=wA+20;
+    if(ebEl && Math.abs(parseFloat(ebEl.value||0)-(wB+20))>1) ebEl.value=wB+20;
+    if(ehEl && wH && Math.abs(parseFloat(ehEl.value||0)-(wH+20))>1) ehEl.value=wH+20;
+  })();
   var wD=parseFloat(document.getElementById('dw-d').value)||150;
   var wH=parseFloat(document.getElementById('dw-h').value)||200;
   var wHBoaz=Math.max(wH-10,100); // boazeria height: wH minus 10cm raised floor
@@ -4311,20 +4321,25 @@ function dimCalc(){
       var frontGlass = document.getElementById('dw-front-glass') && document.getElementById('dw-front-glass').checked;
       // Get board width from selected material
       var beSelEl = document.getElementById('dw-boaz-ext');
-      var oBoardWmm = 146; // default
-      var oBoardLcm = 240; // default board length
+      var oBoardWmm = 146; // default board width mm
+      var oBoardCovMm = 136; // default coverage mm (width - 10mm lap)
+      var oBoardLcm = 240; // default board length cm
       var oBoardPriceInfo = '';
       if(beSelEl && beSelEl.value!==''){
-        var beOpt=beSelEl.selectedOptions[0];
-        oBoardWmm=parseFloat(beOpt.dataset.w)||146;
         var beItem=BOAZ_EXT[parseInt(beSelEl.value)];
         if(beItem){
-          // Try to extract length from name
-          var lm=beItem.n.match(/(\d)[,.](\d{1,2})\s*m/i)||beItem.n.match(/[xX](\d{3,4})/);
-          if(lm){
-            var l2=beItem.n.match(/(\d)[,.](\d{1,2})\s*m/i);
-            if(l2) oBoardLcm=parseFloat(l2[1]+'.'+l2[2])*100;
-            else { var l3=beItem.n.match(/[xX](\d{3,4})/); if(l3) oBoardLcm=parseInt(l3[1])/10; }
+          // Extract dimensions from name e.g. "19x117x2400" or "19x117" or "Thermo 19x117x240"
+          var dims=beItem.n.match(/\b(\d+)x(\d+)(?:x(\d+))?/i);
+          if(dims){
+            var d1=parseInt(dims[1]),d2=parseInt(dims[2]);
+            // Width is the larger of first two dims (thickness x width)
+            oBoardWmm=Math.max(d1,d2);
+            oBoardCovMm=oBoardWmm-10; // 10mm lap joint
+            // Length: 3rd dim if present and >= 150 (cm or mm)
+            if(dims[3]){
+              var d3=parseInt(dims[3]);
+              oBoardLcm = d3>=150 ? d3/10 : d3; // if >=150 assume mm, else cm
+            }
           }
           oBoardPriceInfo=' | '+beItem.g;
         }
@@ -4361,7 +4376,7 @@ function dimCalc(){
         var totalBoardAreaMm2 = (2*eA*eH + 2*eB*eH)*100; // cm2 → mm2
         var deductMm2 = (winAreaM2 + openAreaM2)*1000000; // m2 → mm2
         var netBoardAreaMm2 = Math.max(0, totalBoardAreaMm2 - deductMm2);
-        var boardAreaUnit = oBoardWmm * oBoardLcm * 10; // mm * mm
+        var boardAreaUnit = oBoardCovMm * (oBoardLcm * 10); // coverage_mm * length_mm
         oBoardCount = Math.ceil(netBoardAreaMm2 / boardAreaUnit * 1.10);
       }
     }
