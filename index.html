@@ -956,6 +956,7 @@ function showSyncStatus(mode,msg){
 
   <div class="sec"><div class="sh"><span class="st">8. Wyposażenie dodatkowe</span><span class="ss" id="sm9">0 zł</span></div><div class="sb">
     <div class="c4 row">
+      <div><div class="sub">Prysznic (zł)</div><input type="number" id="prysz-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Ściana solna (zł)</div><input type="number" id="sol-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Aromaterapia (zł)</div><input type="number" id="arom-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Cebrzyk i chochla (zł)</div><input type="number" id="akc-c" value="0" min="0" onchange="r()"></div>
@@ -1765,7 +1766,7 @@ function r(){
   var ledMat=ledQ*gv('ledt')+gv('zast')*(gv('zastq')||1)+gv('lstt')*(gv('lsttq')||1),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
   se('ledk',f(ledK));se('ledp',f(ledP));se('sm6',f(ledP));
   var audK=gv('audt')*(gv('audtq')||2)+gv('btkt'),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
-  var mD=gv('md')||1.5;var dodK=gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
+  var mD=gv('md')||1.5;var dodK=gv('prysz-c')+gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
   var panoCena=gv('panoc')||820;
   var panoK=isZ&&document.getElementById('pano-show')&&document.getElementById('pano-show').checked?(gv('panoq')||0)*panoCena:0;
@@ -1848,7 +1849,7 @@ function r(){
     // Section 7 - audio
     audio:selTxt('audt'),audtVal:gv('audt'),audtq:gv('audtq')||2,btkt:gv('btkt'),
     // Section 8 - dodatkowe
-    solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),
+    pryszC:gv('prysz-c'),solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),
     // Section 9 - logistyka
     transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),
     dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
@@ -2097,6 +2098,8 @@ function buildVariantHTML(s,vkey){
   // Ściana dekoracyjna z kamienia - z ceną
   if(s.scd&&s.scd!='Bez')vrowPrice(tr('sciana_dek'),parseFloat(s.scd)*mP||0);
   else vrowYN(tr('sciana_dek'),false);
+  // Prysznic - TAK/nie (bez ceny w widoku klienta)
+  if(s.pryszC>0)vrowYN('Prysznic',true);
   // Ściana solna - z ceną
   var mDv=s.md||1.5;if(s.solC>0)vrowPrice('Ściana solna',s.solC*mDv);
   else vrowYN(tr('sciana_sol'),false);
@@ -2232,7 +2235,7 @@ function loadStateToCalc(s){ return loadToCalc(s); } function _loadStateToCalcOL
   sv('trn',s.transport||0);sv('dos',s.dostawa||0);sv('prj',s.projekt||0);sv('gdz',s.godz||0);
 
   // Dodatkowe
-  sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+  sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
   // === COMPLETE FIELD RESTORATIONS ===
   // Quantities
@@ -2472,7 +2475,7 @@ function loadToCalc(s){
   sso('audt',s.audtVal||0);sv('audtq',s.audtq||2);sv('btkt',s.btkt||0);
 
   // Section 8 - Dodatkowe
-  sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+  sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
   // Section 9 - Logistyka
   sv('trn',s.transport||0);sv('dos',s.dostawa||0);sv('prj',s.projekt||0);sv('gdz',s.godz||0);
