@@ -4333,7 +4333,20 @@ function dimCalc(){
       // Wall areas
       var frontGlass2 = document.getElementById('dw-front-glass') && document.getElementById('dw-front-glass').checked;
       var numAWalls=2, numBWalls=frontGlass2?1:2;
-      oAreaM2=Math.round((numAWalls*eA*eH + numBWalls*eB*eH)/10000*100)/100;
+
+      // Window opening deduction
+      var winW=frontGlass2?(parseFloat(document.getElementById('dw-win-w')?.value)||0):0;
+      var winH=frontGlass2?(parseFloat(document.getElementById('dw-win-h')?.value)||0):0;
+      var winAreaM2=(winW>0&&winH>0)?winW*winH/10000:0;
+
+      // Open space deduction (e.g. balie area)
+      var openCk2=document.getElementById('dw-open-space')&&document.getElementById('dw-open-space').checked;
+      var openW=openCk2?(parseFloat(document.getElementById('dw-open-w')?.value)||0):0;
+      var openH=openCk2?(parseFloat(document.getElementById('dw-open-h')?.value)||0):0;
+      var openAreaM2=(openW>0&&openH>0)?openW*openH/10000:0;
+
+      var grossAreaM2=(numAWalls*eA*eH + numBWalls*eB*eH)/10000;
+      oAreaM2=Math.round(Math.max(0, grossAreaM2 - winAreaM2 - openAreaM2)*100)/100;
 
       // Detect if material is m2 (e.g. blacha) or szt (boards)
       var beItem2=beSelEl&&beSelEl.value!==''?BOAZ_EXT[parseInt(beSelEl.value)]:null;
@@ -4371,7 +4384,15 @@ function dimCalc(){
   var welPartitions=0;
   if(showE&&wE>0) welPartitions+=wE*wH/10000;
   if(showF&&wF>0) welPartitions+=wF*wH/10000;
-  var welTotal=Math.ceil((welWalls+welCeil+welPartitions)*1.10);
+  // Subtract window opening and open space from welna
+  var welWinW=document.getElementById('dw-front-glass')&&document.getElementById('dw-front-glass').checked?(parseFloat(document.getElementById('dw-win-w')?.value)||0):0;
+  var welWinH=document.getElementById('dw-front-glass')&&document.getElementById('dw-front-glass').checked?(parseFloat(document.getElementById('dw-win-h')?.value)||0):0;
+  var welWinDeduct=(welWinW>0&&welWinH>0)?welWinW*welWinH/10000:0;
+  var welOpenCk=document.getElementById('dw-open-space')&&document.getElementById('dw-open-space').checked;
+  var welOpenW=welOpenCk?(parseFloat(document.getElementById('dw-open-w')?.value)||0):0;
+  var welOpenH=welOpenCk?(parseFloat(document.getElementById('dw-open-h')?.value)||0):0;
+  var welOpenDeduct=(welOpenW>0&&welOpenH>0)?welOpenW*welOpenH/10000:0;
+  var welTotal=Math.ceil(Math.max(0,welWalls+welCeil+welPartitions-welWinDeduct-welOpenDeduct)*1.10);
 
   // ---- STORE RESULTS ----
   _dimResult={
@@ -4403,7 +4424,8 @@ function dimCalc(){
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
   if(calcPodloga&&deskMat&&floorBoardCount>0) html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | dł. '+BOARD_LEN+'cm');
   else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
-  html+=resultRow('Wełna (ciany+sufit'+(welFrontGlass?' -front szk.':'')+') +10%', welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
+  var welDeductInfo=(welWinDeduct>0?' -okno '+Math.round(welWinDeduct*100)/100+'m²':'')+(welOpenDeduct>0?' -otwarta '+Math.round(welOpenDeduct*100)/100+'m²':'');
+html+=resultRow('Wełna+10%'+welDeductInfo, welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
   rows.innerHTML=html;
 }
 
@@ -4977,6 +4999,28 @@ function initClientWidth(){
               <input type="checkbox" id="dw-front-glass" onchange="dimCalc()" style="width:13px;height:13px">
               <span>&#127358; Okno panoramiczne (front szklany → 3 ściany obicia)</span>
             </label>
+            <div id="dw-window-dims" style="display:none;margin-left:20px;margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--mbm-mid)">Wymiary okna:</span>
+              <input type="number" id="dw-win-w" placeholder="szer. cm" min="0" onchange="dimCalc()" style="width:70px;font-size:11px;padding:2px 5px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px">
+              <span style="font-size:11px;color:var(--mbm-mid)">×</span>
+              <input type="number" id="dw-win-h" placeholder="wys. cm" min="0" onchange="dimCalc()" style="width:70px;font-size:11px;padding:2px 5px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px">
+              <span style="font-size:10px;color:var(--mbm-mid)">(odejmuje od obicia i wełny)</span>
+            </div>
+            <div style="margin-top:6px">
+              <label style="font-size:11px;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--mbm-dark)">
+                <input type="checkbox" id="dw-open-space" onchange="dimCalc()" style="width:13px;height:13px">
+                <span>&#9634; Otwarta przestrzeń (np. miejsce na balie)</span>
+              </label>
+              <div id="dw-open-dims" style="margin-left:20px;margin-top:4px">
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <span style="font-size:11px;color:var(--mbm-mid)">Wymiary:</span>
+                  <input type="number" id="dw-open-w" placeholder="szer. cm" min="0" onchange="dimCalc()" style="width:70px;font-size:11px;padding:2px 5px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px">
+                  <span style="font-size:11px;color:var(--mbm-mid)">×</span>
+                  <input type="number" id="dw-open-h" placeholder="wys. cm" min="0" onchange="dimCalc()" style="width:70px;font-size:11px;padding:2px 5px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px">
+                  <span style="font-size:10px;color:var(--mbm-mid)">(odejmuje od obicia i wełny)</span>
+                </div>
+              </div>
+            </div>
             <div id="dw-obit-opts" style="display:none">
               <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 <div><div style="font-size:10px;color:var(--mbm-mid);margin-bottom:3px">Materiał obicia</div>
