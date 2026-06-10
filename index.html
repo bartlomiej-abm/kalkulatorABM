@@ -4001,7 +4001,7 @@ function closeDimCalc(){
 function dimGetBoardLen(name){
   // Format: "14x90x2100", "28x90 2400mm", "15x90 Olcha 2,10m", "15x90 2.10m", "x2400"
   // 1. Match "x2100" or "x2400" style
-  var m=name.match(/[xX](\d{3,4})(?:\s|$)/);
+  var m=name.match(/[x\u00d7X](\d{3,4})(?:\s|$)/);
   if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
   // 2. Match "2400mm" or "2100 mm"
   m=name.match(/(\d{3,4})\s*mm/i);
@@ -4016,26 +4016,20 @@ function dimGetBoardLen(name){
 }
 
 function dimGetCoverage(name){
-  // Extract coverage from name - e.g. "14x96x2100" -> 86mm, "14x90x2100" -> 80mm, "14x120x2100"->110mm
-  var m=name.match(/x(\d+)x/i);
-  if(m){
-    var w=parseInt(m[1]);
-    // Coverage = width - 10mm (lap joint)
-    if(w>=120) return 110;
-    if(w>=96) return 86;
-    if(w>=90) return 80;
-    return w-10;
-  }
-  // Default fallback
-  if(name.indexOf('120')>0) return 110;
-  if(name.indexOf('96')>0) return 86;
-  if(name.indexOf('90')>0) return 80;
+  // Extract width from name e.g. "14x96x2100", "19×117×2400", "21×146×2400", "28x90"
+  // Always: coverage = width - 10mm (lap joint)
+  // 1. Width is middle dim: 14x96x2100 or 19×117×2400
+  var m=name.match(/[x×](\d+)[x×]/i);
+  if(m){var w=parseInt(m[1]);return Math.max(w-10,1);}
+  // 2. Width is last dim: 28x90 or 15×90
+  var m2=name.match(/[x×](\d+)(?:\s*(?:mm)?\s*$|\s)/i);
+  if(m2){var w2=parseInt(m2[1]);if(w2>=60&&w2<=300)return Math.max(w2-10,1);}
   return 86;
 }
 
 function dimGetDeskWidth(name){
   // Extract desk width: "28x90x...", "28x95x...", "28x80x..."
-  var m=name.match(/x(\d+)x/i);
+  var m=name.match(/[x\u00d7](\d+)[x\u00d7]/i);
   if(m) return parseInt(m[1]);
   if(name.indexOf('95')>=0) return 95;
   if(name.indexOf('90')>=0) return 90;
@@ -4329,7 +4323,7 @@ function dimCalc(){
         var beItem=BOAZ_EXT[parseInt(beSelEl.value)];
         if(beItem){
           // Extract dimensions from name e.g. "19x117x2400" or "19x117" or "Thermo 19x117x240"
-          var dims=beItem.n.match(/\b(\d+)x(\d+)(?:x(\d+))?/i);
+          var dims=beItem.n.match(/\b(\d+)[x\u00d7](\d+)(?:[x\u00d7](\d+))?/i);
           if(dims){
             var d1=parseInt(dims[1]),d2=parseInt(dims[2]);
             // Width is the larger of first two dims (thickness x width)
