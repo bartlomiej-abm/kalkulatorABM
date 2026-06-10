@@ -4330,22 +4330,22 @@ function dimCalc(){
         }
       }
 
-      // Wall areas
+      // Wall areas — always all 4 walls, deduct openings from total
       var frontGlass2 = document.getElementById('dw-front-glass') && document.getElementById('dw-front-glass').checked;
-      var numAWalls=2, numBWalls=frontGlass2?1:2;
 
-      // Window opening deduction
+      // Window opening deduction (on front wall B when panoramic)
       var winW=frontGlass2?(parseFloat(document.getElementById('dw-win-w')?.value)||0):0;
       var winH=frontGlass2?(parseFloat(document.getElementById('dw-win-h')?.value)||0):0;
       var winAreaM2=(winW>0&&winH>0)?winW*winH/10000:0;
 
-      // Open space deduction (e.g. balie area)
+      // Open space deduction
       var openCk2=document.getElementById('dw-open-space')&&document.getElementById('dw-open-space').checked;
       var openW=openCk2?(parseFloat(document.getElementById('dw-open-w')?.value)||0):0;
       var openH=openCk2?(parseFloat(document.getElementById('dw-open-h')?.value)||0):0;
       var openAreaM2=(openW>0&&openH>0)?openW*openH/10000:0;
 
-      var grossAreaM2=(numAWalls*eA*eH + numBWalls*eB*eH)/10000;
+      // All 4 walls: 2×A + 2×B (ściana B ma okno/otwarte, ściana D pełna)
+      var grossAreaM2=(2*eA*eH + 2*eB*eH)/10000;
       oAreaM2=Math.round(Math.max(0, grossAreaM2 - winAreaM2 - openAreaM2)*100)/100;
 
       // Detect if material is m2 (e.g. blacha) or szt (boards)
@@ -4357,12 +4357,12 @@ function dimCalc(){
         oBoardCount=Math.round(oAreaM2*1.10*100)/100; // stored as m2 value
       } else {
         // Board material - count pieces
-        var aWallBoardsAcross=Math.ceil(eA*10/oBoardWmm);
-        var aWallBoardsRows=Math.ceil(eH/oBoardLcm);
-        var bWallBoardsAcross=Math.ceil(eB*10/oBoardWmm);
-        var bWallBoardsRows=Math.ceil(eH/oBoardLcm);
-        var rawCount=numAWalls*aWallBoardsAcross*aWallBoardsRows + numBWalls*bWallBoardsAcross*bWallBoardsRows;
-        oBoardCount=Math.ceil(rawCount*1.10);
+        // All 4 walls minus deductions (area-based for consistency)
+        var totalBoardAreaMm2 = (2*eA*eH + 2*eB*eH)*100; // cm2 → mm2
+        var deductMm2 = (winAreaM2 + openAreaM2)*1000000; // m2 → mm2
+        var netBoardAreaMm2 = Math.max(0, totalBoardAreaMm2 - deductMm2);
+        var boardAreaUnit = oBoardWmm * oBoardLcm * 10; // mm * mm
+        oBoardCount = Math.ceil(netBoardAreaMm2 / boardAreaUnit * 1.10);
       }
     }
   }
