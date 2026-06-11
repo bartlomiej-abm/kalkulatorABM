@@ -144,6 +144,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .dim-modal-body{padding:18px 20px}
 .dim-sec{margin-bottom:16px}
 .dim-sec-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mbm-mid);margin-bottom:8px}
+.ceil-zone-row{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
+.ceil-zone-row input{width:70px;font-size:11px;padding:2px 5px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px;text-align:center}
+.ceil-zone-row select{font-size:11px;padding:2px 4px;height:24px;border:0.5px solid var(--mbm-light);border-radius:4px;background:#fff;min-width:150px}
+.ceil-zone-row .ceil-zone-lbl{font-size:10px;color:var(--mbm-mid);min-width:50px}
 .zone-row{display:flex;align-items:center;gap:4px;padding:3px 0;flex-wrap:wrap;width:100%}
 .zone-row input{width:58px!important;font-size:11px!important;padding:2px 4px!important;height:22px!important;border:0.5px solid var(--mbm-light)!important;border-radius:4px!important;text-align:center}
 .zone-row select{font-size:11px;padding:1px 4px;height:22px;border:0.5px solid var(--mbm-light);border-radius:4px;background:#fff;min-width:130px;flex:1}
@@ -4174,7 +4178,7 @@ function dimCalc(){
     zones.forEach(function(z){
       var zA=z.w*z.h; boazArea-=zA;
       if(z.t==='glass') glassArea+=zA/10000;
-      else if(z.t==='ext') extBoards+=Math.ceil(z.w*10/covMm)*Math.ceil(z.h/bLcm);
+      else if(z.t==='ext') extBoards+=zA/10000; // accumulate as m², convert to boards later with ext dims
     });
     boazArea=Math.max(0,boazArea);
     // Convert area to boards: cols = area_width_mm / covMm, rows = area_height / bLcm
@@ -4219,10 +4223,44 @@ function dimCalc(){
   // Boards per row = ceil(longDim / board_length) — joining if sauna longer than board
   var longDim=Math.max(wA,wC), shortDim=Math.min(wB,wD);
   var boazLen=boazMat?Math.min(dimGetBoardLen(boazMat.n),MAX_BOAZ):MAX_BOAZ;
+  // Ceiling calculation - with optional zone-based split
+  function getCeilZones(){
+    var zones=[];
+    for(var z=1;z<=3;z++){
+      var lenEl=document.getElementById('cz'+z+'-len');
+      var typEl=document.getElementById('cz'+z+'-type');
+      var len=lenEl?parseFloat(lenEl.value)||0:0;
+      var typ=typEl?typEl.value:'boaz';
+      if(len>0) zones.push({len:len,typ:typ});
+    }
+    return zones;
+  }
+  var czones=getCeilZones();
   var ceilRows=boazMat?Math.ceil(shortDim*10/coverage):0;
-  var ceilPerRow=Math.ceil(longDim/boazLen);
-  var boazCeiling=boazMat?Math.ceil(ceilRows*ceilPerRow*1.10):0;
-  var ceilNote=boazMat?(ceilPerRow>1?'łączenie — '+ceilPerRow+'szt./rząd, deski '+boazLen+'cm':'deski '+boazLen+'cm, bez łączenia'):'—';
+  var ceilPerRow=0, boazCeiling=0, ceilExtAreaM2=0;
+  if(czones.length===0){
+    // Default: full ceiling = boazeria
+    ceilPerRow=Math.ceil(longDim/boazLen);
+    boazCeiling=boazMat?Math.ceil(ceilRows*ceilPerRow*1.10):0;
+  } else {
+    // Zone-based ceiling
+    var boazCeilArea=0, totalCzLen=0;
+    czones.forEach(function(cz){
+      totalCzLen+=cz.len;
+      var zArea=shortDim*cz.len; // cm² (shortDim=wA)
+      if(cz.typ==='boaz') boazCeilArea+=zArea;
+      else if(cz.typ==='ext') ceilExtAreaM2+=zArea/10000;
+      // 'open' = nothing
+    });
+    // Remaining length (not covered by zones) = boazeria
+    var remaining=longDim-totalCzLen;
+    if(remaining>0) boazCeilArea+=shortDim*remaining;
+    // Convert boazeria area to boards
+    var boardAreaMm2=coverage*(boazLen*10);
+    boazCeiling=boazMat?Math.ceil(boazCeilArea*100/boardAreaMm2*1.10):0;
+    ceilPerRow=czones.length>0?'-':Math.ceil(longDim/boazLen);
+  }
+  var ceilNote=boazMat?(typeof ceilPerRow==='number'&&ceilPerRow>1?'łączenie — '+ceilPerRow+'szt./rząd, deski '+boazLen+'cm':'deski '+boazLen+'cm'):'—';
 
   var totalBoaz=boazMat?boazWalls+boazCeiling:0;
 
@@ -4445,7 +4483,7 @@ function dimCalc(){
   var welOpenW=welOpenCk?(parseFloat(document.getElementById('dw-open-w')?.value)||0):0;
   var welOpenH=welOpenCk?(parseFloat(document.getElementById('dw-open-h')?.value)||0):0;
   var welOpenDeduct=(welOpenW>0&&welOpenH>0)?welOpenW*welOpenH/10000:0;
-  var welTotal=Math.ceil(Math.max(0,welWalls+welCeil+welPartitions-welWinDeduct-welOpenDeduct)*1.10);
+  var welTotal=Math.ceil(Math.max(0,welWalls+welCeil+welPartitions-welWinDeduct-welOpenDeduct-ceilExtAreaM2)*1.10);
 
   // ---- STORE RESULTS ----
   _dimResult={
@@ -4550,7 +4588,25 @@ function applyDimCalc(){
     if(bzEl)bzEl.value=(parseInt(bzEl.value)||0)+_dimResult.zoneExtBoards;
   }
   if(_dimResult.zoneGlassArea>0){var szEl=document.getElementById('szkm');if(szEl)szEl.value=Math.round(((parseFloat(szEl.value)||0)+_dimResult.zoneGlassArea)*100)/100;}
-  if(_dimResult.zoneExtBoards>0){var bzEl=document.getElementById('bzq');if(bzEl)bzEl.value=(parseInt(bzEl.value)||0)+_dimResult.zoneExtBoards;}
+  // Add zone ext areas using EXTERIOR board dimensions
+  if(_dimResult.zoneExtAreaM2>0){
+    var bzEl=document.getElementById('bzq');
+    if(bzEl){
+      // Get ext board dimensions from selected material (same as obit calc)
+      var beSelEl2=document.getElementById('dw-boaz-ext');
+      var extCovMm=136, extLenCm=240; // defaults
+      if(beSelEl2&&beSelEl2.value!==''){
+        var beItem2=BOAZ_EXT[parseInt(beSelEl2.value)];
+        if(beItem2){
+          var dims2=beItem2.n.match(/\b(\d+)[x\u00d7](\d+)(?:[x\u00d7](\d+))?/i);
+          if(dims2){var w2=Math.max(parseInt(dims2[1]),parseInt(dims2[2]));extCovMm=w2-10;if(dims2[3]){var d3=parseInt(dims2[3]);extLenCm=d3>=150?d3/10:d3;}}
+        }
+      }
+      var extBoardAreaMm2=extCovMm*(extLenCm*10);
+      var zoneExtBds=Math.ceil(_dimResult.zoneExtAreaM2*1000000/extBoardAreaMm2*1.10);
+      bzEl.value=(parseInt(bzEl.value)||0)+zoneExtBds;
+    }
+  }
   r();
   closeDimCalc();
 
@@ -4559,7 +4615,7 @@ function applyDimCalc(){
   if(insDeski&&_dimResult.deskCount>0)parts.push('Ławki: '+_dimResult.deskCount+' szt.');
   if(insPodl&&_dimResult.floorBoardCount>0)parts.push('Podłoga: '+_dimResult.floorBoardCount+' szt.');
   if(insBsh&&am)parts.push('BSH+dach wg modelu '+am.querySelector('.dim-model-name').textContent);
-  if(insObit&&_dimResult.oBoardCount>0)parts.push('Obicie: '+_dimResult.oBoardCount+(oUnit==='m2'?' m²':' szt.'));
+  if(insObit&&_dimResult.oBoardCount>0)parts.push('Obicie: '+_dimResult.oBoardCount+(oUnit==='m2'?' m²':' szt.')+(_dimResult.zoneExtAreaM2>0?' +strefy '+Math.round(_dimResult.zoneExtAreaM2*100)/100+'m²':''));
   if(parts.length>0)alert('Wstawiono: '+parts.join(', '));
 }
 
@@ -4998,7 +5054,44 @@ function initClientWidth(){
       </div>
     </div>
 
-    <!-- ŁAWKI -->
+    <!-- STREFY SUFITU -->
+    <div class="dim-sec">
+      <div class="dim-sec-title">Strefy sufitu <span style="font-size:10px;font-weight:400;color:var(--mbm-mid)">(opcjonalnie — gdy różne wykończenie w strefach)</span></div>
+      <div id="ceil-zones">
+        <div class="ceil-zone-row">
+          <span class="ceil-zone-lbl">Strefa 1</span>
+          <input type="number" id="cz1-len" placeholder="dł. cm" min="0" oninput="dimCalc()">
+          <select id="cz1-type" onchange="dimCalc()">
+            <option value="boaz">Boazeria</option>
+            <option value="ext">Obicie zewnętrzne</option>
+            <option value="open">Bez sufitu (otwarty)</option>
+          </select>
+        </div>
+        <div class="ceil-zone-row">
+          <span class="ceil-zone-lbl">Strefa 2</span>
+          <input type="number" id="cz2-len" placeholder="dł. cm" min="0" oninput="dimCalc()">
+          <select id="cz2-type" onchange="dimCalc()">
+            <option value="boaz">Boazeria</option>
+            <option value="ext">Obicie zewnętrzne</option>
+            <option value="open">Bez sufitu (otwarty)</option>
+          </select>
+        </div>
+        <div class="ceil-zone-row">
+          <span class="ceil-zone-lbl">Strefa 3</span>
+          <input type="number" id="cz3-len" placeholder="dł. cm" min="0" oninput="dimCalc()">
+          <select id="cz3-type" onchange="dimCalc()">
+            <option value="boaz">Boazeria</option>
+            <option value="ext">Obicie zewnętrzne</option>
+            <option value="open">Bez sufitu (otwarty)</option>
+          </select>
+        </div>
+        <div style="font-size:10px;color:var(--mbm-mid);margin-top:4px">
+          ↑ Jeśli puste — cały sufit = boazeria. Sumy długości stref nie muszą równać się wymiarowi B.
+        </div>
+      </div>
+    </div>
+
+        <!-- ŁAWKI -->
     <div class="dim-sec">
       <div class="dim-sec-title">Ławki</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
