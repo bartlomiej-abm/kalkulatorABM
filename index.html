@@ -4209,6 +4209,24 @@ function dimCalc(){
       if(fSides>0){var resF=boardsWithZones(wF,wHBoaz,'F',coverage,0.10,wallMult);boazWalls+=fSides*resF.boards;zoneGlassArea+=resF.glassArea;zoneExtBoards+=resF.extBoards;}
     }
   }
+  // Ext zone areas (always calculated, independent of boazMat)
+  if(zoneExtBoards===0){
+    // Re-calculate ext zones without needing boazMat
+    [['A',wA,tA],['B',wB,tB],['C',wC,tC],['D',wD,tD]].forEach(function(w){
+      var wid=w[0],wd=w[1],tp=w[2];
+      if(tp==='glass') return;
+      var zones=getWallZones(wid);
+      zones.forEach(function(z){
+        if(z.t==='ext') zoneExtBoards+=z.w*z.h/10000;
+        else if(z.t==='glass') zoneGlassArea+=z.w*z.h/10000;
+      });
+    });
+    // E wall
+    if(showE&&wE>0){var tE2=tE||'p2';var fSidesE=tE2==='p1ext1'?1:0;if(fSidesE===0){getWallZones('E').forEach(function(z){if(z.t==='ext')zoneExtBoards+=z.w*z.h/10000;});}}
+    // F wall
+    if(showF&&wF>0){var tF2=tF||'p1ext1';if(tF2==='p1ext1'){var fArea=wF*wHBoaz/10000;zoneExtBoards+=fArea;} else {getWallZones('F').forEach(function(z){if(z.t==='ext')zoneExtBoards+=z.w*z.h/10000;});}}
+  }
+
   var boazLen2=boazMat?Math.min(BOAZ_LEN,MAX_BOAZ):240;
   var wallNote=boazMat?(wallMult>1?'łączenie ('+wallMult+' deski/pion)':'deski '+boazLen2+'cm (bez łączenia)'):'— wybierz materiał —';
 
@@ -4225,7 +4243,10 @@ function dimCalc(){
   // Ceiling: boards run lengthwise (along wall A/C direction = longDim)
   // Rows = how many strips across width B/D (= shortDim / coverage)
   // Boards per row = ceil(longDim / board_length) — joining if sauna longer than board
-  var longDim=Math.max(wA,wC), shortDim=Math.min(wB,wD);
+  // Ceiling dims: short = A/C walls, long = B/D walls
+  var ceilW=Math.min(wA,wC);   // actual ceiling WIDTH (short dimension)
+  var ceilL=Math.max(wB,wD);   // actual ceiling LENGTH (long dimension)
+  var shortDim=ceilW; var longDim=ceilL; // keep for compat
   var boazLen=boazMat?Math.min(dimGetBoardLen(boazMat.n),MAX_BOAZ):MAX_BOAZ;
   // Ceiling calculation - with optional zone-based split
   function getCeilZones(){
@@ -4240,28 +4261,32 @@ function dimCalc(){
     return zones;
   }
   var czones=getCeilZones();
-  var ceilRows=boazMat?Math.ceil(shortDim*10/coverage):0;
+  var ceilRows=Math.ceil(ceilW*10/(coverage||86)); // kept for display only
   var ceilPerRow=0, boazCeiling=0, ceilExtAreaM2=0;
   if(czones.length===0){
-    // Default: full ceiling = boazeria
-    ceilPerRow=Math.ceil(longDim/boazLen);
-    boazCeiling=boazMat?Math.ceil(ceilRows*ceilPerRow*1.10):0;
+    // Default: full ceiling = boazeria (area-based)
+    var bACm2=(coverage||86)/10*Math.min(boazLen,MAX_BOAZ);
+    boazCeiling=Math.ceil(ceilW*ceilL/bACm2*1.10);
+    ceilPerRow=Math.ceil(ceilL/boazLen);
   } else {
     // Zone-based ceiling
     var boazCeilArea=0, totalCzLen=0;
     czones.forEach(function(cz){
       totalCzLen+=cz.len;
-      var zArea=shortDim*cz.len; // cm² (shortDim=wA)
+      var zArea=ceilW*cz.len; // cm² (ceilW = actual ceiling width = min(wA,wC))
       if(cz.typ==='boaz') boazCeilArea+=zArea;
       else if(cz.typ==='ext') ceilExtAreaM2+=zArea/10000;
       // 'open' = nothing
     });
     // Remaining length (not covered by zones) = boazeria
     var remaining=longDim-totalCzLen;
-    if(remaining>0) boazCeilArea+=shortDim*remaining;
+    if(remaining>0) boazCeilArea+=ceilW*remaining;
     // Convert boazeria area to boards
     var boardAreaMm2=coverage*(boazLen*10);
-    boazCeiling=boazMat?Math.ceil(boazCeilArea*100/boardAreaMm2*1.10):0;
+    // Use boazMat board dims if available, otherwise use coverage/BOAZ_LEN defaults
+  var effCov=coverage||86, effLen=Math.min(BOAZ_LEN,MAX_BOAZ)||210;
+  boardAreaMm2=effCov*(effLen*10);
+  boazCeiling=Math.ceil(boazCeilArea*100/boardAreaMm2*1.10);
     ceilPerRow=czones.length>0?'-':Math.ceil(longDim/boazLen);
   }
   var ceilNote=boazMat?(typeof ceilPerRow==='number'&&ceilPerRow>1?'łączenie — '+ceilPerRow+'szt./rząd, deski '+boazLen+'cm':'deski '+boazLen+'cm'):'—';
@@ -4474,7 +4499,7 @@ function dimCalc(){
     if(wType==='glass') return; // already marked as glass
     welWalls+=pair[0]*wH/10000; // full wall area cm² → m²
   });
-  var welCeil=wA*wB/10000;
+  var welCeil=ceilW*ceilL/10000;
   // Add partition walls to welna (insulated from one side)
   var welPartitions=0;
   if(showE&&wE>0) welPartitions+=wE*wH/10000;
