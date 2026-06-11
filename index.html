@@ -397,12 +397,17 @@ async function syncLoad(){
           if(kArr&&kArr.length>0){KONSTR=kArr;localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));}
         }catch(e){}
       }
+      if(row.key==='audio_list'){
+        try{var aArr=typeof row.value==='string'?JSON.parse(row.value):row.value;
+          if(aArr&&aArr.length>0){AUDIO_LIST=aArr;localStorage.setItem('abm_audio',JSON.stringify(AUDIO_LIST));}
+        }catch(e){}
+      }
     });
     // Rebuild selects with cloud data
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
-    mkSelBZ();
+    mkSelBZ();mkSelAudio();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
     showSyncStatus('local','Tryb lokalny (brak połączenia)');
@@ -1179,6 +1184,8 @@ function showSyncStatus(mode,msg){
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('deski')"><span class="st">Ławki i deski</span><span style="font-size:11px;color:#666" id="count-deski"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-deski">▸ rozwiń</span></div><div id="price-deski-wrap" style="display:none"><div class="sb"><div id="price-deski"></div></div></div></div>
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('konstr')"><span class="st">Drewno konstrukcyjne</span><span style="font-size:11px;color:#666" id="count-konstr"></span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-konstr">▸ rozwiń</span></div><div id="price-konstr-wrap" style="display:none"><div class="sb"><div id="price-konstr"></div></div></div></div>
 
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('audio')"><span class="st" style="color:var(--mbm-dark)">Audio / Nagłośnienie</span><span style="font-size:11px;color:#666" id="count-audio"></span><span id="toggle-audio" style="font-size:11px;color:var(--mbm-mid);margin-left:auto">▸ rozwiń</span></div><div id="price-audio-wrap" style="display:none"><div class="sb"><div id="price-audio"></div></div></div></div>
+
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('glass')"><span class="st">Szklenie — ceny bazowe</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-glass">▸ rozwiń</span></div>
   <div id="price-glass" style="display:none"><div class="sb">
     <table class="price-table"><thead><tr><th>Rodzaj szkła</th><th>Cena (zł/m²)</th></tr></thead><tbody>
@@ -1587,6 +1594,29 @@ function mkSelBZ(){
     o.textContent=i.n+' ('+i.p+' zl)';el.appendChild(o);
   });
 }
+function mkSelAudio(){
+  var el=document.getElementById('audt');if(!el)return;
+  var cur=el.value;
+  while(el.options.length>1)el.remove(1);
+  // Default built-in options (always present)
+  var defaults=[
+    {n:'2× TONSIL standard',p:320},
+    {n:'2× BOSE Premium',p:799}
+  ];
+  defaults.forEach(function(d){
+    var o=new Option(d.n+' ('+d.p+' zł)',d.p);
+    el.appendChild(o);
+  });
+  // Custom options from AUDIO_LIST
+  AUDIO_LIST.forEach(function(item){
+    var o=new Option(item.n+' ('+item.p+' zł)',item.p);
+    el.appendChild(o);
+  });
+  // Restore selection
+  el.value=cur;
+  if(el.value!==cur){el.selectedIndex=0;}
+}
+
 
 function onBZSel(){
   var sel=document.getElementById('bz-sel');
@@ -2912,10 +2942,12 @@ async function clearHistory(){
 // ===== CENNIKI =====
 var BOAZ_EXT=[];
 var PODL_EXT=[];
+var AUDIO_LIST=[];
 
 function loadPricesExt(){
   try{var be=localStorage.getItem('abm_boaz_ext');BOAZ_EXT=be?JSON.parse(be):[];}catch(e){BOAZ_EXT=[];}
   try{var pe=localStorage.getItem('abm_podl_ext');PODL_EXT=pe?JSON.parse(pe):[];}catch(e){PODL_EXT=[];}
+  try{var au=localStorage.getItem('abm_audio');AUDIO_LIST=au?JSON.parse(au):[];}catch(e){AUDIO_LIST=[];}
 }
 
 function buildPriceTables(){
@@ -2924,8 +2956,10 @@ function buildPriceTables(){
   renderPriceTable('price-boaz-ext',BOAZ_EXT,'boaz-ext');
   renderPriceTable('price-deski',DESKI,'deski');
   renderPriceTable('price-konstr',KONSTR,'konstr');
+  renderPriceTable('price-audio',AUDIO_LIST,'audio');
   var ce=document.getElementById('count-boaz-ext');if(ce)ce.textContent=BOAZ_EXT.length>0?BOAZ_EXT.length+' pozycji':'';
   var cb=document.getElementById('count-boaz');if(cb)cb.textContent=BOAZ.length+' pozycji';
+  var caudio=document.getElementById('count-audio');if(caudio)caudio.textContent=AUDIO_LIST.length>0?AUDIO_LIST.length+' pozycji':'';
   var cd=document.getElementById('count-deski');if(cd)cd.textContent=DESKI.length+' pozycji';
   var ck=document.getElementById('count-konstr');if(ck)ck.textContent=KONSTR.length+' pozycji';
 }
@@ -4524,7 +4558,10 @@ function dimCalc(){
     welFrontGlass:welFrontGlass,
     floorBoardCount:floorBoardCount, floorAreaM2:Math.round(floorAreaM2*100)/100, sdCm:sdCm,
     bshMb:bshMb, bshBeams:bshBeams, oBoardCount:oBoardCount, oAreaM2:oAreaM2, calcZ:calcZ, calcObit:calcObit,
-    obitIdx:(function(){var s=document.getElementById('dw-boaz-ext');return s&&s.value!==''?parseInt(s.value):null;})()
+    obitIdx:(function(){var s=document.getElementById('dw-boaz-ext');return s&&s.value!==''?parseInt(s.value):null;})(),
+    zoneExtAreaM2:zoneExtBoards||0,
+    ceilExtAreaM2:ceilExtAreaM2||0,
+    totalExtAreaM2:(calcObit?(oAreaM2||0):0)+(zoneExtBoards||0)+(ceilExtAreaM2||0)
   };
 
   // ---- RENDER RESULT ----
