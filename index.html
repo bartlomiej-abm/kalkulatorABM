@@ -4170,7 +4170,11 @@ function dimCalc(){
   // Helper: boards with zone deductions
   function boardsWithZones(wallW,wallH,wallId,cov,waste,mult){
     var zones=getWallZones(wallId);
-    if(zones.length===0) return {boards:boardsForWall(wallW,cov,waste)*mult,glassArea:0,extBoards:0};
+    if(zones.length===0){
+      // Area-based (consistent with zone walls): wallW × wallH / board_area
+      var baCm2=cov/10*(Math.min(BOAZ_LEN,MAX_BOAZ));
+      return {boards:Math.ceil(wallW*wallH/baCm2*(1+waste)*mult),glassArea:0,extBoards:0};
+    }
     // Use coverage (mm) - same as boardsForWall, and actual BOAZ_LEN
     var covMm=cov; // coverage in mm (e.g. 86mm for 14x96)
     var bLcm=Math.min(BOAZ_LEN,MAX_BOAZ); // board length in cm
@@ -4569,43 +4573,33 @@ function applyDimCalc(){
   // Wełna - always from dimResult (calculated from wall/ceiling area)
   if(insWelna&&_dimResult.welTotal>0){sv2('welq',_dimResult.welTotal);}
 
-  // Obicie zewnętrzne + ściana F (jednostronna obicie zewn.)
-  if(insObit&&_dimResult.calcObit&&_dimResult.oBoardCount>0){
-    sv2('bzq',_dimResult.oBoardCount);
-    if(_dimResult.obitIdx!=null){var bzSel=document.getElementById('bz-sel');if(bzSel){for(var i=0;i<bzSel.options.length;i++){if(parseFloat(bzSel.options[i].value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}}if(typeof onBZSel==='function')onBZSel();}
-    // Add F wall exterior cladding
-    if(_dimResult.fWallExtBoards>0){var bzqEl=document.getElementById('bzq');if(bzqEl)bzqEl.value=parseInt(bzqEl.value||0)+_dimResult.fWallExtBoards;}}
+  // OBICIE ZEWNĘTRZNE - UNIFIED (perimetr + strefy ścian + strefy sufitu)
+  if(insObit&&_dimResult.totalExtAreaM2>0){
+    // Get ext board dimensions from selected material
+    var beSelEl2=document.getElementById('dw-boaz-ext');
+    var extCovMm2=136, extLenCm2=240;
+    if(beSelEl2&&beSelEl2.value!==''){
+      var beItm2=BOAZ_EXT[parseInt(beSelEl2.value)];
+      if(beItm2){
+        var dm2=beItm2.n.match(/\b(\d+)[x\u00d7](\d+)(?:[x\u00d7](\d+))?/i);
+        if(dm2){var ww2=Math.max(parseInt(dm2[1]),parseInt(dm2[2]));extCovMm2=ww2-10;if(dm2[3]){var dd3=parseInt(dm2[3]);extLenCm2=dd3>=150?dd3/10:dd3;}}
+      }
+    }
+    var extBrdArea=extCovMm2/10*extLenCm2; // cm²
+    var totalExtBds=Math.ceil(_dimResult.totalExtAreaM2*10000/extBrdArea*1.10);
+    sv2('bzq',totalExtBds);
+    // Restore bz-sel
+    if(_dimResult.obitIdx!=null){
+      var bzSel=document.getElementById('bz-sel');
+      if(bzSel){for(var i=0;i<bzSel.options.length;i++){if(parseFloat(bzSel.options[i].value)===BOAZ_EXT[_dimResult.obitIdx].p){bzSel.selectedIndex=i;break;}}
+      if(typeof onBZSel==='function')onBZSel();}
+    }
   }
 
   // Add zone glass area to szkm
   if(_dimResult.zoneGlassArea>0){
     var szEl=document.getElementById('szkm');
     if(szEl)szEl.value=Math.round(((parseFloat(szEl.value)||0)+_dimResult.zoneGlassArea)*100)/100;
-  }
-  // Add zone ext boards to bzq
-  if(_dimResult.zoneExtBoards>0){
-    var bzEl=document.getElementById('bzq');
-    if(bzEl)bzEl.value=(parseInt(bzEl.value)||0)+_dimResult.zoneExtBoards;
-  }
-  if(_dimResult.zoneGlassArea>0){var szEl=document.getElementById('szkm');if(szEl)szEl.value=Math.round(((parseFloat(szEl.value)||0)+_dimResult.zoneGlassArea)*100)/100;}
-  // Add zone ext areas using EXTERIOR board dimensions
-  if(_dimResult.zoneExtAreaM2>0){
-    var bzEl=document.getElementById('bzq');
-    if(bzEl){
-      // Get ext board dimensions from selected material (same as obit calc)
-      var beSelEl2=document.getElementById('dw-boaz-ext');
-      var extCovMm=136, extLenCm=240; // defaults
-      if(beSelEl2&&beSelEl2.value!==''){
-        var beItem2=BOAZ_EXT[parseInt(beSelEl2.value)];
-        if(beItem2){
-          var dims2=beItem2.n.match(/\b(\d+)[x\u00d7](\d+)(?:[x\u00d7](\d+))?/i);
-          if(dims2){var w2=Math.max(parseInt(dims2[1]),parseInt(dims2[2]));extCovMm=w2-10;if(dims2[3]){var d3=parseInt(dims2[3]);extLenCm=d3>=150?d3/10:d3;}}
-        }
-      }
-      var extBoardAreaMm2=extCovMm*(extLenCm*10);
-      var zoneExtBds=Math.ceil(_dimResult.zoneExtAreaM2*1000000/extBoardAreaMm2*1.10);
-      bzEl.value=(parseInt(bzEl.value)||0)+zoneExtBds;
-    }
   }
   r();
   closeDimCalc();
