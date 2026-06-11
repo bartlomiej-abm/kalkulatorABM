@@ -1824,7 +1824,7 @@ function r(){
     // Section 4 - wyposażenie premium
     zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),klmq:gv('klmq')||1,
     drzwi:selTxt('drz'),drzwiVal:gv('drz'),
-    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selTxt('drzwz'),
+    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selVal('drzwz'),
     // Section 5 - ogrzewanie
     piec:{name:(document.getElementById('psel')&&document.getElementById('psel').value==='-1'&&document.getElementById('piec-name')&&document.getElementById('piec-name').value.trim())?document.getElementById('piec-name').value.trim():selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
     kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
@@ -2223,7 +2223,7 @@ function loadStateToCalc(s){ return loadToCalc(s); } function _loadStateToCalcOL
   sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);
   // Restore LED miejsce checkboxes
   var _ledM=s.ledMiejsce||'';
-  ['led-m1','led-m2','led-m3'].forEach(function(id){
+  ['led-m1','led-m2','led-m3','led-m4','led-m5','led-m6'].forEach(function(id){
     var el=document.getElementById(id);
     if(el)el.checked=_ledM.indexOf(el.value)>=0;
   });
@@ -2420,7 +2420,11 @@ function loadToCalc(s){
   sso('klm',s.klamkaVal||0);sv('klmq',s.klmq||1);
   sso('drz',s.drzwiVal||0);
   sso('scd',s.scd||0);
-  sso('drzwz',s.drzwz||0);
+  // drzwz - handle both old text format and new numeric
+  if(s.drzwz!==undefined){
+    if(typeof s.drzwz==='string'&&isNaN(parseFloat(s.drzwz))){ssoByName('drzwz',s.drzwz);}
+    else{sso('drzwz',s.drzwz||0);}
+  }
 
   // Section 5 - Ogrzewanie (piec)
   sv('piec',s.piec?s.piec.cena:0);sv('kamd',s.kamd||0);sv('kams',s.kams||0);sv('osl',s.osl||0);
@@ -2468,7 +2472,7 @@ function loadToCalc(s){
   sso('lstt',s.lsttVal||0);sv('lsttq',s.lsttq||1);
   sv('kabq-led',s.kabLed||0);sv('led-barwa',s.ledBarwa||'');
   var _ledM=s.ledMiejsce||'';
-  ['led-m1','led-m2','led-m3'].forEach(function(id){
+  ['led-m1','led-m2','led-m3','led-m4','led-m5','led-m6'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.checked=_ledM.indexOf(el.value)>=0;
   });
@@ -2491,24 +2495,43 @@ function loadToCalc(s){
   _loading=false;
   r();
 
-  // Re-apply piec + promienniki po przebudowie dropdownów
-  setTimeout(function(){
-    var _s=STATE;
-    if(_s&&_s.piec&&_s.piec.name){
-      var pselEl=document.getElementById('psel');if(pselEl){
-        var found=false;
-        for(var i=0;i<pselEl.options.length;i++){if(pselEl.options[i].text.indexOf(_s.piec.name.split('--')[0].trim())>=0){pselEl.selectedIndex=i;found=true;break;}}
-        if(!found&&_s.piec.cena>0)for(var i=0;i<pselEl.options.length;i++){if(Math.abs(parseFloat(pselEl.options[i].value)-_s.piec.cena)<1){pselEl.selectedIndex=i;break;}}
-        if(typeof onPS==='function')onPS();
+  // Re-apply dropdowny po załadowaniu danych z chmury
+  function _reapply(s){
+    if(!s)return;
+    // Konstrukcja k1/k2/k3 - musi być po załadowaniu KONSTR z Supabase
+    if(s.k1&&s.k1.name){ssoByName('k1m',s.k1.name);sv('k1q',s.k1?s.k1.q:0);if(typeof uM==='function')uM('k1');}
+    if(s.k2&&s.k2.name){ssoByName('k2m',s.k2.name);sv('k2q',s.k2?s.k2.q:0);if(typeof uM==='function')uM('k2');}
+    if(s.k3&&s.k3.name){ssoByName('k3m',s.k3.name);sv('k3q',s.k3?s.k3.q:0);if(typeof uM==='function')uM('k3');}
+    // Boazeria/ławki/podłoga
+    if(s.b1&&s.b1.name){ssoByName('b1m',s.b1.name);sv('b1q',s.b1.q||0);if(typeof uM==='function')uM('b1');}
+    if(s.b2&&s.b2.name){ssoByName('b2m',s.b2.name);sv('b2q',s.b2.q||0);if(typeof uM==='function')uM('b2');}
+    if(s.l1&&s.l1.name){ssoByName('l1m',s.l1.name);sv('l1q',s.l1.q||0);if(typeof uM==='function')uM('l1');}
+    if(s.l2&&s.l2.name){ssoByName('l2m',s.l2.name);sv('l2q',s.l2.q||0);if(typeof uM==='function')uM('l2');}
+    if(s.podl&&s.podl.name){ssoByName('podlm',s.podl.name);sv('podlq',s.podl.q||0);if(typeof uM==='function')uM('podl');}
+    // Drzwi zewnętrzne - obsługa starego formatu (tekst) i nowego (liczba)
+    if(s.drzwz!==undefined){
+      if(typeof s.drzwz==='string'&&isNaN(parseFloat(s.drzwz))){
+        ssoByName('drzwz',s.drzwz);
+      } else {
+        sso('drzwz',s.drzwz||0);
       }
     }
-    if(_s){
-      if(s.pr3m){var e=document.getElementById('pr3m');if(e)e.value=s.pr3m;}
-      if(s.pr5m){var e=document.getElementById('pr5m');if(e)e.value=s.pr5m;}
-      if(s.pr7m){var e=document.getElementById('pr7m');if(e)e.value=s.pr7m;}
+    // Piec
+    var pselEl=document.getElementById('psel');
+    if(pselEl&&s.piec&&s.piec.name){
+      var found=false;
+      for(var i=0;i<pselEl.options.length;i++){if(pselEl.options[i].text.indexOf(s.piec.name.split('--')[0].trim())>=0){pselEl.selectedIndex=i;found=true;break;}}
+      if(!found&&s.piec.cena>0)for(var i=0;i<pselEl.options.length;i++){if(Math.abs(parseFloat(pselEl.options[i].value)-s.piec.cena)<1){pselEl.selectedIndex=i;break;}}
+      if(typeof onPS==='function')onPS();
     }
+    // Promienniki
+    if(s.pr3m){var e=document.getElementById('pr3m');if(e)e.value=s.pr3m;}
+    if(s.pr5m){var e=document.getElementById('pr5m');if(e)e.value=s.pr5m;}
+    if(s.pr7m){var e=document.getElementById('pr7m');if(e)e.value=s.pr7m;}
     r();
-  },150);
+  }
+  setTimeout(function(){_reapply(s);},200);
+  setTimeout(function(){_reapply(s);},800);
 }
 
 
@@ -4555,7 +4578,7 @@ function clearCalc(){
 
   // Checkboxes off
   ['awifi','abt','asty','asty3','aaw','apbez','nkw-auto','profauto',
-   'led-m1','led-m2','led-m3'].forEach(function(id){
+   'led-m1','led-m2','led-m3','led-m4','led-m5','led-m6'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.checked=(id==='nkw-auto'||id==='profauto');
   });
 
