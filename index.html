@@ -2979,7 +2979,8 @@ function renderPriceTable(containerId,data,key){
       return '<option value="'+k+'"'+(item.s===k?' selected':'')+'>'+SN[k]+'</option>';
     }).join('');
     html+='<tr>';
-    html+='<td style="font-size:12px">'+item.n+'</td>';
+    var safeName=item.n.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    html+='<td><input type="text" value="'+safeName+'" data-key="'+key+'" data-idx="'+i+'" onchange="updateMaterialName(this)" style="font-size:12px;width:100%;border:none;background:transparent;padding:1px 2px;border-radius:3px;cursor:text" title="Kliknij aby edytować nazwę" onfocus="this.style.border=\'0.5px solid var(--mbm-light)\';this.style.background=\'#fff\'" onblur="this.style.border=\'none\';this.style.background=\'transparent\'"></td>';
     html+='<td style="font-size:11px;color:var(--mbm-mid);text-align:center">'+(item.u||'szt.')+'</td>';
     html+='<td><select data-key="'+key+'" data-idx="'+i+'" onchange="updateSupplier(this)" style="font-size:11px;height:24px;border:0.5px solid #ddd;border-radius:4px;width:100%;padding:0 3px">'+supOpts+'</select></td>';
     html+='<td><input type="number" value="'+item.p+'" step="0.01" min="0" data-key="'+key+'" data-idx="'+i+'" onchange="updatePrice(this)" style="width:82px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td>';
@@ -3010,6 +3011,22 @@ function updatePrice(el){
   savePricesQuiet();
   if(typeof syncSavePrices==='function') syncSavePrices();
 }
+function updateMaterialName(el){
+  var key=el.dataset.key, idx=parseInt(el.dataset.idx);
+  var newName=el.value.trim();
+  if(!newName) return;
+  var arr=key==='boaz'?BOAZ:key==='deski'?DESKI:key==='konstr'?KONSTR:key==='boaz-ext'?BOAZ_EXT:key==='podl-ext'?PODL_EXT:key==='audio'?AUDIO_LIST:null;
+  if(arr&&arr[idx]){
+    arr[idx].n=newName;
+    savePricesQuiet();
+    // Refresh selects if material board dimensions changed
+    if(key==='boaz')mkSelG('b1m',BOAZ),mkSelG('b2m',BOAZ),mkSelG('zb1m',BOAZ);
+    else if(key==='deski')mkSelG('l1m',DESKI),mkSelG('l2m',DESKI),mkSelG('podlm',DESKI);
+    else if(key==='konstr')mkSelG('k1m',KONSTR),mkSelG('k2m',KONSTR),mkSelG('k3m',KONSTR);
+    else if(key==='boaz-ext')mkSelBZ();
+  }
+}
+
 
 function onAddCatChange(){
   toggleAddPieceRow();
@@ -4088,7 +4105,10 @@ function dimGetBoardLen(name){
   // 2. Match "2400mm" or "2100 mm"
   m=name.match(/(\d{3,4})\s*mm/i);
   if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
-  // 3. Match "2,10m" or "2.10m" or "2,40m"
+  // 3a. Match "x2,13" or "x2.13" (decimal meters after x separator, no 'm' unit)
+  m=name.match(/[x\u00d7X](\d)[,\.](\d{2})(?:\s|$|[^0-9])/);
+  if(m){var l=parseFloat(m[1]+'.'+m[2])*100;if(l>=150&&l<=300)return Math.round(l);}
+  // 3b. Match "2,10m" or "2.10m" or "2,40m"
   m=name.match(/(\d)[,\.](\d{1,2})\s*m(?:\b|$)/i);
   if(m){var l=parseFloat(m[1]+'.'+m[2])*100;if(l>=150&&l<=300)return Math.round(l);}
   // 4. Plain 4-digit number at end: "...2100"
@@ -4607,9 +4627,6 @@ function applyDimCalc(){
     sv2('styq',d.sty);sv2('styc','49.4');
     sv2('osbq',d.osb);sv2('folq',d.fol);
     sv2('epdmq',d.epdm);sv2('epdmc','55');
-  } else if(!am&&insBsh){
-    // BSH from dimCalc result (without model)
-    if(_dimResult.calcZ&&_dimResult.bshMb>0){var bshqEl=document.getElementById('bshq');if(bshqEl)bshqEl.value=Math.round(_dimResult.bshMb*10)/10;}
   }
 
   // Boazeria wewnętrzna
