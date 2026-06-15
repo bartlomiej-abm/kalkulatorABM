@@ -4455,25 +4455,42 @@ function dimCalc(){
     var iA=eA-20, iB=eB-20, iH=eH-20; // internal cm
 
     if(calcZ){
-      // 4 corner posts × internal height
-      var postMb = 4 * iH / 100;
+      // Number of zones/partitions: count from partition walls (E,F) or model
+      // posts = 4 + 2*partitions (1 zone=4, 2 zones=6, 3 zones=8)
+      var numPartitions=0;
+      var showE2=document.getElementById('dw-show-e')&&document.getElementById('dw-show-e').checked;
+      var showF2=document.getElementById('dw-show-f')&&document.getElementById('dw-show-f').checked;
+      // Count active partition walls
+      var pE=document.getElementById('dw-wall-e-type');
+      var pF=document.getElementById('dw-wall-f-type');
+      if(showE2&&pE&&pE.value&&pE.value!=='open')numPartitions++;
+      if(showF2&&pF&&pF.value&&pF.value!=='open')numPartitions++;
+      // Fallback: derive from active model preset
+      if(numPartitions===0){
+        var amP=document.querySelector('.dim-model-btn.active');
+        if(amP&&amP.dataset.partitions)numPartitions=parseInt(amP.dataset.partitions)||0;
+      }
+      var numPosts=4+2*numPartitions;
 
-      // Floor frame: 2 beams × eA + 2 beams × eB (outer perimeter)
+      // Posts × internal height
+      var postMb = numPosts * iH / 100;
+
+      // Floor frame: 2×eA + 2×eB (outer perimeter)
       var floorFrameMb = (2*eA + 2*eB) / 100;
 
-      // Ceiling frame: same
-      var ceilFrameMb = floorFrameMb;
+      // Ceiling frame: 2×eA + 2×eB (same perimeter, but NO cross beams - those are separate 45x95)
+      var ceilFrameMb = (2*eA + 2*eB) / 100;
 
-      // Cross-beams in floor: span shorter internal dim, spaced along longer
+      // Floor cross-beams (rygle) ONLY: span shorter internal, spaced every 70cm along longer
       var longI=Math.max(iA,iB), shortI=Math.min(iA,iB);
       numCross = Math.max(2, Math.ceil(longI/70)-1);
       var crossFloorMb = numCross * shortI / 100;
-      var crossCeilMb = crossFloorMb;
+      // NO ceiling cross beams (separate construction 45x95)
 
-      bshMb = Math.round((postMb + floorFrameMb + ceilFrameMb + crossFloorMb + crossCeilMb)*10)/10;
-      bshBeams = Math.ceil((postMb+floorFrameMb+ceilFrameMb+crossFloorMb+crossCeilMb)*100 / 1300);
+      bshMb = Math.round((postMb + floorFrameMb + ceilFrameMb + crossFloorMb)*10)/10;
+      bshBeams = Math.ceil(bshMb*100 / 1300);
 
-      bshDetail = '4 słupki '+Math.round(iH)+'cm | obwód podłogi/sufitu '+Math.round(2*eA+2*eB)+'cm | '+numCross+' rygle/poziom '+Math.round(shortI)+'cm';
+      bshDetail = numPosts+' słupki '+Math.round(iH)+'cm | obwód podłogi+sufitu 2×'+Math.round(2*eA+2*eB)+'cm | '+numCross+' rygle podłogowe '+Math.round(shortI)+'cm (sufit: osobna konstr. 45×95)';
     }
 
     if(calcObit){
@@ -4594,7 +4611,9 @@ function dimCalc(){
   html+=resultRow('Boazeria — ściany', boazMat?boazWalls+' szt.':'— wybierz materiał', wallNote);
   html+=resultRow('Boazeria — sufit', boazMat?boazCeiling+' szt.':'—', boazMat?('krycie: '+coverage+' mm | '+ceilNote):'');
   html+=resultRow('Boazeria ŁĄCZNIE', boazMat?totalBoaz+' szt.':'—', '(+10% odpad)');
-  html+=resultRow('Deski ławkowe', deskCount+' szt.', (deskMat?deskMat.n+' | ':'')+'dł. '+BOARD_LEN+'cm'+(rowBoards(l1)>1?' (łączenie)':''));
+  var _floorAdd=(calcPodloga&&floorBoardCount>0)?floorBoardCount:0;
+  var _deskTotal=deskCount+_floorAdd;
+  html+=resultRow('Deski ławkowe'+(_floorAdd>0?' + podłoga':''), _deskTotal+' szt.', (deskMat?deskMat.n+' | ':'')+'dł. '+BOARD_LEN+'cm'+(_floorAdd>0?' | ławki '+deskCount+' + podłoga '+_floorAdd:'')+(rowBoards(l1)>1?' (łączenie)':''));
   html+=resultRow('  — siedzisko', '5 rzędów', '5 × ceil(długość/210cm)');
   html+=resultRow('  — oparcie', '3 rzędy', 'zawsze 3 rzędy wzdłuż');
   if(isZab) html+=resultRow('  — front (zabudowane)', '5 rzędów', '+5 rzędów pionowo');
@@ -4637,16 +4656,14 @@ function applyDimCalc(){
   }
 
   // Deski ławkowe
-  if(insDeski&&_dimResult.deskMat){
+  // Ławki + Podłoga (te same deski → wspólna suma w wierszu L1)
+  var lawkiQ = (insDeski?_dimResult.deskCount:0);
+  var podlogaQ = (insPodl&&_dimResult.floorBoardCount>0?_dimResult.floorBoardCount:0);
+  var combinedDeskQ = lawkiQ + podlogaQ;
+  if((insDeski||insPodl)&&_dimResult.deskMat&&combinedDeskQ>0){
     var l1Sel=document.getElementById('l1m');
     if(l1Sel){for(var i=0;i<l1Sel.options.length;i++){if(l1Sel.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){l1Sel.selectedIndex=i;break;}}}
-    sv2('l1q',_dimResult.deskCount);uM('l1');
-  }
-
-  // Podłoga wewnętrzna
-  if(insPodl&&_dimResult.floorBoardCount>0){
-    if(_dimResult.deskMat){var pSel=document.getElementById('podlm');if(pSel){for(var i=0;i<pSel.options.length;i++){if(pSel.options[i].textContent.indexOf(_dimResult.deskMat.n)>=0){pSel.selectedIndex=i;break;}}}}
-    sv2('podlq',_dimResult.floorBoardCount);uM('podl');
+    sv2('l1q',combinedDeskQ);uM('l1');
   }
 
   // Wełna - always from dimResult (calculated from wall/ceiling area)
@@ -4686,7 +4703,7 @@ function applyDimCalc(){
   var parts=[];
   if(insBoaz&&_dimResult.boazCount>0)parts.push('Boazeria: '+_dimResult.boazCount+' szt.');
   if(insDeski&&_dimResult.deskCount>0)parts.push('Ławki: '+_dimResult.deskCount+' szt.');
-  if(insPodl&&_dimResult.floorBoardCount>0)parts.push('Podłoga: '+_dimResult.floorBoardCount+' szt.');
+  if(insPodl&&_dimResult.floorBoardCount>0)parts.push('Podłoga: '+_dimResult.floorBoardCount+' szt. (dodano do ławek)');
   if(insBsh&&am)parts.push('BSH+dach wg modelu '+am.querySelector('.dim-model-name').textContent);
   if(insObit&&_dimResult.oBoardCount>0)parts.push('Obicie: '+_dimResult.oBoardCount+(oUnit==='m2'?' m²':' szt.')+(_dimResult.zoneExtAreaM2>0?' +strefy '+Math.round(_dimResult.zoneExtAreaM2*100)/100+'m²':''));
   if(parts.length>0)alert('Wstawiono: '+parts.join(', '));
@@ -5040,12 +5057,12 @@ function initClientWidth(){
   </div>
   <div class="dim-modal-body">
 
-    <div class="dim-sec" style="margin-bottom:10px"><div class="dim-sec-title">Szybki wybór modelu [Z]</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="dim-model-btn" data-ea="230" data-eb="230" data-eh="230" data-ia="210" data-ib="210" data-ih="210" data-bsh="34" data-dach="5.75" data-obrb="2" data-ryn="1" data-ply="2" data-sty="6" data-osb="2" data-fol="15" data-epdm="6" data-wel="15" onclick="applyDimModel(this)"><span class="dim-model-name">Sama sauna</span><span class="dim-model-dims">230x230x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem</span><span class="dim-model-dims">230x330x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="430" data-eh="230" data-ia="210" data-ib="410" data-ih="210" data-bsh="56" data-dach="10.5" data-obrb="3" data-ryn="1" data-ply="4" data-sty="10.5" data-osb="3" data-fol="15" data-epdm="10.5" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem i prysznicem</span><span class="dim-model-dims">230x430x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="600" data-eh="230" data-ia="210" data-ib="580" data-ih="210" data-bsh="65" data-dach="14" data-obrb="4" data-ryn="1" data-ply="4" data-sty="14" data-osb="4" data-fol="15" data-epdm="14" data-wel="38" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie</span><span class="dim-model-dims">230x600x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="700" data-eh="230" data-ia="210" data-ib="680" data-ih="210" data-bsh="78" data-dach="16" data-obrb="4" data-ryn="1" data-ply="4" data-sty="16" data-osb="4" data-fol="15" data-epdm="16" data-wel="46" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie i przedsionkiem</span><span class="dim-model-dims">230x700x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z prysznicem</span><span class="dim-model-dims">230x330x230</span></div>
+    <div class="dim-sec" style="margin-bottom:10px"><div class="dim-sec-title">Szybki wybór modelu [Z]</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="dim-model-btn" data-ea="230" data-eb="230" data-eh="230" data-ia="210" data-ib="210" data-ih="210" data-bsh="34" data-partitions="0" data-dach="5.75" data-obrb="2" data-ryn="1" data-ply="2" data-sty="6" data-osb="2" data-fol="15" data-epdm="6" data-wel="15" onclick="applyDimModel(this)"><span class="dim-model-name">Sama sauna</span><span class="dim-model-dims">230x230x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-partitions="1" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem</span><span class="dim-model-dims">230x330x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="430" data-eh="230" data-ia="210" data-ib="410" data-ih="210" data-bsh="56" data-partitions="2" data-dach="10.5" data-obrb="3" data-ryn="1" data-ply="4" data-sty="10.5" data-osb="3" data-fol="15" data-epdm="10.5" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem i prysznicem</span><span class="dim-model-dims">230x430x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="600" data-eh="230" data-ia="210" data-ib="580" data-ih="210" data-bsh="65" data-partitions="1" data-dach="14" data-obrb="4" data-ryn="1" data-ply="4" data-sty="14" data-osb="4" data-fol="15" data-epdm="14" data-wel="38" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie</span><span class="dim-model-dims">230x600x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="700" data-eh="230" data-ia="210" data-ib="680" data-ih="210" data-bsh="78" data-partitions="2" data-dach="16" data-obrb="4" data-ryn="1" data-ply="4" data-sty="16" data-osb="4" data-fol="15" data-epdm="16" data-wel="46" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie i przedsionkiem</span><span class="dim-model-dims">230x700x230</span></div>
+<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-partitions="1" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z prysznicem</span><span class="dim-model-dims">230x330x230</span></div>
 </div></div>
 
         <!-- ŚCIANY -->
