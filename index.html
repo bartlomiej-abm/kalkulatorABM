@@ -136,6 +136,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 .act-sl{font-size:10px;color:var(--mbm-mid);margin-bottom:3px}
 .act-sv{font-size:16px;font-weight:500}
 /* DIM CALC MODAL */
+.wall-highlight{animation:wallPulse 1.5s ease-out;border-radius:6px}
+@keyframes wallPulse{0%{background:rgba(176,141,87,0.5);box-shadow:0 0 0 3px rgba(176,141,87,0.4)}100%{background:transparent;box-shadow:none}}
+.svg-wall-clickable{cursor:pointer;transition:opacity 0.15s}
+.svg-wall-clickable:hover{opacity:0.7}
 .dim-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
 .dim-modal-overlay.on{display:flex}
 .dim-modal{background:#fff;border-radius:12px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto}
@@ -457,24 +461,35 @@ async function syncSaveBoazExt(){
 // ===== CLOUD HISTORY =====
 async function saveQuoteCloud(quoteData){
   if(!supa)return null;
+  // Base payload (always-present columns)
+  var base={
+    klient:quoteData.klient,
+    opis:quoteData.opis||'',
+    netto:quoteData.netto,
+    brutto:quoteData.brutto,
+    vat:quoteData.vat,
+    typ:quoteData.typ,
+    is_z:quoteData.isZ,
+    data:quoteData,
+    variants:JSON.parse(JSON.stringify(VARIANTS))
+  };
+  // Try with variant_order first
   try{
-    const {data,error} = await supa.from('quotes').insert({
-      klient:quoteData.klient,
-      opis:quoteData.opis||'',
-      netto:quoteData.netto,
-      brutto:quoteData.brutto,
-      vat:quoteData.vat,
-      typ:quoteData.typ,
-      is_z:quoteData.isZ,
-      data:quoteData,
-      variants:JSON.parse(JSON.stringify(VARIANTS)),
-      variant_order:JSON.parse(JSON.stringify(VARIANT_ORDER))
-    }).select();
+    var payload=Object.assign({},base,{variant_order:JSON.parse(JSON.stringify(VARIANT_ORDER))});
+    const {data,error}=await supa.from('quotes').insert(payload).select();
     if(error)throw error;
     return data[0];
-  }catch(e){
-    console.error('saveQuoteCloud:',e);
-    return null;
+  }catch(e1){
+    console.warn('saveQuoteCloud (z variant_order) nieudane, próba bez:',e1&&e1.message);
+    // Retry without variant_order (column may not exist in schema)
+    try{
+      const {data,error}=await supa.from('quotes').insert(base).select();
+      if(error)throw error;
+      return data[0];
+    }catch(e2){
+      console.error('saveQuoteCloud (bez variant_order) też nieudane:',e2&&e2.message);
+      return null;
+    }
   }
 }
 
@@ -4169,6 +4184,22 @@ function dimGetDeskWidth(name){
   return 90;
 }
 
+
+function highlightWall(w){
+  // Map wall letter to its row element id
+  var ids={'A':'wallrow-A','B':'wallrow-B','C':'wallrow-C','D':'wallrow-D','E':'dw-wall-e','F':'dw-wall-f'};
+  var el=document.getElementById(ids[w]);
+  if(!el)return;
+  el.classList.remove('wall-highlight');
+  void el.offsetWidth; // force reflow to restart animation
+  el.classList.add('wall-highlight');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  // Focus the width input
+  var inp=el.querySelector('input[type=number]');
+  if(inp)setTimeout(function(){inp.focus();},300);
+  setTimeout(function(){el.classList.remove('wall-highlight');},1600);
+}
+
 function dimCalc(){
   var wA=parseFloat(document.getElementById('dw-a').value)||200;
   var wB=parseFloat(document.getElementById('dw-b').value)||150;
@@ -5096,12 +5127,72 @@ function initClientWidth(){
 </div></div>
 
         <!-- ŚCIANY -->
+    <!-- RZUT POMOCNICZY -->
+    <div class="dim-sec">
+      <div class="dim-sec-title">Rzut z góry — układ ścian</div>
+      <div style="display:flex;justify-content:center;padding:8px 0">
+        <svg viewBox="0 0 320 230" style="max-width:320px;width:100%;height:auto;font-family:inherit">
+          <!-- Outer building rectangle -->
+          <rect x="40" y="50" width="240" height="140" fill="#f5ede2" stroke="#8a6d3b" stroke-width="2"/>
+          <!-- B = top (long) - clickable -->
+          <g class="svg-wall-clickable" onclick="highlightWall('B')">
+            <rect x="40" y="42" width="240" height="16" fill="transparent"/>
+            <line x1="40" y1="50" x2="280" y2="50" stroke="#633806" stroke-width="4"/>
+            <rect x="148" y="22" width="24" height="20" rx="4" fill="#633806"/>
+            <text x="160" y="36" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">B</text>
+          </g>
+          <!-- D = bottom (long) - clickable -->
+          <g class="svg-wall-clickable" onclick="highlightWall('D')">
+            <rect x="40" y="182" width="240" height="16" fill="transparent"/>
+            <line x1="40" y1="190" x2="280" y2="190" stroke="#633806" stroke-width="4"/>
+            <rect x="148" y="198" width="24" height="20" rx="4" fill="#633806"/>
+            <text x="160" y="212" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">D</text>
+          </g>
+          <!-- A = left (short) - clickable -->
+          <g class="svg-wall-clickable" onclick="highlightWall('A')">
+            <rect x="32" y="50" width="16" height="140" fill="transparent"/>
+            <line x1="40" y1="50" x2="40" y2="190" stroke="#633806" stroke-width="4"/>
+            <rect x="8" y="110" width="24" height="20" rx="4" fill="#633806"/>
+            <text x="20" y="124" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">A</text>
+          </g>
+          <!-- C = right (short) - clickable -->
+          <g class="svg-wall-clickable" onclick="highlightWall('C')">
+            <rect x="272" y="50" width="16" height="140" fill="transparent"/>
+            <line x1="280" y1="50" x2="280" y2="190" stroke="#633806" stroke-width="4"/>
+            <rect x="288" y="110" width="24" height="20" rx="4" fill="#633806"/>
+            <text x="300" y="124" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">C</text>
+          </g>
+          <!-- E = vertical partition - clickable -->
+          <g class="svg-wall-clickable" onclick="highlightWall('E')">
+            <rect x="112" y="50" width="16" height="140" fill="transparent"/>
+            <line x1="120" y1="50" x2="120" y2="190" stroke="#b08d57" stroke-width="2.5" stroke-dasharray="6 4"/>
+            <rect x="108" y="105" width="24" height="20" rx="4" fill="#b08d57"/>
+            <text x="120" y="119" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">E</text>
+          </g>
+          <!-- F = vertical partition - clickable -->
+          <g class="svg-wall-clickable" onclick="highlightWall('F')">
+            <rect x="192" y="50" width="16" height="140" fill="transparent"/>
+            <line x1="200" y1="50" x2="200" y2="190" stroke="#b08d57" stroke-width="2.5" stroke-dasharray="6 4"/>
+            <rect x="188" y="105" width="24" height="20" rx="4" fill="#b08d57"/>
+            <text x="200" y="119" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">F</text>
+          </g>
+          <!-- Zone labels -->
+          <text x="80" y="160" fill="#a08868" font-size="9" text-anchor="middle">strefa 1</text>
+          <text x="160" y="160" fill="#a08868" font-size="9" text-anchor="middle">strefa 2</text>
+          <text x="240" y="160" fill="#a08868" font-size="9" text-anchor="middle">strefa 3</text>
+        </svg>
+      </div>
+      <div style="font-size:10px;color:var(--mbm-mid);text-align:center;margin-top:-4px">
+        👆 Kliknij ścianę na rysunku aby przejść do jej pól · A/C — krótkie (boki) · B/D — długie (przód/tył) · E/F — działowe
+      </div>
+    </div>
+
     <div class="dim-sec">
       <div class="dim-sec-title">Wymiary ścian (cm) i typ</div>
       <div style="display:grid;grid-template-columns:60px 80px 1fr;gap:6px;font-size:10px;font-weight:600;color:var(--mbm-mid);text-transform:uppercase;margin-bottom:4px">
         <div></div><div>Szerokość (cm)</div><div>Typ ściany</div>
       </div>
-      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana A</span>
+      <div class="dim-wall" id="wallrow-A"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana A</span>
         <input type="number" id="dw-a" class="dim-input" value="200" min="50" oninput="dimCalc()">
         <select id="dw-at" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
@@ -5111,7 +5202,7 @@ function initClientWidth(){
     </div>  <div id="zones-A" style="margin-top:2px"></div>
       <button class="zone-add" onclick="addZone('A')">+ strefa</button>
       </div>
-      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana B</span>
+      <div class="dim-wall" id="wallrow-B"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana B</span>
         <input type="number" id="dw-b" class="dim-input" value="150" min="50" oninput="dimCalc()">
         <select id="dw-bt" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
@@ -5121,7 +5212,7 @@ function initClientWidth(){
     </div>  <div id="zones-B" style="margin-top:2px"></div>
       <button class="zone-add" onclick="addZone('B')">+ strefa</button>
       </div>
-      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana C</span>
+      <div class="dim-wall" id="wallrow-C"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana C</span>
         <input type="number" id="dw-c" class="dim-input" value="200" min="50" oninput="dimCalc()">
         <select id="dw-ct" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
@@ -5131,7 +5222,7 @@ function initClientWidth(){
     </div>  <div id="zones-C" style="margin-top:2px"></div>
       <button class="zone-add" onclick="addZone('C')">+ strefa</button>
       </div>
-      <div class="dim-wall"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana D</span>
+      <div class="dim-wall" id="wallrow-D"><div class="dim-wall-row"><span class="dim-wall-lbl">Ściana D</span>
         <input type="number" id="dw-d" class="dim-input" value="150" min="50" oninput="dimCalc()">
         <select id="dw-dt" class="dim-select" onchange="dimCalc()">
           <option value="full">Pełna boazeria</option>
