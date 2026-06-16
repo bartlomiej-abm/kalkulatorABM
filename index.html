@@ -467,7 +467,8 @@ async function saveQuoteCloud(quoteData){
       typ:quoteData.typ,
       is_z:quoteData.isZ,
       data:quoteData,
-      variants:JSON.parse(JSON.stringify(VARIANTS))
+      variants:JSON.parse(JSON.stringify(VARIANTS)),
+      variant_order:JSON.parse(JSON.stringify(VARIANT_ORDER))
     }).select();
     if(error)throw error;
     return data[0];
@@ -1905,6 +1906,7 @@ function r(){
 
 // ===== WIDOK KLIENTA =====
 var VARIANTS = {A:null, B:null, C:null, D:null, E:null};
+var VARIANT_ORDER = ['A','B','C','D','E']; // custom display order for client view
 
 function initVslots(){
   ['A','B','C','D','E'].forEach(function(v){
@@ -1965,6 +1967,7 @@ function saveVariant(v){
 
 function clearVariants(){
   VARIANTS={A:null,B:null,C:null,D:null,E:null};
+  VARIANT_ORDER=['A','B','C','D','E'];
   ['A','B','C','D','E'].forEach(function(v){
     var btn=document.getElementById('vbtn-'+v);
     if(btn){btn.textContent='Zapisz '+v;btn.className='vslot-btn';}
@@ -2605,10 +2608,26 @@ function overrideCenaSauny(vkey,val){
   buildClient();
 }
 
+
+function moveVariant(vkey,dir){
+  var idx=VARIANT_ORDER.indexOf(vkey);
+  if(idx<0)return;
+  // Get only active variants in current order
+  var active=VARIANT_ORDER.filter(function(v){return VARIANTS[v]!==null;});
+  var aIdx=active.indexOf(vkey);
+  var swapIdx=aIdx+dir;
+  if(swapIdx<0||swapIdx>=active.length)return;
+  // Swap in active list, then rebuild VARIANT_ORDER
+  var other=active[swapIdx];
+  var i1=VARIANT_ORDER.indexOf(vkey), i2=VARIANT_ORDER.indexOf(other);
+  VARIANT_ORDER[i1]=other; VARIANT_ORDER[i2]=vkey;
+  buildClient();
+}
+
 function buildClient(){
   // Note: syncVariantRows called after grid render
 
-  var active=Object.keys(VARIANTS).filter(function(v){return VARIANTS[v]!==null;});
+  var active=VARIANT_ORDER.filter(function(v){return VARIANTS[v]!==null;});
   var toShow=active.length>0
     ?active.map(function(v){return {key:v,s:VARIANTS[v]};})
     :(STATE?[{key:'',s:JSON.parse(JSON.stringify(STATE))}]:[]);
@@ -2636,6 +2655,16 @@ function buildClient(){
     html+='<div class="vcard">';
     html+='<div class="v-hd">';
     var vLabel=s.variantName&&s.variantName!==s.klient?s.variantName:(item.key?'Wariant '+item.key:'Oferta');
+    // Reorder arrows (only in multi-variant view with real keys)
+    if(item.key&&toShow.length>1){
+      var aOrder=VARIANT_ORDER.filter(function(v){return VARIANTS[v]!==null;});
+      var aPos=aOrder.indexOf(item.key);
+      var canLeft=aPos>0, canRight=aPos<aOrder.length-1;
+      html+='<div class="v-reorder" style="display:flex;gap:3px;justify-content:center;margin-bottom:4px">';
+      html+='<button onclick="moveVariant(\''+item.key+'\',-1)" '+(canLeft?'':'disabled')+' style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:24px;height:22px;border-radius:4px;cursor:'+(canLeft?'pointer':'default')+';font-size:13px;opacity:'+(canLeft?'1':'0.3')+'" title="Przesuń w lewo">◀</button>';
+      html+='<button onclick="moveVariant(\''+item.key+'\',1)" '+(canRight?'':'disabled')+' style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:24px;height:22px;border-radius:4px;cursor:'+(canRight?'pointer':'default')+';font-size:13px;opacity:'+(canRight?'1':'0.3')+'" title="Przesuń w prawo">▶</button>';
+      html+='</div>';
+    }
     // Row 1: logo left | klient+sauna right
     html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">';
     if(logoSrc)html+='<img src="'+logoSrc+'" style="max-height:36px;max-width:90px;object-fit:contain;flex-shrink:0">';
@@ -2866,6 +2895,7 @@ async function loadQuoteFromCloud(entry,btn){
     try{
       var sv2=typeof entry.variants==='string'?JSON.parse(entry.variants):entry.variants;
       ['A','B','C','D','E'].forEach(function(v){if(sv2[v])VARIANTS[v]=sv2[v];});
+      try{if(entry.variant_order){VARIANT_ORDER=typeof entry.variant_order==='string'?JSON.parse(entry.variant_order):entry.variant_order;}}catch(e){VARIANT_ORDER=['A','B','C','D','E'];}
     }catch(ex){}
   }
   loadToCalc(entry.data);
