@@ -4080,15 +4080,127 @@ function openDimCalc(){
 }
 
 
-function applyDimModel(el){
-  document.querySelectorAll('.dim-model-btn').forEach(function(b){b.classList.remove('active');});
-  el.classList.add('active');
-  var d=el.dataset;
-  ['ea','eb','eh'].forEach(function(k){var e=document.getElementById('dw-'+k);if(e)e.value=d[k];});
-  var m={'a':d.ia,'b':d.ib,'c':d.ia,'d':d.ib,'h':d.ih};
-  Object.keys(m).forEach(function(k){var e=document.getElementById('dw-'+k);if(e)e.value=m[k];});
+// ===== ZONE CONFIGURATOR =====
+var ZONE_LABELS={sauna:'Sauna',przedsionek:'Przedsionek',prysznic:'Prysznic',balia:'Miejsce na balię'};
+var ZONE_ORDER=['sauna','przedsionek','prysznic','balia']; // display order, editable via arrows
+
+function toggleZoneMod(el){
+  var active=el.classList.contains('active');
+  if(active){
+    el.classList.remove('active');
+    el.style.background='#fff';el.style.color='var(--mbm-dark)';el.style.borderColor='var(--mbm-light)';
+  } else {
+    el.classList.add('active');
+    el.style.background='var(--mbm-primary)';el.style.color='#fff';el.style.borderColor='var(--mbm-primary)';
+  }
+  rebuildZones();
+}
+
+function getActiveZones(){
+  var zones=[];
+  // Iterate in ZONE_ORDER, only including active modules
+  ZONE_ORDER.forEach(function(mod){
+    var el=document.querySelector('.zone-mod[data-mod="'+mod+'"]');
+    if(el&&el.classList.contains('active')){
+      var lenInput=document.getElementById('zlen-'+mod);
+      var len=lenInput?(parseFloat(lenInput.value)||parseFloat(el.dataset.len)):parseFloat(el.dataset.len);
+      zones.push({mod:mod,len:len});
+    }
+  });
+  return zones;
+}
+
+function moveZone(mod,dir){
+  var active=getActiveZones().map(function(z){return z.mod;});
+  var aIdx=active.indexOf(mod);
+  if(aIdx<0)return;
+  var swapIdx=aIdx+dir;
+  if(swapIdx<0||swapIdx>=active.length)return;
+  var other=active[swapIdx];
+  // Swap in ZONE_ORDER
+  var i1=ZONE_ORDER.indexOf(mod), i2=ZONE_ORDER.indexOf(other);
+  ZONE_ORDER[i1]=other; ZONE_ORDER[i2]=mod;
+  rebuildZones();
+}
+
+function rebuildZones(){
+  var zones=getActiveZones();
+  // Build editable length inputs for each active zone (only when modules toggle)
+  var lenWrap=document.getElementById('zone-lengths');
+  if(lenWrap){
+    var html='';
+    zones.forEach(function(z){
+      var zPos=zones.indexOf(z);
+      var canL=zPos>0, canR=zPos<zones.length-1;
+      html+='<div style="display:flex;flex-direction:column;gap:2px;min-width:90px">';
+      html+='<div style="font-size:10px;color:var(--mbm-mid);display:flex;align-items:center;justify-content:space-between;gap:2px">';
+      html+='<button onclick="moveZone(\''+z.mod+'\',-1)" '+(canL?'':'disabled')+' style="background:'+(canL?'var(--mbm-light)':'#eee')+';border:none;color:'+(canL?'var(--mbm-dark)':'#bbb')+';width:16px;height:16px;border-radius:3px;cursor:'+(canL?'pointer':'default')+';font-size:9px;padding:0;line-height:1" title="W lewo">◀</button>';
+      html+='<span style="flex:1;text-align:center;font-weight:600">'+ZONE_LABELS[z.mod]+'</span>';
+      html+='<button onclick="moveZone(\''+z.mod+'\',1)" '+(canR?'':'disabled')+' style="background:'+(canR?'var(--mbm-light)':'#eee')+';border:none;color:'+(canR?'var(--mbm-dark)':'#bbb')+';width:16px;height:16px;border-radius:3px;cursor:'+(canR?'pointer':'default')+';font-size:9px;padding:0;line-height:1" title="W prawo">▶</button>';
+      html+='</div>';
+      html+='<input type="number" id="zlen-'+z.mod+'" value="'+z.len+'" min="50" oninput="recalcZones()" style="width:80px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">';
+      html+='</div>';
+    });
+    lenWrap.innerHTML=html;
+  }
+  recalcZones();
+}
+
+function recalcZones(){
+  var zones=getActiveZones();
+  // Total length B = sum of zone lengths
+  var totalLen=zones.reduce(function(s,z){return s+z.len;},0);
+  var width=parseFloat(document.getElementById('zone-width').value)||230;
+  var height=parseFloat(document.getElementById('zone-height').value)||230;
+  var totLenEl=document.getElementById('zone-total-len');
+  if(totLenEl)totLenEl.textContent=totalLen;
+
+  // Set external dims: A/C = width (short), B/D = totalLen (long), H = height
+  var sv=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  sv('dw-ea',width);sv('dw-eb',totalLen);sv('dw-eh',height);
+  // Internal dims = external - 20
+  sv('dw-a',width-20);sv('dw-b',totalLen-20);sv('dw-c',width-20);sv('dw-d',totalLen-20);sv('dw-h',height-20);
+
+  // Enable Z construction
   var zc=document.getElementById('dw-zconstr');if(zc&&!zc.checked)zc.checked=true;
-  dimCalc();
+
+  // Update diagram zones
+  updateZoneDiagram(zones);
+
+  if(typeof dimCalc==='function')dimCalc();
+}
+
+function updateZoneDiagram(zones){
+  // Redraw partition lines + zone labels on SVG based on active zones
+  var svg=document.getElementById('zone-svg');
+  if(!svg)return;
+  var partLayer=document.getElementById('svg-partitions');
+  var labelLayer=document.getElementById('svg-zone-labels');
+  if(!partLayer||!labelLayer)return;
+  var totalLen=zones.reduce(function(s,z){return s+z.len;},0);
+  // SVG inner area: x from 40 to 280 (240 wide = full length)
+  var x0=40, xW=240, y0=50, yH=140;
+  var partH='', labelH='';
+  var cumLen=0;
+  zones.forEach(function(z,i){
+    var zStartX=x0+(cumLen/totalLen)*xW;
+    var zEndX=x0+((cumLen+z.len)/totalLen)*xW;
+    var zMidX=(zStartX+zEndX)/2;
+    // Zone label
+    // Place labels in upper area (y0+28) and cm below, avoiding E/F badges at y=105-125
+    labelH+='<text x="'+zMidX.toFixed(1)+'" y="'+(y0+30)+'" fill="#8a6d3b" font-size="8" text-anchor="middle" font-weight="600">'+ZONE_LABELS[z.mod]+'</text>';
+    labelH+='<text x="'+zMidX.toFixed(1)+'" y="'+(y0+yH-14)+'" fill="#a08868" font-size="7.5" text-anchor="middle" font-weight="600">'+z.len+'cm</text>';
+    // Partition line after this zone (except last)
+    if(i<zones.length-1){
+      partH+='<line x1="'+zEndX.toFixed(1)+'" y1="'+y0+'" x2="'+zEndX.toFixed(1)+'" y2="'+(y0+yH)+'" stroke="#b08d57" stroke-width="2.5" stroke-dasharray="6 4"/>';
+      var pLetter=i===0?'E':'F';
+      partH+='<rect x="'+(zEndX-12).toFixed(1)+'" y="105" width="24" height="20" rx="4" fill="#b08d57"/>';
+      partH+='<text x="'+zEndX.toFixed(1)+'" y="119" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">'+pLetter+'</text>';
+    }
+    cumLen+=z.len;
+  });
+  partLayer.innerHTML=partH;
+  labelLayer.innerHTML=labelH;
 }
 
 // ===== WALL ZONES =====
@@ -4519,17 +4631,10 @@ function dimCalc(){
       // Number of zones/partitions: count from partition walls (E,F) or model
       // posts = 4 + 2*partitions (1 zone=4, 2 zones=6, 3 zones=8)
       var numPartitions=0;
-      var showE2=document.getElementById('dw-show-e')&&document.getElementById('dw-show-e').checked;
-      var showF2=document.getElementById('dw-show-f')&&document.getElementById('dw-show-f').checked;
-      // Count active partition walls
-      var pE=document.getElementById('dw-wall-e-type');
-      var pF=document.getElementById('dw-wall-f-type');
-      if(showE2&&pE&&pE.value&&pE.value!=='open')numPartitions++;
-      if(showF2&&pF&&pF.value&&pF.value!=='open')numPartitions++;
-      // Fallback: derive from active model preset
-      if(numPartitions===0){
-        var amP=document.querySelector('.dim-model-btn.active');
-        if(amP&&amP.dataset.partitions)numPartitions=parseInt(amP.dataset.partitions)||0;
+      // Derive partitions from active zones in configurator (zones-1)
+      if(typeof getActiveZones==='function'){
+        var actZones=getActiveZones();
+        numPartitions=Math.max(0,actZones.length-1);
       }
       var numPosts=4+2*numPartitions;
 
@@ -5118,20 +5223,46 @@ function initClientWidth(){
   </div>
   <div class="dim-modal-body">
 
-    <div class="dim-sec" style="margin-bottom:10px"><div class="dim-sec-title">Szybki wybór modelu [Z]</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="dim-model-btn" data-ea="230" data-eb="230" data-eh="230" data-ia="210" data-ib="210" data-ih="210" data-bsh="34" data-partitions="0" data-dach="5.75" data-obrb="2" data-ryn="1" data-ply="2" data-sty="6" data-osb="2" data-fol="15" data-epdm="6" data-wel="15" onclick="applyDimModel(this)"><span class="dim-model-name">Sama sauna</span><span class="dim-model-dims">230x230x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-partitions="1" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem</span><span class="dim-model-dims">230x330x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="430" data-eh="230" data-ia="210" data-ib="410" data-ih="210" data-bsh="56" data-partitions="2" data-dach="10.5" data-obrb="3" data-ryn="1" data-ply="4" data-sty="10.5" data-osb="3" data-fol="15" data-epdm="10.5" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z przedsionkiem i prysznicem</span><span class="dim-model-dims">230x430x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="600" data-eh="230" data-ia="210" data-ib="580" data-ih="210" data-bsh="65" data-partitions="1" data-dach="14" data-obrb="4" data-ryn="1" data-ply="4" data-sty="14" data-osb="4" data-fol="15" data-epdm="14" data-wel="38" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie</span><span class="dim-model-dims">230x600x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="700" data-eh="230" data-ia="210" data-ib="680" data-ih="210" data-bsh="78" data-partitions="2" data-dach="16" data-obrb="4" data-ryn="1" data-ply="4" data-sty="16" data-osb="4" data-fol="15" data-epdm="16" data-wel="46" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z miejscem na balie i przedsionkiem</span><span class="dim-model-dims">230x700x230</span></div>
-<div class="dim-model-btn" data-ea="230" data-eb="330" data-eh="230" data-ia="210" data-ib="310" data-ih="210" data-bsh="46" data-partitions="1" data-dach="8" data-obrb="3" data-ryn="1" data-ply="3" data-sty="8" data-osb="3" data-fol="15" data-epdm="8" data-wel="20" onclick="applyDimModel(this)"><span class="dim-model-name">Sauna z prysznicem</span><span class="dim-model-dims">230x330x230</span></div>
-</div></div>
+    <div class="dim-sec" style="margin-bottom:10px">
+      <div class="dim-sec-title">Konfigurator stref [Z]</div>
+      <div style="font-size:10px;color:var(--mbm-mid);margin-bottom:8px">Kliknij moduły aby zbudować saunę. Każdy dokłada strefę i długość.</div>
+      <!-- Module buttons -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <div class="zone-mod active" data-mod="sauna" data-len="230" style="flex:1;min-width:120px;padding:8px;border:1.5px solid var(--mbm-primary);border-radius:8px;background:var(--mbm-primary);color:#fff;cursor:default;text-align:center">
+          <div style="font-size:12px;font-weight:700">SAUNA</div>
+          <div style="font-size:9px;opacity:0.85;margin-top:2px">baza · wymagana</div>
+        </div>
+        <div class="zone-mod" data-mod="przedsionek" data-len="100" onclick="toggleZoneMod(this)" style="flex:1;min-width:120px;padding:8px;border:1.5px solid var(--mbm-light);border-radius:8px;background:#fff;color:var(--mbm-dark);cursor:pointer;text-align:center;transition:all 0.15s">
+          <div style="font-size:12px;font-weight:700">+ PRZEDSIONEK</div>
+          <div style="font-size:9px;opacity:0.7;margin-top:2px">domyślnie 100 cm</div>
+        </div>
+        <div class="zone-mod" data-mod="prysznic" data-len="100" onclick="toggleZoneMod(this)" style="flex:1;min-width:120px;padding:8px;border:1.5px solid var(--mbm-light);border-radius:8px;background:#fff;color:var(--mbm-dark);cursor:pointer;text-align:center;transition:all 0.15s">
+          <div style="font-size:12px;font-weight:700">+ PRYSZNIC</div>
+          <div style="font-size:9px;opacity:0.7;margin-top:2px">domyślnie 100 cm</div>
+        </div>
+        <div class="zone-mod" data-mod="balia" data-len="370" onclick="toggleZoneMod(this)" style="flex:1;min-width:120px;padding:8px;border:1.5px solid var(--mbm-light);border-radius:8px;background:#fff;color:var(--mbm-dark);cursor:pointer;text-align:center;transition:all 0.15s">
+          <div style="font-size:12px;font-weight:700">+ MIEJSCE NA BALIĘ</div>
+          <div style="font-size:9px;opacity:0.7;margin-top:2px">domyślnie 370 cm</div>
+        </div>
+      </div>
+      <!-- Editable zone lengths (shown for active modules) -->
+      <div id="zone-lengths" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <!-- Common width + height -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:6px;border-top:1px dashed var(--mbm-pale)">
+        <label style="font-size:11px;color:var(--mbm-mid);display:flex;align-items:center;gap:5px">Szerokość zewn. (A/C)
+          <input type="number" id="zone-width" value="230" min="100" oninput="rebuildZones()" style="width:70px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">cm</label>
+        <label style="font-size:11px;color:var(--mbm-mid);display:flex;align-items:center;gap:5px">Wysokość zewn. (H)
+          <input type="number" id="zone-height" value="230" min="100" oninput="rebuildZones()" style="width:70px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">cm</label>
+        <span style="font-size:11px;color:var(--mbm-mid)">→ Długość B: <strong id="zone-total-len" style="color:var(--mbm-primary)">230</strong> cm</span>
+      </div>
+    </div>
 
         <!-- ŚCIANY -->
     <!-- RZUT POMOCNICZY -->
     <div class="dim-sec">
       <div class="dim-sec-title">Rzut z góry — układ ścian</div>
       <div style="display:flex;justify-content:center;padding:8px 0">
-        <svg viewBox="0 0 320 230" style="max-width:320px;width:100%;height:auto;font-family:inherit">
+        <svg id="zone-svg" viewBox="0 0 320 230" style="max-width:320px;width:100%;height:auto;font-family:inherit">
           <!-- Outer building rectangle -->
           <rect x="40" y="50" width="240" height="140" fill="#f5ede2" stroke="#8a6d3b" stroke-width="2"/>
           <!-- B = top (long) - clickable -->
@@ -5162,28 +5293,14 @@ function initClientWidth(){
             <rect x="288" y="110" width="24" height="20" rx="4" fill="#633806"/>
             <text x="300" y="124" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">C</text>
           </g>
-          <!-- E = vertical partition - clickable -->
-          <g class="svg-wall-clickable" onclick="highlightWall('E')">
-            <rect x="112" y="50" width="16" height="140" fill="transparent"/>
-            <line x1="120" y1="50" x2="120" y2="190" stroke="#b08d57" stroke-width="2.5" stroke-dasharray="6 4"/>
-            <rect x="108" y="105" width="24" height="20" rx="4" fill="#b08d57"/>
-            <text x="120" y="119" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">E</text>
-          </g>
-          <!-- F = vertical partition - clickable -->
-          <g class="svg-wall-clickable" onclick="highlightWall('F')">
-            <rect x="192" y="50" width="16" height="140" fill="transparent"/>
-            <line x1="200" y1="50" x2="200" y2="190" stroke="#b08d57" stroke-width="2.5" stroke-dasharray="6 4"/>
-            <rect x="188" y="105" width="24" height="20" rx="4" fill="#b08d57"/>
-            <text x="200" y="119" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">F</text>
-          </g>
-          <!-- Zone labels -->
-          <text x="80" y="160" fill="#a08868" font-size="9" text-anchor="middle">strefa 1</text>
-          <text x="160" y="160" fill="#a08868" font-size="9" text-anchor="middle">strefa 2</text>
-          <text x="240" y="160" fill="#a08868" font-size="9" text-anchor="middle">strefa 3</text>
+          <!-- Dynamic partition lines (E/F) -->
+          <g id="svg-partitions"></g>
+          <!-- Dynamic zone labels -->
+          <g id="svg-zone-labels"></g>
         </svg>
       </div>
       <div style="font-size:10px;color:var(--mbm-mid);text-align:center;margin-top:-4px">
-        👆 Kliknij ścianę na rysunku aby przejść do jej pól · A/C — krótkie (boki) · B/D — długie (przód/tył) · E/F — działowe
+        👆 Kliknij ścianę aby przejść do pól · Strefy i przegrody E/F pojawiają się automatycznie z konfiguratora powyżej
       </div>
     </div>
 
