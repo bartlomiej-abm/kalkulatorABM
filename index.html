@@ -4803,15 +4803,22 @@ function applyDimCalc(){
   var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
 
   // Model preset values (BSH + dach + fundament)
-  var am=document.querySelector('.dim-model-btn.active');
-  if(am&&insBsh){var d=am.dataset;
-    sv2('bshq',d.bsh);sv2('dachq',d.dach);sv2('dachc','60');
-    sv2('obrbq',d.obrb);sv2('obrbc','120');
-    sv2('rynq',d.ryn);sv2('rync','320');
-    sv2('plyq',d.ply);sv2('plyc','221.65');
-    sv2('styq',d.sty);sv2('styc','49.4');
-    sv2('osbq',d.osb);sv2('folq',d.fol);
-    sv2('epdmq',d.epdm);sv2('epdmc','55');
+  if(insBsh){
+    // BSH: always use calculated value from dimCalc
+    if(_dimResult.calcZ&&_dimResult.bshMb>0){
+      sv2('bshq',Math.round(_dimResult.bshMb*10)/10);
+    }
+    // Dach/fundament: estimate from external footprint area (m²)
+    var eaV=parseFloat(document.getElementById('dw-ea').value)||230;
+    var ebV=parseFloat(document.getElementById('dw-eb').value)||230;
+    var footM2=(eaV*ebV)/10000;
+    // Roof area ≈ footprint × 1.15 (slope), eaves/obróbki ≈ perimeter
+    var perimM=(2*eaV+2*ebV)/100;
+    sv2('dachq',Math.ceil(footM2*1.15));sv2('dachc','60');
+    sv2('obrbq',Math.ceil(perimM));sv2('obrbc','120');
+    sv2('rynq',Math.ceil(ebV/100));sv2('rync','320');
+    sv2('plyq',Math.ceil(footM2));sv2('plyc','221.65');
+    sv2('styq',Math.ceil(footM2));sv2('styc','49.4');
   }
 
   // Boazeria wewnętrzna
