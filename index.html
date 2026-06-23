@@ -4449,41 +4449,42 @@ function dimCalc(){
     if(zones.length===0){
       // Area-based (consistent with zone walls): wallW × wallH / board_area
       var baCm2=cov/10*(Math.min(BOAZ_LEN,MAX_BOAZ));
-      return {boards:Math.ceil(wallW*wallH/baCm2*(1+waste)*mult),glassArea:0,extBoards:0};
+      return {boards:Math.ceil(wallW*wallH/baCm2*(1+waste)*mult),glassArea:0,extBoards:0,extWidthCm:0};
     }
     // Use coverage (mm) - same as boardsForWall, and actual BOAZ_LEN
     var covMm=cov; // coverage in mm (e.g. 86mm for 14x96)
     var bLcm=Math.min(BOAZ_LEN,MAX_BOAZ); // board length in cm
-    var boazArea=wallW*wallH,glassArea=0,extBoards=0;
+    var boazArea=wallW*wallH,glassArea=0,extBoards=0,extWidthCm=0;
     zones.forEach(function(z){
       var zA=z.w*z.h; boazArea-=zA;
       if(z.t==='glass') glassArea+=zA/10000;
-      else if(z.t==='ext') extBoards+=zA/10000; // accumulate as m², convert to boards later with ext dims
+      else if(z.t==='ext'){ extBoards+=zA/10000; extWidthCm+=z.w; }
     });
     boazArea=Math.max(0,boazArea);
-    // Convert area to boards: cols = area_width_mm / covMm, rows = area_height / bLcm
-    // Approximation: boards = ceil(boazArea_mm2 / (covMm * bLcm*10)) * (1+waste) * mult
-    var boardArea=covMm*(bLcm*10); // mm * mm (bLcm*10 = mm)
-    var boazAreaMm2=boazArea*100; // cm2 -> mm2
-    return {boards:Math.ceil(boazAreaMm2/boardArea*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards};
+    var boardArea=covMm*(bLcm*10);
+    var boazAreaMm2=boazArea*100;
+    return {boards:Math.ceil(boazAreaMm2/boardArea*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards,extWidthCm:extWidthCm};
   }
 
-  var boazWalls=0,zoneGlassArea=0,zoneExtBoards=0;
+  var boazWalls=0,zoneGlassArea=0,zoneExtBoards=0,zoneExtWidthCm=0;
   if(boazMat){
     [['A',wA,tA],['B',wB,tB],['C',wC,tC],['D',wD,tD]].forEach(function(w){
       var wid=w[0],wd=w[1],tp=w[2];
       if(tp==='glass') return;
-      if(tp==='ext'){ zoneExtBoards+=wd*wHBoaz/10000; return; } // whole wall = exterior cladding
+      if(tp==='ext'){ zoneExtBoards+=wd*wHBoaz/10000; zoneExtWidthCm+=wd; return; } // whole wall
       var res=boardsWithZones(wallBoazWidth(wd,tp),wHBoaz,wid,coverage,0.10,wallMult);
-      boazWalls+=res.boards; zoneGlassArea+=res.glassArea; zoneExtBoards+=res.extBoards;
+      boazWalls+=res.boards; zoneGlassArea+=res.glassArea; zoneExtBoards+=res.extBoards; zoneExtWidthCm+=res.extWidthCm;
     });
     if(showE&&wE>0){
       var eSides=tE==='p2'?2:tE==='p1'||tE==='p1ext1'?1:0;
-      if(eSides>0){var resE=boardsWithZones(wE,wHBoaz,'E',coverage,0.10,wallMult);boazWalls+=eSides*resE.boards;zoneGlassArea+=resE.glassArea;zoneExtBoards+=resE.extBoards;}
+      if(eSides>0){var resE=boardsWithZones(wE,wHBoaz,'E',coverage,0.10,wallMult);boazWalls+=eSides*resE.boards;zoneGlassArea+=resE.glassArea;zoneExtBoards+=resE.extBoards;zoneExtWidthCm+=resE.extWidthCm;}
+      // p1ext1: 1 side is exterior cladding (width = wE minus open zones)
+      if(tE==='p1ext1'){var eOpenW=0;getWallZones('E').forEach(function(z){if(z.t==='open')eOpenW+=z.w;});var eXW=Math.max(0,wE-eOpenW);zoneExtBoards+=eXW*wHBoaz/10000;zoneExtWidthCm+=eXW;}
     }
     if(showF&&wF>0){
       var fSides=tF==='p2'?2:tF==='p1'||tF==='p1ext1'?1:0;
-      if(fSides>0){var resF=boardsWithZones(wF,wHBoaz,'F',coverage,0.10,wallMult);boazWalls+=fSides*resF.boards;zoneGlassArea+=resF.glassArea;zoneExtBoards+=resF.extBoards;}
+      if(fSides>0){var resF=boardsWithZones(wF,wHBoaz,'F',coverage,0.10,wallMult);boazWalls+=fSides*resF.boards;zoneGlassArea+=resF.glassArea;zoneExtBoards+=resF.extBoards;zoneExtWidthCm+=resF.extWidthCm;}
+      if(tF==='p1ext1'){var fOpenW=0;getWallZones('F').forEach(function(z){if(z.t==='open')fOpenW+=z.w;});var fXW=Math.max(0,wF-fOpenW);zoneExtBoards+=fXW*wHBoaz/10000;zoneExtWidthCm+=fXW;}
     }
   }
   // Ext zone areas (always calculated, independent of boazMat)
@@ -4492,17 +4493,17 @@ function dimCalc(){
     [['A',wA,tA],['B',wB,tB],['C',wC,tC],['D',wD,tD]].forEach(function(w){
       var wid=w[0],wd=w[1],tp=w[2];
       if(tp==='glass') return;
-      if(tp==='ext'){ zoneExtBoards+=wd*wHBoaz/10000; return; } // whole wall = exterior cladding
+      if(tp==='ext'){ zoneExtBoards+=wd*wHBoaz/10000; zoneExtWidthCm+=wd; return; } // whole wall
       var zones=getWallZones(wid);
       zones.forEach(function(z){
-        if(z.t==='ext') zoneExtBoards+=z.w*z.h/10000;
+        if(z.t==='ext'){ zoneExtBoards+=z.w*z.h/10000; zoneExtWidthCm+=z.w; }
         else if(z.t==='glass') zoneGlassArea+=z.w*z.h/10000;
       });
     });
     // E wall - p1ext1 adds 1 side as exterior cladding
-    if(showE&&wE>0){var tE2=tE||'p2';if(tE2==='p1ext1'){var eArea=wE*wHBoaz/10000;zoneExtBoards+=eArea;} else {getWallZones('E').forEach(function(z){if(z.t==='ext')zoneExtBoards+=z.w*z.h/10000;});}}
+    if(showE&&wE>0){var tE2=tE||'p2';if(tE2==='p1ext1'){var eOpenW=0;getWallZones('E').forEach(function(z){if(z.t==='open')eOpenW+=z.w;});var eW=Math.max(0,wE-eOpenW);zoneExtBoards+=eW*wHBoaz/10000;zoneExtWidthCm+=eW;} else {getWallZones('E').forEach(function(z){if(z.t==='ext'){zoneExtBoards+=z.w*z.h/10000;zoneExtWidthCm+=z.w;}});}}
     // F wall - p1ext1 adds 1 side as exterior cladding
-    if(showF&&wF>0){var tF2=tF||'p1ext1';if(tF2==='p1ext1'){var fArea=wF*wHBoaz/10000;zoneExtBoards+=fArea;} else {getWallZones('F').forEach(function(z){if(z.t==='ext')zoneExtBoards+=z.w*z.h/10000;});}}
+    if(showF&&wF>0){var tF2=tF||'p1ext1';if(tF2==='p1ext1'){var fOpenW=0;getWallZones('F').forEach(function(z){if(z.t==='open')fOpenW+=z.w;});var fW=Math.max(0,wF-fOpenW);zoneExtBoards+=fW*wHBoaz/10000;zoneExtWidthCm+=fW;} else {getWallZones('F').forEach(function(z){if(z.t==='ext'){zoneExtBoards+=z.w*z.h/10000;zoneExtWidthCm+=z.w;}});}}
   }
 
   var boazLen2=boazMat?Math.min(BOAZ_LEN,MAX_BOAZ):240;
@@ -4540,7 +4541,7 @@ function dimCalc(){
   }
   var czones=getCeilZones();
   var ceilRows=Math.ceil(ceilW*10/(coverage||86)); // kept for display only
-  var ceilPerRow=0, boazCeiling=0, ceilExtAreaM2=0;
+  var ceilPerRow=0, boazCeiling=0, ceilExtAreaM2=0, ceilExtWidthCm=0;
   if(czones.length===0){
     // Default: full ceiling = boazeria (area-based)
     var bACm2=(coverage||86)/10*Math.min(boazLen,MAX_BOAZ);
@@ -4553,7 +4554,7 @@ function dimCalc(){
       totalCzLen+=cz.len;
       var zArea=ceilW*cz.len; // cm² (ceilW = actual ceiling width = min(wA,wC))
       if(cz.typ==='boaz') boazCeilArea+=zArea;
-      else if(cz.typ==='ext') ceilExtAreaM2+=zArea/10000;
+      else if(cz.typ==='ext'){ ceilExtAreaM2+=zArea/10000; ceilExtWidthCm+=cz.len; }
       // 'open' = nothing
     });
     // Remaining length (not covered by zones) = boazeria
@@ -4663,7 +4664,7 @@ function dimCalc(){
   // ---- KONSTRUKCJA BSH i OBICIE ZEWNĘTRZNE [Z] ----
   var calcZ = document.getElementById('dw-zconstr') && document.getElementById('dw-zconstr').checked;
   var calcObit = document.getElementById('dw-obit') && document.getElementById('dw-obit').checked;
-  var bshMb=0, bshBeams=0, oBoardCount=0, oAreaM2=0;
+  var bshMb=0, bshBeams=0, oBoardCount=0, oAreaM2=0, perimWidthCm=0;
   var bshDetail='', numCross=2;
 
   // Show/hide option panels
@@ -4755,6 +4756,8 @@ function dimCalc(){
       // All 4 walls: 2×A + 2×B (ściana B ma okno/otwarte, ściana D pełna)
       var grossAreaM2=(2*eA*eH + 2*eB*eH)/10000;
       oAreaM2=Math.round(Math.max(0, grossAreaM2 - winAreaM2 - openAreaM2)*100)/100;
+      // PERIMETER WIDTH (linear method): obwód bryły - szerokość okna - szerokość otwartej
+      perimWidthCm=Math.max(0,(2*eA+2*eB)-winW-openW);
 
       // Detect if material is m2 (e.g. blacha) or szt (boards)
       var beItem2=beSelEl&&beSelEl.value!==''?BOAZ_EXT[parseInt(beSelEl.value)]:null;
@@ -4815,7 +4818,8 @@ function dimCalc(){
     obitIdx:(function(){var s=document.getElementById('dw-boaz-ext');return s&&s.value!==''?parseInt(s.value):null;})(),
     zoneExtAreaM2:zoneExtBoards||0,
     ceilExtAreaM2:ceilExtAreaM2||0,
-    totalExtAreaM2:(calcObit?(oAreaM2||0):0)+(zoneExtBoards||0)+(ceilExtAreaM2||0)
+    totalExtAreaM2:(calcObit?(oAreaM2||0):0)+(zoneExtBoards||0)+(ceilExtAreaM2||0),
+    totalExtWidthCm:(calcObit?(perimWidthCm||0):0)+(zoneExtWidthCm||0)+(ceilExtWidthCm||0)
   };
 
   // ---- RENDER RESULT ----
@@ -4839,6 +4843,20 @@ function dimCalc(){
   else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
   var welDeductInfo=(welWinDeduct>0?' -okno '+Math.round(welWinDeduct*100)/100+'m²':'')+(welOpenDeduct>0?' -otwarta '+Math.round(welOpenDeduct*100)/100+'m²':'');
 html+=resultRow('Wełna+10%'+welDeductInfo, welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
+  // BSH row
+  if(calcZ&&bshMb>0){
+    html+=resultRow('Konstrukcja BSH', (Math.round(bshMb*10)/10)+' mb', bshDetail);
+  }
+  // Obicie zewnętrzne (metoda liniowa: szerokość / krycie x 1.10)
+  var totalExtW=(calcObit?perimWidthCm:0)+zoneExtWidthCm+ceilExtWidthCm;
+  if(totalExtW>0){
+    var beSelR=document.getElementById('dw-boaz-ext');
+    var extCovR=136;
+    if(beSelR&&beSelR.value!==''){var beIR=BOAZ_EXT[parseInt(beSelR.value)];if(beIR){var dmR=beIR.n.match(/(\d+)[x\u00d7](\d+)/);if(dmR)extCovR=Math.max(parseInt(dmR[1]),parseInt(dmR[2]))-10;}}
+    var extBdsR=Math.ceil(totalExtW*10/extCovR*1.10);
+    var brk=(calcObit&&perimWidthCm>0?'perimetr '+Math.round(perimWidthCm)+'cm':'')+(zoneExtWidthCm>0?' + sciany '+Math.round(zoneExtWidthCm)+'cm':'')+(ceilExtWidthCm>0?' + sufit '+Math.round(ceilExtWidthCm)+'cm':'');
+    html+=resultRow('Obicie zewnetrzne', extBdsR+' szt.', 'suma '+Math.round(totalExtW)+'cm / krycie '+extCovR+'mm x1.10 - '+brk);
+  }
   rows.innerHTML=html;
 }
 
@@ -4894,7 +4912,7 @@ function applyDimCalc(){
   if(insWelna&&_dimResult.welTotal>0){sv2('welq',_dimResult.welTotal);}
 
   // OBICIE ZEWNĘTRZNE - UNIFIED (perimetr + strefy ścian + strefy sufitu)
-  if(insObit&&_dimResult.totalExtAreaM2>0){
+  if(insObit&&_dimResult.totalExtWidthCm>0){
     // Get ext board dimensions from selected material
     var beSelEl2=document.getElementById('dw-boaz-ext');
     var extCovMm2=136, extLenCm2=240;
@@ -4905,8 +4923,8 @@ function applyDimCalc(){
         if(dm2){var ww2=Math.max(parseInt(dm2[1]),parseInt(dm2[2]));extCovMm2=ww2-10;if(dm2[3]){var dd3=parseInt(dm2[3]);extLenCm2=dd3>=150?dd3/10:dd3;}}
       }
     }
-    var extBrdArea=extCovMm2/10*extLenCm2; // cm²
-    var totalExtBds=Math.ceil(_dimResult.totalExtAreaM2*10000/extBrdArea*1.10);
+    // LINEAR METHOD: total width (cm) ÷ krycie (mm) × 1.10, rounded once
+    var totalExtBds=Math.ceil(_dimResult.totalExtWidthCm*10/extCovMm2*1.10);
     sv2('bzq',totalExtBds);
     // Restore bz-sel
     if(_dimResult.obitIdx!=null){
