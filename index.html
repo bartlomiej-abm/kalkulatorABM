@@ -4445,25 +4445,22 @@ function dimCalc(){
 
   // Helper: boards with zone deductions
   function boardsWithZones(wallW,wallH,wallId,cov,waste,mult){
+    // LINEAR METHOD: liczba desek = szerokość boazerii (cm) / krycie (cm) × (1+waste)
+    // Deski pionowe, pełna wysokość. Strefy odejmowane po SZEROKOŚCI.
+    var covCm=cov/10; // krycie w cm
     var zones=getWallZones(wallId);
     if(zones.length===0){
-      // Area-based (consistent with zone walls): wallW × wallH / board_area
-      var baCm2=cov/10*(Math.min(BOAZ_LEN,MAX_BOAZ));
-      return {boards:Math.ceil(wallW*wallH/baCm2*(1+waste)*mult),glassArea:0,extBoards:0,extWidthCm:0};
+      return {boards:Math.ceil(wallW/covCm*(1+waste)*mult),glassArea:0,extBoards:0,extWidthCm:0,boazWidthCm:wallW};
     }
-    // Use coverage (mm) - same as boardsForWall, and actual BOAZ_LEN
-    var covMm=cov; // coverage in mm (e.g. 86mm for 14x96)
-    var bLcm=Math.min(BOAZ_LEN,MAX_BOAZ); // board length in cm
-    var boazArea=wallW*wallH,glassArea=0,extBoards=0,extWidthCm=0;
+    // Odejmij szerokości stref od szerokości boazerii
+    var boazWidth=wallW,glassArea=0,extBoards=0,extWidthCm=0;
     zones.forEach(function(z){
-      var zA=z.w*z.h; boazArea-=zA;
-      if(z.t==='glass') glassArea+=zA/10000;
-      else if(z.t==='ext'){ extBoards+=zA/10000; extWidthCm+=z.w; }
+      boazWidth-=z.w; // odejmij szerokość strefy
+      if(z.t==='glass') glassArea+=z.w*z.h/10000;
+      else if(z.t==='ext'){ extBoards+=z.w*z.h/10000; extWidthCm+=z.w; }
     });
-    boazArea=Math.max(0,boazArea);
-    var boardArea=covMm*(bLcm*10);
-    var boazAreaMm2=boazArea*100;
-    return {boards:Math.ceil(boazAreaMm2/boardArea*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards,extWidthCm:extWidthCm};
+    boazWidth=Math.max(0,boazWidth);
+    return {boards:Math.ceil(boazWidth/covCm*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards,extWidthCm:extWidthCm,boazWidthCm:boazWidth};
   }
 
   var boazWalls=0,zoneGlassArea=0,zoneExtBoards=0,zoneExtWidthCm=0;
@@ -4507,7 +4504,7 @@ function dimCalc(){
   }
 
   var boazLen2=boazMat?Math.min(BOAZ_LEN,MAX_BOAZ):240;
-  var wallNote=boazMat?(wallMult>1?'łączenie ('+wallMult+' deski/pion)':'deski '+boazLen2+'cm (bez łączenia)'):'— wybierz materiał —';
+  var wallNote=boazMat?('liniowo: szer. ÷ krycie '+coverage+'mm ×1.10'+(wallMult>1?' · łączenie '+wallMult+' deski/pion':'')):'— wybierz materiał —';
 
   // Ceiling boards: perpendicular, use same length 2100mm
   var boazCeil=boardsForWall(totalBoazCm,coverage,0.10); // reuse total wall width as "length" dimension for ceiling
@@ -4543,9 +4540,10 @@ function dimCalc(){
   var ceilRows=Math.ceil(ceilW*10/(coverage||86)); // kept for display only
   var ceilPerRow=0, boazCeiling=0, ceilExtAreaM2=0, ceilExtWidthCm=0;
   if(czones.length===0){
-    // Default: full ceiling = boazeria (area-based)
-    var bACm2=(coverage||86)/10*Math.min(boazLen,MAX_BOAZ);
-    boazCeiling=Math.ceil(ceilW*ceilL/bACm2*1.10);
+    // Default: full ceiling = boazeria (LINEAR: deski równolegle do D)
+    // liczba desek = bok A/C (ceilW) / krycie × 1.10; deski biegną wzdłuż D
+    var covCm=(coverage||86)/10;
+    boazCeiling=Math.ceil(ceilW/covCm*1.10);
     ceilPerRow=Math.ceil(ceilL/boazLen);
   } else {
     // Zone-based ceiling
@@ -4558,17 +4556,19 @@ function dimCalc(){
       // 'open' = nothing
     });
     // Remaining length (not covered by zones) = boazeria
-    var remaining=longDim-totalCzLen;
+    var remaining=ceilL-totalCzLen;
     if(remaining>0) boazCeilArea+=ceilW*remaining;
-    // Convert boazeria area to boards
-    var boardAreaMm2=coverage*(boazLen*10);
-    // Use boazMat board dims if available, otherwise use coverage/BOAZ_LEN defaults
-  var effCov=coverage||86, effLen=Math.min(BOAZ_LEN,MAX_BOAZ)||210;
-  boardAreaMm2=effCov*(effLen*10);
-  boazCeiling=Math.ceil(boazCeilArea*100/boardAreaMm2*1.10);
-    ceilPerRow=czones.length>0?'-':Math.ceil(longDim/boazLen);
+    // LINEAR: boazeria ceiling boards = total boaz length along D / krycie × 1.10
+    // boazCeilArea / ceilW = total length (cm) of boazeria zones along D direction
+    var covCm2=(coverage||86)/10;
+    var boazCeilLenCm=ceilW>0?boazCeilArea/ceilW:0; // sumaryczna długość stref boaz wzdłuż D
+    // liczba desek = (głębokość ceilW / krycie) × (ile rzędów wzdłuż D = boazCeilLen / board_len)
+    // Deski równolegle do D: liczba pasów po szerokości ceilW, każdy rząd = board_len wzdłuż D
+    var rowsAlongD=Math.ceil(boazCeilLenCm/Math.min(boazLen,MAX_BOAZ));
+    boazCeiling=Math.ceil(ceilW/covCm2*1.10)*Math.max(1,rowsAlongD);
+    ceilPerRow=czones.length>0?'-':Math.ceil(ceilL/boazLen);
   }
-  var ceilNote=boazMat?(typeof ceilPerRow==='number'&&ceilPerRow>1?'łączenie — '+ceilPerRow+'szt./rząd, deski '+boazLen+'cm':'deski '+boazLen+'cm'):'—';
+  var ceilNote=boazMat?('deski równolegle do D, krycie '+coverage+'mm, dł. '+boazLen+'cm'):'—';
 
   var totalBoaz=boazMat?boazWalls+boazCeiling:0;
 
