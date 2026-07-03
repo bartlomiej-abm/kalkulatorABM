@@ -4382,15 +4382,21 @@ function dimCalc(){
   var tB=document.getElementById('dw-bt').value;
   var tC=document.getElementById('dw-ct').value;
   var tD=document.getElementById('dw-dt').value;
-  var lawki=document.getElementById('dw-lawki').value;
   var lawkiTyp=document.getElementById('dw-lawki-typ').value;
-  var l1=parseFloat(document.getElementById('dw-l1').value)||200;
-  var l2=parseFloat(document.getElementById('dw-l2').value)||150;
-
-  // Show/hide l2 based on layout
-  var needL2=['1L','1N','2L'].indexOf(lawki)>=0;
-  var l2wrap=document.getElementById('dw-l2-wrap');
-  if(l2wrap) l2wrap.style.display=needL2?'block':'none';
+  // Per-wall benches: read each wall's checkbox, length, levels
+  function getBenches(){
+    var benches=[];
+    ['A','B','C','D'].forEach(function(w){
+      var ck=document.getElementById('bench-'+w);
+      if(ck&&ck.checked){
+        var len=parseFloat(document.getElementById('bench-'+w+'-len').value)||0;
+        var lvl=parseInt(document.getElementById('bench-'+w+'-lvl').value)||1;
+        if(len>0)benches.push({wall:w,len:len,lvl:lvl});
+      }
+    });
+    return benches;
+  }
+  var benches=getBenches();
 
   // Get selected boazeria material
   var bSel=document.getElementById('dw-boaz-mat');
@@ -4591,40 +4597,24 @@ function dimCalc(){
   }
 
   // One bench: seat = 5 rows, oparcie = 3 rows, front (zabudowane) = 5 rows
-  function addBench(lenCm){
-    var seat=5*rowBoards(lenCm);
-    var oparcie=3*rowBoards(lenCm);
-    var front=isZab?5*rowBoards(lenCm):0;
-    deskCount+=seat+oparcie+front;
-  }
 
   var deskCount=0;
-  var isL=lawki.indexOf('L')>=0;
-  var isN=lawki.indexOf('N')>=0;
   var isZab=lawkiTyp==='zab';
 
-  // L2 adjusted for L-shape (shorter by seat depth)
-  var l2adj=isL?Math.max(0,l2-Math.round(seatDepth/10)):l2;
-
-  if(lawki==='1'){
-    addBench(l1);
-  } else if(lawki==='1L'){
-    addBench(l1);
-    addBench(l2adj);
-  } else if(lawki==='1N'){
-    addBench(l1);
-    addBench(l2);
-  } else if(lawki==='2'){
-    addBench(l1); // górna
-    var lowerLen=isZab?l1:l1+50;
-    addBench(lowerLen); // dolna
-  } else if(lawki==='2L'){
-    addBench(l1); // górna główna
-    addBench(l2adj); // górna boczna
-    var lowerMain=isZab?l1:l1+50;
-    addBench(lowerMain); // dolna główna
-    addBench(l2adj); // dolna boczna
-  }
+  // Per-wall bench desk calculation:
+  // Górny poziom = 5 siedzisko + 3 oparcie (+5 front jeśli zabudowane)
+  // Dolny poziom (gdy 2 poziomy) = 5 siedzisko (+5 front jeśli zabudowane)
+  benches.forEach(function(b){
+    var rb=rowBoards(b.len); // ile desek długości na 1 rząd
+    // Górny poziom
+    deskCount += 5*rb + 3*rb; // siedzisko + oparcie
+    if(isZab) deskCount += 5*rb; // front zabudowy
+    // Dolny poziom (tylko siedzisko)
+    if(b.lvl>=2){
+      deskCount += 5*rb; // dolne siedzisko
+      if(isZab) deskCount += 5*rb; // front dolnej
+    }
+  });
 
   // 10% waste
   deskCount=deskMat?Math.ceil(deskCount*1.10):0;
@@ -4639,21 +4629,18 @@ function dimCalc(){
   var calcPodloga=document.getElementById('dw-podloga')&&document.getElementById('dw-podloga').checked;
   var floorBoardCount=0, floorAreaM2=0, floorArea=0;
   if(calcPodloga){
-    var sauna_area=wA*wB;
-    var sdCm=Math.round(seatDepth/10);
-    if(lawki==='0'||lawki===''){ floorArea=sauna_area; }
-    else if(lawki==='1'||lawki==='2'){ floorArea=sauna_area - l1*sdCm; }
-    else if(lawki==='1L'||lawki==='2L'){ floorArea=sauna_area - l1*sdCm - l2adj*sdCm + sdCm*sdCm; }
-    else if(lawki==='1N'){ floorArea=sauna_area - l1*sdCm - l2*sdCm; }
-    floorArea=Math.max(0, floorArea);
-    floorAreaM2=Math.round(floorArea)/10000; // cm² to m²
+    var sauna_area=wA*wB; // cm²
+    var sdCm=Math.round(seatDepth/10); // głębokość ławki cm
+    // Odejmij rzut każdej ławki (długość × głębokość siedziska)
+    var benchFootprint=0;
+    benches.forEach(function(b){ benchFootprint+=b.len*sdCm; });
+    floorArea=Math.max(0, sauna_area - benchFootprint);
+    floorAreaM2=Math.round(floorArea)/10000;
     if(deskMat && floorArea>0){
-      var floorW=0, floorL=0;
-      if(lawki==='0'||lawki===''){floorW=Math.min(wA,wB);floorL=Math.max(wA,wB);}
-      else if(lawki==='1'||lawki==='2'){floorW=wB-sdCm;floorL=l1;}
-      else if(lawki==='1L'||lawki==='2L'){floorW=wB-sdCm;floorL=wA-sdCm;}
-      else if(lawki==='1N'){floorW=wB-2*sdCm;floorL=l1;}
-      floorW=Math.max(0,floorW); floorL=Math.max(0,floorL);
+      // Podłoga: deski liniowo - szerokość wolnej przestrzeni / szerokość deski
+      // Wolna przestrzeń = pełna podłoga minus pas zajęty przez ławki
+      var floorW=Math.max(0,Math.min(wA,wB)); // krótszy bok = szerokość pasów
+      var floorL=Math.max(0,floorArea/floorW); // długość efektywna
       var boardsAcross=floorW>0?Math.ceil(floorW*10/deskW):0;
       var boardsAlong=floorL>0?Math.ceil(floorL/BOARD_LEN):0;
       floorBoardCount=boardsAcross>0&&boardsAlong>0?Math.ceil(boardsAcross*boardsAlong*1.10):0;
@@ -4834,10 +4821,14 @@ function dimCalc(){
   html+=resultRow('Boazeria ŁĄCZNIE', boazMat?totalBoaz+' szt.':'—', '(+10% odpad)');
   var _floorAdd=(calcPodloga&&floorBoardCount>0)?floorBoardCount:0;
   var _deskTotal=deskCount+_floorAdd;
-  html+=resultRow('Deski ławkowe'+(_floorAdd>0?' + podłoga':''), _deskTotal+' szt.', (deskMat?deskMat.n+' | ':'')+'dł. '+BOARD_LEN+'cm'+(_floorAdd>0?' | ławki '+deskCount+' + podłoga '+_floorAdd:'')+(rowBoards(l1)>1?' (łączenie)':''));
-  html+=resultRow('  — siedzisko', '5 rzędów', '5 × ceil(długość/210cm)');
-  html+=resultRow('  — oparcie', '3 rzędy', 'zawsze 3 rzędy wzdłuż');
-  if(isZab) html+=resultRow('  — front (zabudowane)', '5 rzędów', '+5 rzędów pionowo');
+  html+=resultRow('Deski ławkowe'+(_floorAdd>0?' + podłoga':''), _deskTotal+' szt.', (deskMat?deskMat.n+' | ':'')+'dł. '+BOARD_LEN+'cm'+(_floorAdd>0?' | ławki '+deskCount+' + podłoga '+_floorAdd:'')+(benches.length>0&&rowBoards(benches[0].len)>1?' (łączenie)':''));
+  // Bench breakdown per wall
+  benches.forEach(function(b){
+    var lvlTxt=b.lvl>=2?'2 poziomy':'1 poziom';
+    var rb=rowBoards(b.len);
+    var bDesks=(5*rb+3*rb)+(isZab?5*rb:0)+(b.lvl>=2?(5*rb+(isZab?5*rb:0)):0);
+    html+=resultRow('  — ściana '+b.wall+' ('+b.len+'cm, '+lvlTxt+')', Math.ceil(bDesks*1.10)+' szt.', isZab?'zabudowane (+front)':'lewitujące');
+  });
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
   if(calcPodloga&&deskMat&&floorBoardCount>0) html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | dł. '+BOARD_LEN+'cm');
   else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
@@ -4877,17 +4868,32 @@ function applyDimCalc(){
     if(_dimResult.calcZ&&_dimResult.bshMb>0){
       sv2('bshq',Math.round(_dimResult.bshMb*10)/10);
     }
-    // Dach/fundament: estimate from external footprint area (m²)
+    // Dach/fundament: wzory oparte o wymiary zewnętrzne
     var eaV=parseFloat(document.getElementById('dw-ea').value)||230;
     var ebV=parseFloat(document.getElementById('dw-eb').value)||230;
-    var footM2=(eaV*ebV)/10000;
-    // Roof area ≈ footprint × 1.15 (slope), eaves/obróbki ≈ perimeter
-    var perimM=(2*eaV+2*ebV)/100;
-    sv2('dachq',Math.ceil(footM2*1.15));sv2('dachc','60');
-    sv2('obrbq',Math.ceil(perimM));sv2('obrbc','120');
-    sv2('rynq',Math.ceil(ebV/100));sv2('rync','320');
-    sv2('plyq',Math.ceil(footM2));sv2('plyc','221.65');
+    var footM2=(eaV*ebV)/10000;           // rzut m²
+    var roofM2=footM2*1.15;               // dach = rzut + 15% (spadek/okap)
+    var perimM=(2*eaV+2*ebV)/100;         // obwód mb
+
+    // DACH m² (blacha/membrana): rzut × 1.15
+    sv2('dachq',Math.ceil(roofM2));sv2('dachc','60');
+
+    // OBRÓBKI — arkusze blachy 1250×2000: 1 arkusz = 8 mb obróbki (obwód / 8, w górę)
+    sv2('obrbq',Math.ceil(perimM/8));sv2('obrbc','120');
+
+    // RYNNY: zawsze 1 kpl
+    sv2('rynq',1);sv2('rync','320');
+
+    // PŁYTY BETONOWE 1250×2500 (podłoga/fundament): rzut / 3.125m² na płytę, w górę
+    var plateM2=1.25*2.5; // 3.125 m²
+    sv2('plyq',Math.ceil(footM2/plateM2));sv2('plyc','221.65');
+
+    // STYRODUR: powierzchnia rzutu m² (w górę)
     sv2('styq',Math.ceil(footM2));sv2('styc','49.4');
+
+    // PŁYTY OSB 1250×2500 (na dach): powierzchnia dachu / 3.125m², w górę
+    sv2('osbq',Math.ceil(roofM2/plateM2));
+    var osbnEl=document.getElementById('osbn');if(osbnEl&&!osbnEl.value)osbnEl.value='OSB3 18mm 1250x2500';
   }
 
   // Boazeria wewnętrzna
@@ -5501,21 +5507,13 @@ function initClientWidth(){
     <div class="dim-sec">
       <div class="dim-sec-title">Ławki</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
-        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Układ ławek</div>
-          <select id="dw-lawki" class="dim-select" onchange="dimCalc()">
-            <option value="1">Jeden poziom</option>
-            <option value="1L">Jeden poziom — litera L</option>
-            <option value="1N">Jeden poziom — naprzeciwko</option>
-            <option value="2">Dwa poziomy</option>
-            <option value="2L">Dwa poziomy — litera L</option>
-          </select>
-        </div>
-        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Typ ławek</div>
+        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Typ konstrukcji ławek</div>
           <select id="dw-lawki-typ" class="dim-select" onchange="dimCalc()">
             <option value="lev">Lewitujące</option>
             <option value="zab">Zabudowane</option>
           </select>
         </div>
+
         <div style="display:flex;align-items:center;margin-top:6px">
           <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--mbm-dark)">
             <input type="checkbox" id="dw-podloga" onchange="dimCalc()" style="width:14px;height:14px">
@@ -5586,14 +5584,38 @@ function initClientWidth(){
           </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Długość ławki głównej (cm)</div>
-          <input type="number" id="dw-l1" class="dim-input" value="200" min="50" oninput="dimCalc()">
+      <div style="font-size:11px;color:var(--mbm-mid);margin-bottom:6px;margin-top:8px">Ławki na ścianach — zaznacz ściany, podaj długość i liczbę poziomów:</div>
+      <div id="bench-walls" style="display:flex;flex-direction:column;gap:6px">
+        <div class="bench-wall-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;min-width:90px">
+            <input type="checkbox" id="bench-A" onchange="dimCalc()" style="width:14px;height:14px"> Ściana A</label>
+          <input type="number" id="bench-A-len" placeholder="dł. cm" value="200" min="0" oninput="dimCalc()" style="width:70px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">
+          <select id="bench-A-lvl" onchange="dimCalc()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff">
+            <option value="1">1 poziom</option><option value="2">2 poziomy</option></select>
         </div>
-        <div id="dw-l2-wrap"><div style="font-size:11px;color:var(--mbm-mid);margin-bottom:4px">Długość ławki bocznej (cm)</div>
-          <input type="number" id="dw-l2" class="dim-input" value="150" min="50" oninput="dimCalc()">
+        <div class="bench-wall-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;min-width:90px">
+            <input type="checkbox" id="bench-B" onchange="dimCalc()" style="width:14px;height:14px"> Ściana B</label>
+          <input type="number" id="bench-B-len" placeholder="dł. cm" value="200" min="0" oninput="dimCalc()" style="width:70px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">
+          <select id="bench-B-lvl" onchange="dimCalc()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff">
+            <option value="1">1 poziom</option><option value="2">2 poziomy</option></select>
+        </div>
+        <div class="bench-wall-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;min-width:90px">
+            <input type="checkbox" id="bench-C" onchange="dimCalc()" style="width:14px;height:14px"> Ściana C</label>
+          <input type="number" id="bench-C-len" placeholder="dł. cm" value="150" min="0" oninput="dimCalc()" style="width:70px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">
+          <select id="bench-C-lvl" onchange="dimCalc()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff">
+            <option value="1">1 poziom</option><option value="2">2 poziomy</option></select>
+        </div>
+        <div class="bench-wall-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;min-width:90px">
+            <input type="checkbox" id="bench-D" onchange="dimCalc()" style="width:14px;height:14px"> Ściana D</label>
+          <input type="number" id="bench-D-len" placeholder="dł. cm" value="150" min="0" oninput="dimCalc()" style="width:70px;font-size:12px;padding:3px 6px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center">
+          <select id="bench-D-lvl" onchange="dimCalc()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;background:#fff">
+            <option value="1">1 poziom</option><option value="2">2 poziomy</option></select>
         </div>
       </div>
+      <div style="font-size:10px;color:var(--mbm-mid);margin-top:6px">Górny poziom = 5 desek siedzisko + 3 oparcie · dolny poziom = 5 desek siedzisko · zabudowane +5 front</div>
     </div>
 
     <!-- MATERIAŁ -->
