@@ -461,6 +461,123 @@ async function syncSaveBoazExt(){
   }catch(e){console.error('syncSaveBoazExt:',e);}
 }
 
+// ===== CLICKUP INTEGRATION =====
+var CLICKUP_FN_URL = SUPA_URL + '/functions/v1/send-to-clickup';
+
+// Zbierz wszystkie materiały z niezerowymi ilościami
+function collectMaterials(){
+  var items=[];
+  // Mapa: [qtyFieldId, selectFieldId (opcjonalnie), etykieta domyślna]
+  var map=[
+    ['b1q','b1m','Boazeria wewnętrzna'],
+    ['b2q','b2m','Boazeria wewnętrzna (2)'],
+    ['zb1q','zb1m','Boazeria sufit'],
+    ['bzq','bz-sel','Obicie zewnętrzne'],
+    ['l1q','l1m','Deski ławkowe'],
+    ['l2q','l2m','Deski ławkowe (2)'],
+    ['podq','podlm','Deski podłogowe'],
+    ['k1q','k1m','Drewno konstrukcyjne'],
+    ['k2q','k2m','Drewno konstrukcyjne (2)'],
+    ['bshq',null,'Konstrukcja BSH 100x100'],
+    ['panoq',null,'Szyba panoramiczna'],
+    ['dachq',null,'Dach (m²)'],
+    ['obrbq',null,'Obróbki blacharskie (arkusze)'],
+    ['rynq',null,'Rynny (kpl)'],
+    ['plyq',null,'Płyty betonowe'],
+    ['styq',null,'Styrodur (m²)'],
+    ['osbq',null,'Płyty OSB'],
+    ['epdmq',null,'Membrana EPDM'],
+    ['skrzq',null,'Skrzynia/paleta'],
+    ['audtq','audt','Głośniki audio'],
+    ['btktq','btkt','Moduł BT']
+  ];
+  map.forEach(function(row){
+    var qEl=document.getElementById(row[0]);
+    if(!qEl) return;
+    var qty=parseFloat(qEl.value)||0;
+    if(qty<=0) return;
+    var label=row[2];
+    // Dopisz nazwę wybranego materiału jeśli jest select
+    if(row[1]){
+      var sEl=document.getElementById(row[1]);
+      if(sEl){
+        var txt=sEl.options&&sEl.selectedIndex>=0?sEl.options[sEl.selectedIndex].textContent:'';
+        // wytnij cenę z nawiasu dla czytelności
+        txt=txt.replace(/\s*\([^)]*\)\s*$/,'').trim();
+        if(txt&&txt!=='—'&&txt.toLowerCase().indexOf('bez')<0) label+=': '+txt;
+      }
+    }
+    // Piece — osobne pola
+    items.push(qty+'× '+label);
+  });
+  // Piec (osobna sekcja)
+  var piecSel=document.getElementById('piecsel');
+  if(piecSel&&piecSel.value&&piecSel.selectedIndex>0){
+    var pn=piecSel.options[piecSel.selectedIndex].textContent.replace(/\s*\([^)]*\)\s*$/,'').trim();
+    items.push('1× Piec: '+pn);
+  }
+  // LED
+  var ledSel=document.getElementById('ledsel');
+  if(ledSel&&ledSel.value&&ledSel.selectedIndex>0){
+    var ln=ledSel.options[ledSel.selectedIndex].textContent.replace(/\s*\([^)]*\)\s*$/,'').trim();
+    items.push('LED: '+ln);
+  }
+  return items;
+}
+
+// Pobierz listę tasków z ClickUp (przez Edge Function)
+async function loadClickUpTasks(){
+  var sel=document.getElementById('clickup-task');
+  if(!sel) return;
+  sel.innerHTML='<option>Ładowanie...</option>';
+  try{
+    var res=await fetch(CLICKUP_FN_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body:JSON.stringify({action:'list_tasks'})
+    });
+    var data=await res.json();
+    if(!data.ok) throw new Error(data.error||'Błąd');
+    sel.innerHTML='<option value="">— wybierz projekt —</option>';
+    (data.tasks||[]).forEach(function(t){
+      var o=new Option(t.name+(t.status?' ['+t.status+']':''),t.id);
+      sel.appendChild(o);
+    });
+    if((data.tasks||[]).length===0) sel.innerHTML='<option value="">Brak aktywnych tasków</option>';
+  }catch(e){
+    sel.innerHTML='<option value="">Błąd: '+e.message+'</option>';
+  }
+}
+
+// Wyślij materiały do wybranego taska ClickUp
+async function sendMaterialsToClickUp(){
+  var sel=document.getElementById('clickup-task');
+  var statusEl=document.getElementById('clickup-status');
+  var taskId=sel?sel.value:'';
+  if(!taskId){ if(statusEl)statusEl.textContent='⚠ Wybierz projekt z listy'; return; }
+  var items=collectMaterials();
+  if(items.length===0){ if(statusEl)statusEl.textContent='⚠ Brak materiałów (wszystkie ilości = 0)'; return; }
+  // Nagłówek: klient + data
+  var klient=(document.getElementById('klient')?.value||'').trim();
+  var header=(klient?klient+' · ':'')+new Date().toLocaleDateString('pl-PL');
+  if(statusEl)statusEl.textContent='Wysyłanie '+items.length+' pozycji...';
+  try{
+    var res=await fetch(CLICKUP_FN_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body:JSON.stringify({action:'send',task_id:taskId,items:items,header:header})
+    });
+    var data=await res.json();
+    if(data.ok){
+      if(statusEl)statusEl.textContent='✓ Dodano '+data.added+' pozycji do checklisty "Materiały"';
+    }else{
+      if(statusEl)statusEl.textContent='⚠ '+(data.error||('Dodano '+data.added+'/'+data.total));
+    }
+  }catch(e){
+    if(statusEl)statusEl.textContent='⚠ Błąd połączenia: '+e.message;
+  }
+}
+
 // ===== CLOUD HISTORY =====
 async function saveQuoteCloud(quoteData){
   if(!supa)return null;
@@ -591,7 +708,21 @@ function showSyncStatus(mode,msg){
     <button class="btn on8" id="bV8" onclick="setVAT(8)">VAT 8%</button>
     <button class="btn" id="bV23" onclick="setVAT(23)">VAT 23%</button>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;padding:10px 14px;background:var(--mbm-palest);border-radius:8px;border:0.5px solid var(--mbm-pale)">
+  <div style="margin-bottom:10px;padding:12px 14px;background:var(--mbm-palest,#f7f3ee);border:1px solid var(--mbm-light,#d8cbb8);border-radius:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600;color:var(--mbm-dark)">📋 Wyślij materiały do ClickUp</span>
+        <span style="font-size:11px;color:var(--mbm-mid)">— dopisze do checklisty „Materiały" w wybranym projekcie</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="clickup-task" style="flex:1;min-width:200px;font-size:12px;padding:4px 8px;height:30px;border:0.5px solid #ccc;border-radius:5px;background:#fff">
+          <option value="">— kliknij Odśwież —</option>
+        </select>
+        <button onclick="loadClickUpTasks()" style="background:var(--mbm-light);border:none;color:var(--mbm-dark);padding:5px 12px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px">🔄 Odśwież</button>
+        <button onclick="sendMaterialsToClickUp()" style="background:var(--mbm-primary,#7B4B27);border:none;color:#fff;padding:5px 14px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600">➤ Wyślij</button>
+      </div>
+      <div id="clickup-status" style="font-size:11px;color:var(--mbm-mid);margin-top:6px;min-height:14px"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;padding:10px 14px;background:var(--mbm-palest);border-radius:8px;border:0.5px solid var(--mbm-pale)">
     <span style="font-size:11px;color:var(--mbm-mid);font-weight:500;letter-spacing:.04em;text-transform:uppercase">Warianty:</span>
     <div id="vslot-A" class="vslot"></div>
     <div id="vslot-B" class="vslot"></div>
