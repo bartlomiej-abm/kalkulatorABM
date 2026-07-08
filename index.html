@@ -467,61 +467,66 @@ var CLICKUP_FN_URL = SUPA_URL + '/functions/v1/send-to-clickup';
 // Zbierz wszystkie materiały z niezerowymi ilościami
 function collectMaterials(){
   var items=[];
-  // Mapa: [qtyFieldId, selectFieldId (opcjonalnie), etykieta domyślna]
+  function selName(id){
+    var el=document.getElementById(id);
+    if(!el||!el.options||el.selectedIndex<0) return '';
+    var txt=el.options[el.selectedIndex].textContent||'';
+    txt=txt.replace(/\s*\([^)]*\)\s*$/,'').replace(/\s*\|.*$/,'').trim();
+    if(!txt||txt.indexOf('—')>=0||txt.toLowerCase().indexOf('wybierz')>=0||txt.toLowerCase().indexOf('bez ')>=0) return '';
+    return txt;
+  }
+  function qv(id){var e=document.getElementById(id);return e?(parseFloat(e.value)||0):0;}
+  // [qtyId, selectId|null, etykieta, jednostka]
   var map=[
-    ['b1q','b1m','Boazeria wewnętrzna'],
-    ['b2q','b2m','Boazeria wewnętrzna (2)'],
-    ['zb1q','zb1m','Boazeria sufit'],
-    ['bzq','bz-sel','Obicie zewnętrzne'],
-    ['l1q','l1m','Deski ławkowe'],
-    ['l2q','l2m','Deski ławkowe (2)'],
-    ['podq','podlm','Deski podłogowe'],
-    ['k1q','k1m','Drewno konstrukcyjne'],
-    ['k2q','k2m','Drewno konstrukcyjne (2)'],
-    ['bshq',null,'Konstrukcja BSH 100x100'],
-    ['panoq',null,'Szyba panoramiczna'],
-    ['dachq',null,'Dach (m²)'],
-    ['obrbq',null,'Obróbki blacharskie (arkusze)'],
-    ['rynq',null,'Rynny (kpl)'],
-    ['plyq',null,'Płyty betonowe'],
-    ['styq',null,'Styrodur (m²)'],
-    ['osbq',null,'Płyty OSB'],
-    ['epdmq',null,'Membrana EPDM'],
-    ['skrzq',null,'Skrzynia/paleta'],
-    ['audtq','audt','Głośniki audio'],
-    ['btktq','btkt','Moduł BT']
+    ['b1q','b1m','Boazeria wewnętrzna','szt'],
+    ['b2q','b2m','Boazeria wewnętrzna','szt'],
+    ['zb1q','zb1m','Boazeria sufit','szt'],
+    ['bzq','bz-sel','Obicie zewnętrzne','szt'],
+    ['l1q','l1m','Deski ławkowe','szt'],
+    ['l2q','l2m','Deski ławkowe','szt'],
+    ['podq','podl-ext-sel','Deski podłogowe','szt'],
+    ['k1q','k1m','Drewno konstrukcyjne','szt'],
+    ['k2q','k2m','Drewno konstrukcyjne','szt'],
+    ['bshq',null,'Konstrukcja BSH 100x100','szt'],
+    ['panoq',null,'Szyba panoramiczna','m²'],
+    ['dachq',null,'Dach','m²'],
+    ['obrbq',null,'Obróbki blacharskie','ark.'],
+    ['rynq',null,'Rynny','kpl'],
+    ['plyq',null,'Płyty betonowe','szt'],
+    ['styq',null,'Styrodur','m²'],
+    ['osbq',null,'Płyty OSB','szt'],
+    ['epdmq',null,'Membrana EPDM','szt'],
+    ['skrzq',null,'Skrzynia/paleta','szt']
   ];
   map.forEach(function(row){
-    var qEl=document.getElementById(row[0]);
-    if(!qEl) return;
-    var qty=parseFloat(qEl.value)||0;
+    var qty=qv(row[0]);
     if(qty<=0) return;
     var label=row[2];
-    // Dopisz nazwę wybranego materiału jeśli jest select
     if(row[1]){
-      var sEl=document.getElementById(row[1]);
-      if(sEl){
-        var txt=sEl.options&&sEl.selectedIndex>=0?sEl.options[sEl.selectedIndex].textContent:'';
-        // wytnij cenę z nawiasu dla czytelności
-        txt=txt.replace(/\s*\([^)]*\)\s*$/,'').trim();
-        if(txt&&txt!=='—'&&txt.toLowerCase().indexOf('bez')<0) label+=': '+txt;
-      }
+      var nm=selName(row[1]);
+      if(nm){ label+=': '+nm; }
+      else { label+=' ⚠(uzupełnij materiał)'; }
     }
-    // Piece — osobne pola
-    items.push(qty+'× '+label);
+    items.push(label+' — '+qty+' '+row[3]);
   });
-  // Piec (osobna sekcja)
-  var piecSel=document.getElementById('piecsel');
-  if(piecSel&&piecSel.value&&piecSel.selectedIndex>0){
-    var pn=piecSel.options[piecSel.selectedIndex].textContent.replace(/\s*\([^)]*\)\s*$/,'').trim();
-    items.push('1× Piec: '+pn);
+  // PIEC: model w psel, ilość zawsze 1 gdy wybrany
+  var piecNm=selName('psel');
+  if(!piecNm){ var pnEl=document.getElementById('piec-name'); if(pnEl&&pnEl.value.trim()) piecNm=pnEl.value.trim(); }
+  if(piecNm) items.push('Piec: '+piecNm+' — 1 szt');
+  // STEROWNIK: select ster
+  var sterNm=selName('ster');
+  if(sterNm) items.push('Sterownik: '+sterNm+' — 1 szt');
+  // LED: taśma ledt + ilość m (ledm jeśli jest)
+  var ledNm=selName('ledt');
+  if(ledNm){
+    var ledLen=qv('ledm')||qv('ledq');
+    items.push('Oświetlenie LED: '+ledNm+(ledLen>0?' — '+ledLen+' m':''));
   }
-  // LED
-  var ledSel=document.getElementById('ledsel');
-  if(ledSel&&ledSel.value&&ledSel.selectedIndex>0){
-    var ln=ledSel.options[ledSel.selectedIndex].textContent.replace(/\s*\([^)]*\)\s*$/,'').trim();
-    items.push('LED: '+ln);
-  }
+  // AUDIO
+  var audNm=selName('audt'); var audQ=qv('audtq');
+  if(audNm&&audQ>0) items.push('Głośniki: '+audNm+' — '+audQ+' szt');
+  var btNm=selName('btkt'); var btQ=qv('btktq');
+  if(btNm&&btQ>0) items.push('Moduł BT: '+btNm+' — '+btQ+' szt');
   return items;
 }
 
@@ -557,15 +562,12 @@ async function sendMaterialsToClickUp(){
   if(!taskId){ if(statusEl)statusEl.textContent='⚠ Wybierz projekt z listy'; return; }
   var items=collectMaterials();
   if(items.length===0){ if(statusEl)statusEl.textContent='⚠ Brak materiałów (wszystkie ilości = 0)'; return; }
-  // Nagłówek: klient + data
-  var klient=(document.getElementById('klient')?.value||'').trim();
-  var header=(klient?klient+' · ':'')+new Date().toLocaleDateString('pl-PL');
   if(statusEl)statusEl.textContent='Wysyłanie '+items.length+' pozycji...';
   try{
     var res=await fetch(CLICKUP_FN_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-      body:JSON.stringify({action:'send',task_id:taskId,items:items,header:header})
+      body:JSON.stringify({action:'send',task_id:taskId,items:items})
     });
     var data=await res.json();
     if(data.ok){
@@ -2545,23 +2547,33 @@ function loadToCalc(s){
   function ssoByName(id,name){
     if(!name||name.indexOf('wybierz')>=0)return;
     var el=document.getElementById(id);if(!el)return;
-    // Strip price in parentheses from search name e.g. "Świerk 45x95 (9.50 zł)" → "Świerk 45x95"
-    var stripped=name.replace(/\s*\([^)]*\)\s*$/, '').replace(/\s*\|.*$/, '').trim();
-    var nameLow=stripped.toLowerCase();
-    var fullLow=name.toLowerCase();
-    // 1. Try full name match
-    for(var i=0;i<el.options.length;i++){
-      if(el.options[i].textContent.toLowerCase().indexOf(fullLow)>=0){el.selectedIndex=i;return;}
+    // Wyodrębnij RDZEŃ nazwy materiału: usuń dostawcę [XXX], cenę (— N zl / (N zł)), grupę |...
+    function core(s){
+      return String(s)
+        .replace(/\[[^\]]*\]/g,'')        // [Dostawca]
+        .replace(/[—–-]\s*[\d.,]+\s*z[łl]?.*$/i,'') // — 9.5 zl (do końca)
+        .replace(/\([^)]*\)/g,'')          // (9.50 zł)
+        .replace(/\|.*$/,'')               // | grupa
+        .replace(/▸.*$/,'')                 // ▸ nagłówek grupy
+        .replace(/\s+/g,' ')               // wielokrotne spacje
+        .trim().toLowerCase();
     }
-    // 2. Try stripped name (without price)
+    var target=core(name);
+    if(!target)return;
+    // 1. Dokładne dopasowanie rdzenia
     for(var i=0;i<el.options.length;i++){
-      if(el.options[i].textContent.toLowerCase().indexOf(nameLow)>=0){el.selectedIndex=i;return;}
+      if(core(el.options[i].textContent)===target){el.selectedIndex=i;return;}
     }
-    // 3. Try first significant part (before first space after at least 4 chars)
-    var firstPart=nameLow.split(' ').slice(0,3).join(' ');
+    // 2. Rdzeń opcji zawiera się w target lub odwrotnie
+    for(var i=0;i<el.options.length;i++){
+      var oc=core(el.options[i].textContent);
+      if(oc&&(oc.indexOf(target)>=0||target.indexOf(oc)>=0)){el.selectedIndex=i;return;}
+    }
+    // 3. Dopasowanie po pierwszych 3 słowach rdzenia
+    var firstPart=target.split(' ').slice(0,3).join(' ');
     if(firstPart.length>3){
       for(var i=0;i<el.options.length;i++){
-        if(el.options[i].textContent.toLowerCase().indexOf(firstPart)>=0){el.selectedIndex=i;return;}
+        if(core(el.options[i].textContent).indexOf(firstPart)>=0){el.selectedIndex=i;return;}
       }
     }
   }
