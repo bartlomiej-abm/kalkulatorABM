@@ -4446,8 +4446,10 @@ function dimCalc(){
   var tE=document.getElementById('dw-et')?document.getElementById('dw-et').value:'full';
   var wF=parseFloat(document.getElementById('dw-f')?.value)||0;
   var tF=document.getElementById('dw-ft')?document.getElementById('dw-ft').value:'full';
-  var showE=wE>0;
-  var showF=wF>0;
+  // E/F liczone tylko gdy konfigurator ma >1 strefę (przegrody istnieją)
+  var _actZonesCnt=typeof getActiveZones==='function'?getActiveZones().length:1;
+  var showE=wE>0 && _actZonesCnt>=2;
+  var showF=wF>0 && _actZonesCnt>=3;
 
   // Helper: boards with zone deductions
   function boardsWithZones(wallW,wallH,wallId,cov,waste,mult){
@@ -4456,7 +4458,7 @@ function dimCalc(){
     var covCm=cov/10; // krycie w cm
     var zones=getWallZones(wallId);
     if(zones.length===0){
-      return {boards:Math.ceil(wallW/covCm*(1+waste)*mult),glassArea:0,extBoards:0,extWidthCm:0,boazWidthCm:wallW};
+      return {boards:Math.ceil(Math.round(wallW/covCm*(1+waste)*mult*1000)/1000),glassArea:0,extBoards:0,extWidthCm:0,boazWidthCm:wallW};
     }
     // Odejmij szerokości stref od szerokości boazerii
     var boazWidth=wallW,glassArea=0,extBoards=0,extWidthCm=0;
@@ -4466,10 +4468,11 @@ function dimCalc(){
       else if(z.t==='ext'){ extBoards+=z.w*z.h/10000; extWidthCm+=z.w; }
     });
     boazWidth=Math.max(0,boazWidth);
-    return {boards:Math.ceil(boazWidth/covCm*(1+waste)*mult),glassArea:glassArea,extBoards:extBoards,extWidthCm:extWidthCm,boazWidthCm:boazWidth};
+    return {boards:Math.ceil(Math.round(boazWidth/covCm*(1+waste)*mult*1000)/1000),glassArea:glassArea,extBoards:extBoards,extWidthCm:extWidthCm,boazWidthCm:boazWidth};
   }
 
   var boazWalls=0,zoneGlassArea=0,zoneExtBoards=0,zoneExtWidthCm=0;
+  var wallBreakdown=[];
   if(boazMat){
     [['A',wA,tA],['B',wB,tB],['C',wC,tC],['D',wD,tD]].forEach(function(w){
       var wid=w[0],wd=w[1],tp=w[2];
@@ -4477,6 +4480,7 @@ function dimCalc(){
       if(tp==='ext'){ zoneExtBoards+=wd*wHBoaz/10000; zoneExtWidthCm+=wd; return; } // whole wall
       var res=boardsWithZones(wallBoazWidth(wd,tp),wHBoaz,wid,coverage,0.10,wallMult);
       boazWalls+=res.boards; zoneGlassArea+=res.glassArea; zoneExtBoards+=res.extBoards; zoneExtWidthCm+=res.extWidthCm;
+      if(res.boards>0) wallBreakdown.push(wid+':'+res.boards);
     });
     if(showE&&wE>0){
       var eSides=tE==='p2'?2:tE==='p1'||tE==='p1ext1'?1:0;
@@ -4549,7 +4553,7 @@ function dimCalc(){
     // Default: full ceiling = boazeria (LINEAR: deski równolegle do D)
     // liczba desek = bok A/C (ceilW) / krycie × 1.10; deski biegną wzdłuż D
     var covCm=(coverage||86)/10;
-    boazCeiling=Math.ceil(ceilW/covCm*1.10);
+    boazCeiling=Math.ceil(Math.round(ceilW/covCm*1.10*1000)/1000);
     ceilPerRow=Math.ceil(ceilL/boazLen);
   } else {
     // Zone-based ceiling
@@ -4571,7 +4575,7 @@ function dimCalc(){
     // liczba desek = (głębokość ceilW / krycie) × (ile rzędów wzdłuż D = boazCeilLen / board_len)
     // Deski równolegle do D: liczba pasów po szerokości ceilW, każdy rząd = board_len wzdłuż D
     var rowsAlongD=Math.ceil(boazCeilLenCm/Math.min(boazLen,MAX_BOAZ));
-    boazCeiling=Math.ceil(ceilW/covCm2*1.10)*Math.max(1,rowsAlongD);
+    boazCeiling=Math.ceil(Math.round(ceilW/covCm2*1.10*1000)/1000)*Math.max(1,rowsAlongD);
     ceilPerRow=czones.length>0?'-':Math.ceil(ceilL/boazLen);
   }
   var ceilNote=boazMat?('deski równolegle do D, krycie '+coverage+'mm, dł. '+boazLen+'cm'):'—';
@@ -4601,23 +4605,19 @@ function dimCalc(){
   var deskCount=0;
   var isZab=lawkiTyp==='zab';
 
-  // Per-wall bench desk calculation:
-  // Górny poziom = 5 siedzisko + 3 oparcie (+5 front jeśli zabudowane)
-  // Dolny poziom (gdy 2 poziomy) = 5 siedzisko (+5 front jeśli zabudowane)
+  // Per-wall bench — metoda Z ODZYSKIEM materiału:
+  // Sumujemy całkowitą długość desek ławkowych (mb), dzielimy przez długość deski, w górę.
+  // Górny poziom = 5 rzędów siedzisko + 3 rzędy oparcie (+5 front jeśli zabudowane)
+  // Dolny poziom (gdy 2 poziomy) = 5 rzędów siedzisko (+5 front jeśli zabudowane)
+  var benchTotalLenCm=0;
   benches.forEach(function(b){
-    var rb=rowBoards(b.len); // ile desek długości na 1 rząd
-    // Górny poziom
-    deskCount += 5*rb + 3*rb; // siedzisko + oparcie
-    if(isZab) deskCount += 5*rb; // front zabudowy
-    // Dolny poziom (tylko siedzisko)
-    if(b.lvl>=2){
-      deskCount += 5*rb; // dolne siedzisko
-      if(isZab) deskCount += 5*rb; // front dolnej
-    }
+    var rows=5+3; // górny: siedzisko + oparcie
+    if(isZab) rows+=5; // front zabudowy
+    if(b.lvl>=2){ rows+=5; if(isZab) rows+=5; } // dolny poziom
+    benchTotalLenCm += rows*b.len; // każdy rząd = długość ławki
   });
-
-  // 10% waste
-  deskCount=deskMat?Math.ceil(deskCount*1.10):0;
+  // Przelicz na deski: całkowita długość / długość deski, zaokrąglone w górę, +10% zapas
+  deskCount=deskMat&&benchTotalLenCm>0?Math.ceil(benchTotalLenCm/BOARD_LEN*1.10):0;
 
   // ---- DESKI PODŁOGI ----
   // Floor = total sauna floor minus bench footprints
@@ -4816,18 +4816,19 @@ function dimCalc(){
   function resultRow(label,val,sub){
     return '<div class="dim-result-row"><span>'+label+'</span><div style="text-align:right"><span class="dim-result-val">'+val+'</span>'+(sub?'<span style="font-size:10px;color:var(--mbm-mid);margin-left:6px">'+sub+'</span>':'')+' </div></div>';
   }
-  html+=resultRow('Boazeria — ściany', boazMat?boazWalls+' szt.':'— wybierz materiał', wallNote);
+  html+=resultRow('Boazeria — ściany', boazMat?boazWalls+' szt.':'— wybierz materiał', wallNote+(wallBreakdown.length>0?' · '+wallBreakdown.join(', '):''));
   html+=resultRow('Boazeria — sufit', boazMat?boazCeiling+' szt.':'—', boazMat?('krycie: '+coverage+' mm | '+ceilNote):'');
   html+=resultRow('Boazeria ŁĄCZNIE', boazMat?totalBoaz+' szt.':'—', '(+10% odpad)');
   var _floorAdd=(calcPodloga&&floorBoardCount>0)?floorBoardCount:0;
   var _deskTotal=deskCount+_floorAdd;
   html+=resultRow('Deski ławkowe'+(_floorAdd>0?' + podłoga':''), _deskTotal+' szt.', (deskMat?deskMat.n+' | ':'')+'dł. '+BOARD_LEN+'cm'+(_floorAdd>0?' | ławki '+deskCount+' + podłoga '+_floorAdd:'')+(benches.length>0&&rowBoards(benches[0].len)>1?' (łączenie)':''));
-  // Bench breakdown per wall
+  // Bench breakdown per wall (metoda z odzyskiem)
   benches.forEach(function(b){
     var lvlTxt=b.lvl>=2?'2 poziomy':'1 poziom';
-    var rb=rowBoards(b.len);
-    var bDesks=(5*rb+3*rb)+(isZab?5*rb:0)+(b.lvl>=2?(5*rb+(isZab?5*rb:0)):0);
-    html+=resultRow('  — ściana '+b.wall+' ('+b.len+'cm, '+lvlTxt+')', Math.ceil(bDesks*1.10)+' szt.', isZab?'zabudowane (+front)':'lewitujące');
+    var rows=5+3+(isZab?5:0)+(b.lvl>=2?(5+(isZab?5:0)):0);
+    var bLenCm=rows*b.len;
+    var bDesks=Math.ceil(bLenCm/BOARD_LEN*1.10);
+    html+=resultRow('  — ściana '+b.wall+' ('+b.len+'cm, '+lvlTxt+')', bDesks+' szt.', rows+' rzędów × '+b.len+'cm = '+bLenCm+'cm ÷ '+BOARD_LEN+'cm');
   });
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
   if(calcPodloga&&deskMat&&floorBoardCount>0) html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | dł. '+BOARD_LEN+'cm');
@@ -4844,7 +4845,7 @@ html+=resultRow('Wełna+10%'+welDeductInfo, welTotal+' m²', 'ściany '+Math.rou
     var beSelR=document.getElementById('dw-boaz-ext');
     var extCovR=136;
     if(beSelR&&beSelR.value!==''){var beIR=BOAZ_EXT[parseInt(beSelR.value)];if(beIR){var dmR=beIR.n.match(/(\d+)[x\u00d7](\d+)/);if(dmR)extCovR=Math.max(parseInt(dmR[1]),parseInt(dmR[2]))-10;}}
-    var extBdsR=Math.ceil(totalExtW*10/extCovR*1.10);
+    var extBdsR=Math.ceil(Math.round(totalExtW*10/extCovR*1.10*1000)/1000);
     var brk=(calcObit&&perimWidthCm>0?'perimetr '+Math.round(perimWidthCm)+'cm':'')+(zoneExtWidthCm>0?' + sciany '+Math.round(zoneExtWidthCm)+'cm':'')+(ceilExtWidthCm>0?' + sufit '+Math.round(ceilExtWidthCm)+'cm':'');
     html+=resultRow('Obicie zewnetrzne', extBdsR+' szt.', 'suma '+Math.round(totalExtW)+'cm / krycie '+extCovR+'mm x1.10 - '+brk);
   }
@@ -4930,7 +4931,7 @@ function applyDimCalc(){
       }
     }
     // LINEAR METHOD: total width (cm) ÷ krycie (mm) × 1.10, rounded once
-    var totalExtBds=Math.ceil(_dimResult.totalExtWidthCm*10/extCovMm2*1.10);
+    var totalExtBds=Math.ceil(Math.round(_dimResult.totalExtWidthCm*10/extCovMm2*1.10*1000)/1000);
     sv2('bzq',totalExtBds);
     // Restore bz-sel
     if(_dimResult.obitIdx!=null){
