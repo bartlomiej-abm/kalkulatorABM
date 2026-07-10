@@ -403,8 +403,17 @@ async function syncLoad(){
       }
       if(row.key==='audio_list'){
         try{var aArr=typeof row.value==='string'?JSON.parse(row.value):row.value;
-          if(aArr&&aArr.length>0){AUDIO_LIST=aArr;localStorage.setItem('abm_audio',JSON.stringify(AUDIO_LIST));
-    localStorage.setItem('abm_audio_bt',JSON.stringify(AUDIO_BT_LIST));}
+          if(aArr&&aArr.length>0){AUDIO_LIST=aArr;localStorage.setItem('abm_audio',JSON.stringify(AUDIO_LIST));}
+        }catch(e){}
+      }
+      if(row.key==='audio_bt_list'){
+        try{var btArr=typeof row.value==='string'?JSON.parse(row.value):row.value;
+          if(btArr&&btArr.length>0){AUDIO_BT_LIST=btArr;localStorage.setItem('abm_audio_bt',JSON.stringify(AUDIO_BT_LIST));}
+        }catch(e){}
+      }
+      if(row.key==='doors_list'){
+        try{var drArr=typeof row.value==='string'?JSON.parse(row.value):row.value;
+          if(drArr&&drArr.length>0){DOORS_LIST=drArr;localStorage.setItem('abm_doors',JSON.stringify(DOORS_LIST));}
         }catch(e){}
       }
     });
@@ -412,7 +421,7 @@ async function syncLoad(){
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
-    mkSelBZ();mkSelAudio();
+    mkSelBZ();mkSelAudio();mkSelDoors();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
     showSyncStatus('local','Tryb lokalny (brak połączenia)');
@@ -449,6 +458,7 @@ async function syncSavePrices(){
       supa.from('shared_settings').upsert({key:'boaz_ext',value:BOAZ_EXT,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'audio_list',value:AUDIO_LIST,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'audio_bt_list',value:AUDIO_BT_LIST,updated_at:new Date().toISOString()}),
+      supa.from('shared_settings').upsert({key:'doors_list',value:DOORS_LIST,updated_at:new Date().toISOString()}),
       supa.from('shared_settings').upsert({key:'custom_piece',value:customPiece,updated_at:new Date().toISOString()})
     ]);
     showSyncStatus('cloud','Cenniki zsynchronizowane');
@@ -527,6 +537,9 @@ function collectMaterials(){
   if(audNm&&audQ>0) items.push('Głośniki: '+audNm+' — '+audQ+' szt');
   var btNm=selName('btkt'); var btQ=qv('btktq');
   if(btNm&&btQ>0) items.push('Moduł BT: '+btNm+' — '+btQ+' szt');
+  // Drzwi do sauny
+  var drNm=selName('drzsauna');
+  if(drNm) items.push('Drzwi do sauny: '+drNm+' — 1 szt');
   return items;
 }
 
@@ -802,7 +815,7 @@ function showSyncStatus(mode,msg){
       <div class="cf row"><span class="lbl">Folia hydroizolacyjna EPDM (m²)</span><input type="number" id="epdmq" value="0" min="0" onchange="r()"><input type="number" id="epdmc" value="55" min="0" step="0.01" onchange="r()" style="width:65px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px"><span class="dv" id="epdmk">0 zł</span><span class="dv hi" id="epdmp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Folia paraizolacyjna (rolki × 4 zł)</span><input type="number" id="folq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="folk">0 zł</span><span class="dv hi" id="folp">0 zł</span></div>
       <div class="cf row"><span class="lbl">Taśma do folii para (szt. × 20 zł)</span><input type="number" id="tasq" value="1" min="0" onchange="r()"><span></span><span class="dv" id="task">0 zł</span><span class="dv hi" id="tasp">0 zł</span></div>
-      <div class="cf row"><span class="lbl" id="wellb">[W] Wełna 40mm (m² × 8,50 zł)</span><input type="number" id="welq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="welk">0 zł</span><span class="dv hi" id="welp">0 zł</span></div>
+      <div class="cf row"><span class="lbl" id="wellb">[W] Wełna mineralna AKUPŁYTA 50mm (m² × 8,50 zł)</span><input type="number" id="welq" value="15" min="0" onchange="r()"><span></span><span class="dv" id="welk">0 zł</span><span class="dv hi" id="welp">0 zł</span></div>
     </div>
     <div class="grp"><div class="gt">Wentylacja i kable</div>
       <div class="cf row"><span class="lbl">Anemostat (szt. × cena zł)</span><input type="number" id="anoq" value="2" min="0" onchange="r()"><input type="number" id="anop" value="150" min="0" onchange="r()"><span class="dv" id="anok">0 zł</span><span class="dv hi" id="anop2">0 zł</span></div>
@@ -811,8 +824,8 @@ function showSyncStatus(mode,msg){
     <div class="grp" id="gpWent" style="display:none"><div class="gt">Wentylacja i kable [Z]</div>
       <div class="cf row" style="gap:6px">
         <span class="lbl">Skrzynka elektryczna</span>
-        <input type="number" id="skrzq" value="0" min="0" onchange="r()" style="width:60px">
-        <input type="number" id="skrzcena" placeholder="cena/szt." value="0" min="0" onchange="r()" style="width:90px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px">
+        <input type="number" id="skrzq" value="1" min="0" onchange="r()" style="width:60px">
+        <input type="number" id="skrzcena" placeholder="cena/szt." value="300" min="0" onchange="r()" style="width:90px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px">
         <span class="dv hi" id="skrzep">0 zł</span>
       </div>
     </div>
@@ -833,7 +846,7 @@ function showSyncStatus(mode,msg){
       </div>
       <div class="cf row">
         <span class="lbl">Dach — robocizna (m²)</span>
-        <input type="number" id="dacrq" value="5" min="0" onchange="r()">
+        <input type="number" id="dacrq" value="3" min="0" onchange="r()">
         <input type="number" id="dacrc" value="110" min="0" step="0.01" onchange="r()" style="width:70px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:right">
         <span class="dv" id="dacrk">0 zł</span>
         <span class="dv" style="color:#aaa">—</span>
@@ -873,8 +886,8 @@ function showSyncStatus(mode,msg){
       <div class="cf row" style="gap:6px">
         <span class="lbl">Płyta OSB (szt.)</span>
         <input type="number" id="osbq" value="0" min="0" onchange="r()" style="width:60px">
-        <input type="text" id="osbn" placeholder="nazwa np. OSB3 18mm" onchange="r()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;flex:1;min-width:0">
-        <input type="number" id="osbcena" placeholder="cena/szt." value="0" min="0" onchange="r()" style="width:75px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px">
+        <input type="text" id="osbn" placeholder="nazwa np. OSB3 18mm" value="OSB3 18mm" onchange="r()" style="font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px;flex:1;min-width:0">
+        <input type="number" id="osbcena" placeholder="cena/szt." value="90" min="0" onchange="r()" style="width:75px;font-size:11px;padding:2px 5px;height:26px;border:0.5px solid var(--mbm-light);border-radius:5px">
         <span class="dv hi" id="osbp">0 zł</span>
       </div>
     </div>
@@ -911,6 +924,10 @@ function showSyncStatus(mode,msg){
       <div><div class="sub">Antaba / klamka</div><div style="display:flex;gap:5px;align-items:center"><select id="klm" onchange="r()" style="flex:1"><option value="150">Made by ABM (150)</option><option value="479">ANTABA (479)</option><option value="0">Bez</option></select><input type="number" id="klmq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div></div>
       <div><div class="sub">Drzwi do sauny</div><select id="drz" onchange="r()" style="display:none"><option value="0" selected>Bez</option></select><span style="font-size:11px;color:var(--mbm-mid)">—</span></div>
       <div><div class="sub">Ściana dekoracyjna</div><select id="scd" onchange="r()"><option value="0">Bez</option><option value="1000">Ściana z kamienia (1000)</option></select></div>
+    </div>
+    <div style="margin-top:4px">
+      <div class="sub" style="margin-bottom:2px">Drzwi do sauny (gotowe)</div>
+      <select id="drzsauna" onchange="r()" style="width:50%"><option value="0">Bez</option></select>
     </div>
     <div id="rowDrzwZ" style="display:none;margin-top:4px">
       <div class="sub" style="margin-bottom:2px">Drzwi wejściowe zewnętrzne [Z]</div>
@@ -1293,6 +1310,7 @@ function showSyncStatus(mode,msg){
             <option value="led">Oświetlenie LED</option>
             <option value="audio">Audio — głośniki</option>
             <option value="bt">Audio — moduł BT</option>
+            <option value="doors">Drzwi do sauny</option>
             <option value="piece">Piece</option>
           </select>
         </div>
@@ -1351,6 +1369,8 @@ function showSyncStatus(mode,msg){
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('audio')"><span class="st" style="color:var(--mbm-dark)">Audio / Nagłośnienie</span><span style="font-size:11px;color:#666" id="count-audio"></span><span id="toggle-audio" style="font-size:11px;color:var(--mbm-mid);margin-left:auto">▸ rozwiń</span></div><div id="price-audio-wrap" style="display:none"><div class="sb"><div id="price-audio"></div></div></div></div>
 
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('audio-bt')"><span class="st" style="color:var(--mbm-dark)">Audio — moduły BT</span><span style="font-size:11px;color:#666" id="count-audio-bt"></span><span id="toggle-audio-bt" style="font-size:11px;color:var(--mbm-mid);margin-left:auto">▸ rozwiń</span></div><div id="price-audio-bt-wrap" style="display:none"><div class="sb"><div id="price-audio-bt"></div></div></div></div>
+
+  <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('doors')"><span class="st" style="color:var(--mbm-dark)">Drzwi do sauny</span><span style="font-size:11px;color:#666" id="count-doors"></span><span id="toggle-doors" style="font-size:11px;color:var(--mbm-mid);margin-left:auto">▸ rozwiń</span></div><div id="price-doors-wrap" style="display:none"><div class="sb"><div id="price-doors"></div></div></div></div>
 
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('glass')"><span class="st">Szklenie — ceny bazowe</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-glass">▸ rozwiń</span></div>
   <div id="price-glass" style="display:none"><div class="sb">
@@ -1760,6 +1780,18 @@ function mkSelBZ(){
     o.textContent=i.n+' ('+i.p+' zl)';el.appendChild(o);
   });
 }
+function mkSelDoors(){
+  var el=document.getElementById('drzsauna');
+  if(!el)return;
+  var cur=el.value;
+  while(el.options.length>1)el.remove(1);
+  DOORS_LIST.forEach(function(item){
+    el.appendChild(new Option(item.n+' ('+item.p+' zł)',item.p));
+  });
+  el.value=cur;
+  if(el.value!==cur)el.selectedIndex=0;
+}
+
 function mkSelAudio(){
   // Głośniki dropdown
   var el=document.getElementById('audt');
@@ -1795,10 +1827,9 @@ function onBZSel(){
   var si=document.getElementById('bz-sup');
   var bznInp=document.getElementById('bzn');
   if(p>0){if(pi)pi.value=p;}
-  // Auto-fill name from selected option text (e.g. "Termo Sosna STS 14x96...")
-  if(bznInp&&sel.selectedOptions[0]&&parseFloat(sel.value)>0){
+  // Auto-fill name from selected option text - TYLKO przy ręcznej zmianie (nie przy wczytywaniu z historii)
+  if(!_loading && bznInp&&sel.selectedOptions[0]&&parseFloat(sel.value)>0){
     var optTxt=sel.selectedOptions[0].textContent||'';
-    // Extract group name (first 2-3 words) as the display name
     var mat=BOAZ_EXT[parseInt(sel.selectedOptions[0].dataset.idx)];
     if(mat&&mat.g) bznInp.value=mat.g;
     else if(optTxt) bznInp.value=optTxt.split(' ').slice(0,3).join(' ');
@@ -1855,8 +1886,8 @@ function setWZ(t){
   });
   // gpDach is set above AND in loop - dedupe is fine (same value)
   var wl=document.getElementById('wellb');
-  if(wl)wl.textContent=isZ?'[Z] Welna 100mm (m2 x 23,00 zl)':'[W] Welna 40mm (m2 x 8,50 zl)';
-  setVAT(isZ?23:8);r();
+  if(wl)wl.textContent=isZ?'[Z] Wełna skalna RockWool 100mm (m2 x 38,59 zl)':'[W] Wełna mineralna AKUPŁYTA 50mm (m2 x 8,50 zl)';
+  setVAT(isZ?38.59:8);r();
 }
 
 function setTyp(t){
@@ -1928,7 +1959,7 @@ function r(){
   var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+podl.sp+katP;se('sm1',f(s1));
   var epdmK=gv('epdmq')*(gv('epdmc')||55),epdmP=epdmK*mK;se('epdmk',f(epdmK));se('epdmp',f(epdmP));
   var folK=gv('folq')*4,folP=folK*mK,tasK=gv('tasq')*20,tasP=tasK*mK;
-  var welC=isZ?23.0:8.5,welK=gv('welq')*welC,welP=welK*mK;
+  var welC=isZ?38.59:8.5,welK=gv('welq')*welC,welP=welK*mK;
   se('folk',f(folK));se('folp',f(folP));se('task',f(tasK));se('tasp',f(tasP));se('welk',f(welK));se('welp',f(welP));
   var anoK=gv('anoq')*gv('anop'),anoP=anoK*mK,kabK=gv('kabq')*20,kabP=kabK*mK;
   se('anok',f(anoK));se('anop2',f(anoP));se('kabk',f(kabK));se('kabp',f(kabP));
@@ -1945,7 +1976,7 @@ function r(){
   var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
   var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
-  var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
+  var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('drzsauna')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
   se('prmk',f(prmK));se('prmp',f(prmP));se('sm4',f(prmP));
   var piecK=(typ!=='I')?(gv('piec')+gv('kamd')*50+gv('kams')*130+gv('osl')):0;
   var p3cena=parseFloat((document.getElementById('pr3m')?.value||'660|350').split('|')[0])||660;
@@ -2025,7 +2056,7 @@ function r(){
     // Section 4 - wyposażenie premium
     zawq:gv('zawq'),klamka:selTxt('klm'),klamkaVal:gv('klm'),klmq:gv('klmq')||1,
     drzwi:selTxt('drz'),drzwiVal:gv('drz'),
-    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selVal('drzwz'),
+    scd:selVal('scd'),scdTxt:selTxt('scd'),drzwz:selVal('drzwz'),drzsauna:selVal('drzsauna'),drzsaunaTxt:selTxt('drzsauna'),
     // Section 5 - ogrzewanie
     piec:{name:(document.getElementById('psel')&&document.getElementById('psel').value==='-1'&&document.getElementById('piec-name')&&document.getElementById('piec-name').value.trim())?document.getElementById('piec-name').value.trim():selTxt('psel'),cena:gv('piec'),eur:parseFloat(document.getElementById('psel')?.selectedOptions[0]?.dataset?.eur)||0},
     kamd:gv('kamd'),kams:gv('kams'),osl:gv('osl'),
@@ -2246,8 +2277,11 @@ function buildVariantHTML(s,vkey){
   // Wykończenie zewnętrzne [Z]
   if(s.isZ){
     vsec(LANG==='EN'?'Exterior Finishing':'Wykończenie zewnętrzne');
-    var obicieName=s.bzn||(s.obicieZew?(LANG==='EN'?'YES':'TAK'):null);
-    vrowMat(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', obicieName);
+    // Checkbox obicie-zew steruje czy pozycja w ogóle się pokazuje
+    if(s.obicieZew){
+      var obicieName=s.bzn||(LANG==='EN'?'YES':'TAK');
+      vrowMat(LANG==='EN'?'Exterior cladding':'Obicie zewnętrzne', obicieName);
+    }
     vrowYN(LANG==='EN'?'Structure BSH 100x100':'Konstrukcja BSH 100x100', (s.bshq||0)>0);
     vrowYN(LANG==='EN'?'XPS insulation':'Płyta XPS', (s.styq||0)>0);
     vrowYN(LANG==='EN'?'Ground protection':'Zabezpieczenie spodu', (s.plyq||0)>0);
@@ -2752,6 +2786,8 @@ function loadToCalc(s){
       if(!found&&s.piec.cena>0)for(var i=0;i<pselEl.options.length;i++){if(Math.abs(parseFloat(pselEl.options[i].value)-s.piec.cena)<1){pselEl.selectedIndex=i;break;}}
       if(typeof onPS==='function')onPS();
     }
+    // Drzwi do sauny (po nazwie, bo DOORS_LIST ładowany async)
+    if(s.drzsaunaTxt){var dsEl=document.getElementById('drzsauna');if(dsEl){for(var di=0;di<dsEl.options.length;di++){if(dsEl.options[di].textContent.indexOf(s.drzsaunaTxt.replace(/\s*\([^)]*\)/,'').trim())>=0){dsEl.selectedIndex=di;break;}}}}
     // Promienniki
     if(s.pr3m){var e=document.getElementById('pr3m');if(e)e.value=s.pr3m;}
     if(s.pr5m){var e=document.getElementById('pr5m');if(e)e.value=s.pr5m;}
@@ -2884,7 +2920,7 @@ function buildOrder(){
     if(s.isZ&&s.bshq>0)add('Konstrukcja','BSH 100x100',s.bshq,'mb',36.25);
     if(s.folq>0)add('Izolacja','Folia paraizolacyjna',s.folq,'rolki',4);
     if(s.tasq>0)add('Izolacja','Tasma do folii para',s.tasq,'szt.',20);
-    if(s.welq>0)add('Izolacja','Welna '+(s.isZ?'100mm':'40mm'),s.welq,'m2',s.isZ?23:8.5);
+    if(s.welq>0)add('Izolacja',s.isZ?'Wełna skalna RockWool 100mm':'Wełna mineralna AKUPŁYTA 50mm',s.welq,'m2',s.isZ?38.59:8.5);
     if(s.anoq>0)add('Wentylacja','Anemostat',s.anoq,'szt.',s.anop);
     if(s.kabq>0)add('Instalacja','Kabel do pieca',s.kabq,'mb',20);
     if(s.isZ){if(s.dachq>0)add('Dach','Material dachowy',s.dachq,'m2',60);if(s.rynq>0)add('Dach','Rynny',s.rynq,'kpl.',1322);if(s.podq>0)add('Podloga','Podloga zewnetrzna',s.podq,'m2',140);if(s.plyq>0)add('Fundament','Plyta betonowa',s.plyq,'szt.',221.65);if(s.styq>0)add('Fundament','Styrodur 100mm XPS',s.styq,'m2',49.4);}
@@ -3150,12 +3186,14 @@ var BOAZ_EXT=[];
 var PODL_EXT=[];
 var AUDIO_LIST=[];
 var AUDIO_BT_LIST=[];
+var DOORS_LIST=[];
 
 function loadPricesExt(){
   try{var be=localStorage.getItem('abm_boaz_ext');BOAZ_EXT=be?JSON.parse(be):[];}catch(e){BOAZ_EXT=[];}
   try{var pe=localStorage.getItem('abm_podl_ext');PODL_EXT=pe?JSON.parse(pe):[];}catch(e){PODL_EXT=[];}
   try{var au=localStorage.getItem('abm_audio');AUDIO_LIST=au?JSON.parse(au):[];}catch(e){AUDIO_LIST=[];}
   try{var bt=localStorage.getItem('abm_audio_bt');AUDIO_BT_LIST=bt?JSON.parse(bt):[];}catch(e){AUDIO_BT_LIST=[];}
+  try{var dr=localStorage.getItem('abm_doors');DOORS_LIST=dr?JSON.parse(dr):[];}catch(e){DOORS_LIST=[];}
 }
 
 function buildPriceTables(){
@@ -3166,10 +3204,12 @@ function buildPriceTables(){
   renderPriceTable('price-konstr',KONSTR,'konstr');
   renderPriceTable('price-audio',AUDIO_LIST,'audio');
   renderPriceTable('price-audio-bt',AUDIO_BT_LIST,'audio-bt');
+  renderPriceTable('price-doors',DOORS_LIST,'doors');
   var ce=document.getElementById('count-boaz-ext');if(ce)ce.textContent=BOAZ_EXT.length>0?BOAZ_EXT.length+' pozycji':'';
   var cb=document.getElementById('count-boaz');if(cb)cb.textContent=BOAZ.length+' pozycji';
   var caudio=document.getElementById('count-audio');if(caudio)caudio.textContent=AUDIO_LIST.length>0?AUDIO_LIST.length+' pozycji':'';
   var cbt=document.getElementById('count-audio-bt');if(cbt)cbt.textContent=AUDIO_BT_LIST.length>0?AUDIO_BT_LIST.length+' pozycji':'';
+  var cdr=document.getElementById('count-doors');if(cdr)cdr.textContent=DOORS_LIST.length>0?DOORS_LIST.length+' pozycji':'';
   var cd=document.getElementById('count-deski');if(cd)cd.textContent=DESKI.length+' pozycji';
   var ck=document.getElementById('count-konstr');if(ck)ck.textContent=KONSTR.length+' pozycji';
 }
@@ -3225,7 +3265,7 @@ function updateMaterialName(el){
   var key=el.dataset.key, idx=parseInt(el.dataset.idx);
   var newName=el.value.trim();
   if(!newName) return;
-  var arr=key==='boaz'?BOAZ:key==='deski'?DESKI:key==='konstr'?KONSTR:key==='boaz-ext'?BOAZ_EXT:key==='podl-ext'?PODL_EXT:key==='audio'?AUDIO_LIST:key==='audio-bt'?AUDIO_BT_LIST:null;
+  var arr=key==='boaz'?BOAZ:key==='deski'?DESKI:key==='konstr'?KONSTR:key==='boaz-ext'?BOAZ_EXT:key==='podl-ext'?PODL_EXT:key==='audio'?AUDIO_LIST:key==='audio-bt'?AUDIO_BT_LIST:key==='doors'?DOORS_LIST:null;
   if(arr&&arr[idx]){
     arr[idx].n=newName;
     savePricesQuiet();
@@ -3250,7 +3290,7 @@ function toggleAddPieceRow(){
   // Hide group field for audio/bt (only name + price needed)
   var grpEl=document.getElementById('add-group');
   var grpWrap=grpEl?grpEl.closest('div'):null;
-  var noGroup=(cat==='audio'||cat==='bt');
+  var noGroup=(cat==='audio'||cat==='bt'||cat==='doors');
   if(grpWrap)grpWrap.style.display=noGroup?'none':'';
   var grpSub=grpEl?grpEl.previousElementSibling:null;
   if(grpSub){
@@ -3358,6 +3398,16 @@ function addMaterial(){
     return;
   }
 
+  if(cat==='doors'){
+    if(price<=0){alert('Wpisz cenę większą od 0.');return;}
+    DOORS_LIST.push({n:name,p:price});
+    savePricesQuiet();
+    alert('Dodano drzwi: '+name);
+    document.getElementById('add-name').value='';document.getElementById('add-price').value='0';
+    buildPriceTables();
+    return;
+  }
+
   if(cat==='piece'){
     var grpP=document.getElementById('add-group2').value.trim()||grp||'Inne';
     var eurP=parseFloat(document.getElementById('add-eur').value)||0;
@@ -3401,7 +3451,13 @@ function deleteMaterial(key,idx){
   else if(key==='boaz-ext')BOAZ_EXT.splice(idx,1);
   else if(key==='deski')DESKI.splice(idx,1);
   else if(key==='konstr')KONSTR.splice(idx,1);
+  else if(key==='podl-ext')PODL_EXT.splice(idx,1);
+  else if(key==='audio')AUDIO_LIST.splice(idx,1);
+  else if(key==='audio-bt')AUDIO_BT_LIST.splice(idx,1);
+  else if(key==='doors')DOORS_LIST.splice(idx,1);
   buildPriceTables();
+  if(typeof mkSelDoors==='function')mkSelDoors();
+  if(typeof mkSelAudio==='function')mkSelAudio();
   savePricesQuiet();
   if(typeof syncSavePrices==='function') syncSavePrices();
 }
@@ -3537,9 +3593,10 @@ function savePricesQuiet(){
     localStorage.setItem('abm_konstr',JSON.stringify(KONSTR));
     localStorage.setItem('abm_audio',JSON.stringify(AUDIO_LIST));
     localStorage.setItem('abm_audio_bt',JSON.stringify(AUDIO_BT_LIST));
+    localStorage.setItem('abm_doors',JSON.stringify(DOORS_LIST));
     syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();mkSelPodlExt();mkSelAudio();
+    mkSelBZ();mkSelPodlExt();mkSelAudio();mkSelDoors();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
   }catch(e){}
@@ -3859,7 +3916,7 @@ function buildActual(reload){
     if(s.isZ && s.bshq > 0) add('Konstrukcja', 'BSH 100x100', s.bshq, 'mb', 36.25, 'bsh');
     if(s.folq > 0) add('Izolacja', 'Folia paraizolacyjna', s.folq, 'rolek', 4, 'fol');
     if(s.tasq > 0) add('Izolacja', 'Taśma do folii para', s.tasq, 'szt.', 20, 'tas');
-    if(s.welq > 0) add('Izolacja', 'Wełna '+(s.isZ?'100mm':'40mm'), s.welq, 'm²', s.isZ?23:8.5, 'wel');
+    if(s.welq > 0) add('Izolacja', s.isZ?'Wełna skalna RockWool 100mm':'Wełna mineralna AKUPŁYTA 50mm', s.welq, 'm²', s.isZ?38.59:8.5, 'wel');
     if(s.anoq > 0) add('Wentylacja', 'Anemostat', s.anoq, 'szt.', s.anop, 'ano');
     if(s.kabq > 0) add('Instalacja', 'Kabel do pieca', s.kabq, 'mb', 20, 'kab');
     if(s.isZ){
@@ -5037,7 +5094,8 @@ function applyDimCalc(){
 
     // PŁYTY OSB 1250×2500 (na dach): powierzchnia dachu / 3.125m², w górę
     sv2('osbq',Math.ceil(roofM2/plateM2));
-    var osbnEl=document.getElementById('osbn');if(osbnEl&&!osbnEl.value)osbnEl.value='OSB3 18mm 1250x2500';
+    var osbnEl=document.getElementById('osbn');if(osbnEl&&!osbnEl.value)osbnEl.value='OSB3 18mm';
+    var osbcEl=document.getElementById('osbcena');if(osbcEl&&(!osbcEl.value||osbcEl.value==='0'))osbcEl.value='90';
   }
 
   // Boazeria wewnętrzna
