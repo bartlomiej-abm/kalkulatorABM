@@ -477,20 +477,20 @@ var CLICKUP_FN_URL = SUPA_URL + '/functions/v1/send-to-clickup';
 // Zbierz wszystkie materiały z niezerowymi ilościami
 function collectMaterials(){
   var items=[];
-  // Wyodrębnia czytelny rdzeń nazwy materiału z opcji "[Dostawca] Nazwa — cena zł | grupa"
   function coreName(id){
     var el=document.getElementById(id);
     if(!el||!el.options||el.selectedIndex<0) return '';
     var opt=el.options[el.selectedIndex];
-    // Jeśli wartość opcji to 0/pusta = "Bez..." → brak materiału
-    if(!opt || parseFloat(opt.value)===0 || opt.value==='0' || opt.value==='') return '';
+    if(!opt) return '';
+    var v=String(opt.value||'');
+    if(v===''||v==='0'||/^0(\||$)/.test(v)) return '';
     var txt=opt.textContent||'';
     txt=txt
-      .replace(/\[[^\]]*\]/g,'')                       // [Dostawca]
-      .replace(/[—–-]\s*[\d.,]+\s*(z[łl]?|\/mb|\/m).*$/i,'') // — 39.99 zł / — 41,90/mb (do końca)
-      .replace(/\(([^)]*)\)/g,function(m,p1){return /k?w\b/i.test(p1)?'('+p1+')':'';}) // usuń (cena), zostaw (kW)
-      .replace(/\|.*$/,'')                              // | grupa
-      .replace(/▸.*$/,'')                                // ▸ nagłówek
+      .replace(/\[[^\]]*\]/g,'')
+      .replace(/[—–-]\s*[\d.,]+\s*(z[łl]?|\/mb|\/m).*$/i,'')
+      .replace(/\(([^)]*)\)/g,function(m,p1){return /k?w\b/i.test(p1)?'('+p1+')':'';})
+      .replace(/\|.*$/,'')
+      .replace(/▸.*$/,'')
       .replace(/\s+/g,' ')
       .trim();
     if(!txt || /wybierz|^bez\b/i.test(txt)) return '';
@@ -498,67 +498,122 @@ function collectMaterials(){
   }
   function qv(id){var e=document.getElementById(id);return e?(parseFloat(e.value)||0):0;}
 
-  // Pozycje WSPÓLNE (wewnętrzne + zewnętrzne). Format: [qtyId, selectId|null, etykieta, jednostka]
-  var common=[
-    ['b1q','b1m','Boazeria wewnętrzna','szt'],
-    ['b2q','b2m','Boazeria wewnętrzna','szt'],
-    ['zb1q','zb1m','Boazeria sufit','szt'],
-    ['l1q','l1m','Deski ławkowe','szt'],
-    ['l2q','l2m','Deski ławkowe','szt'],
-    ['k1q','k1m','Drewno konstrukcyjne','szt'],
-    ['k2q','k2m','Drewno konstrukcyjne','szt'],
-    ['bshq',null,'Konstrukcja BSH 100x100','szt'],
-    ['panoq',null,'Szyba panoramiczna','m²'],
-    ['epdmq',null,'Membrana EPDM','m²']
-  ];
-  // Pozycje TYLKO dla sauny ZEWNĘTRZNEJ [Z]
-  var extOnly=[
-    ['bzq','bz-sel','Obicie zewnętrzne','szt'],
-    ['podq','podl-ext-sel','Deski podłogowe','m²'],
-    ['dachq',null,'Dach','m²'],
-    ['obrbq',null,'Obróbki blacharskie','ark.'],
-    ['rynq',null,'Rynny','kpl'],
-    ['plyq',null,'Płyty betonowe','szt'],
-    ['styq',null,'Styrodur','m²'],
-    ['osbq',null,'Płyty OSB','szt'],
-    ['skrzq',null,'Skrzynka elektryczna','szt']
-  ];
-  var map = isZ ? common.concat(extOnly) : common;
-
-  map.forEach(function(row){
-    var qty=qv(row[0]);
-    if(qty<=0) return;
-    var label=row[2];
-    if(row[1]){
-      var nm=coreName(row[1]);
-      if(nm){ label+=': '+nm; }
-      else { label+=' ⚠(uzupełnij materiał)'; }
+  // Bufor grupy: zbieramy pozycje, nagłówek dodajemy tylko gdy grupa niepusta
+  var grp=[];
+  function push(label,nm,qty,unit){
+    var t=label;
+    if(nm) t+=': '+nm;
+    if(qty!==null&&qty!==undefined) t+=' — '+qty+' '+unit;
+    grp.push(t);
+  }
+  function flush(title){
+    if(grp.length>0){
+      items.push('▬ '+title.toUpperCase()+' ▬');
+      grp.forEach(function(x){items.push(x);});
+      grp=[];
     }
-    items.push(label+' — '+qty+' '+row[3]);
-  });
+  }
 
-  // PIEC: model w psel
+  // ===== DREWNO =====
+  [['b1q','b1m','Boazeria wewnętrzna','szt'],
+   ['b2q','b2m','Boazeria wewnętrzna','szt'],
+   ['zb1q','zb1m','Boazeria sufit','szt'],
+   ['l1q','l1m','Deski ławkowe','szt'],
+   ['l2q','l2m','Deski ławkowe','szt'],
+   ['k1q','k1m','Drewno konstrukcyjne','szt'],
+   ['k2q','k2m','Drewno konstrukcyjne','szt']
+  ].forEach(function(r){
+    var q=qv(r[0]); if(q<=0) return;
+    var nm=coreName(r[1]);
+    push(r[2], nm||'⚠(uzupełnij materiał)', q, r[3]);
+  });
+  if(isZ){
+    var bzQ=qv('bzq');
+    if(bzQ>0) push('Obicie zewnętrzne', coreName('bz-sel')||'⚠(uzupełnij materiał)', bzQ, 'szt');
+    var podQ=qv('podq');
+    if(podQ>0) push('Deski podłogowe', coreName('podl-ext-sel')||'⚠(uzupełnij materiał)', podQ, 'm²');
+    var bsh=qv('bshq'); if(bsh>0) push('Konstrukcja BSH 100x100', null, bsh, 'szt');
+  }
+  flush('Drewno');
+
+  // ===== SZKŁO ===== (tylko typ + ilość)
+  var szkM=qv('szkm');
+  if(szkM>0){
+    var szkNm=coreName('szkt');
+    push('Szkło', szkNm||null, szkM, 'm²');
+  }
+  var pano=qv('panoq'); if(pano>0) push('Szyba panoramiczna', null, pano, 'm²');
+  flush('Szkło');
+
+  // ===== OKUCIA =====
+  var zaw=qv('zawq'); if(zaw>0) push('Zawiasy', null, zaw, 'szt');
+  var klmNm=coreName('klm'); var klmQ=qv('klmq');
+  if(klmNm&&klmQ>0) push('Klamka / antaba', klmNm, klmQ, 'szt');
+  var drNm=coreName('drzsauna'); if(drNm) push('Drzwi do sauny', drNm, 1, 'szt');
+  if(isZ){ var drzwzNm=coreName('drzwz'); if(drzwzNm) push('Drzwi wejściowe zewnętrzne', drzwzNm, 1, 'szt'); }
+  var scdNm=coreName('scd'); if(scdNm) push('Ściana dekoracyjna', scdNm, 1, 'szt');
+  flush('Okucia i drzwi');
+
+  // ===== PIEC I STEROWANIE =====
   var piecNm=coreName('psel');
   if(!piecNm){ var pnEl=document.getElementById('piec-name'); if(pnEl&&pnEl.value.trim()) piecNm=pnEl.value.trim(); }
-  if(piecNm) items.push('Piec: '+piecNm+' — 1 szt');
-  // STEROWNIK
-  var sterNm=coreName('ster');
-  if(sterNm) items.push('Sterownik: '+sterNm+' — 1 szt');
-  // LED taśma
+  if(piecNm) push('Piec', piecNm, 1, 'szt');
+  var sterNm=coreName('ster'); if(sterNm) push('Sterownik', sterNm, 1, 'szt');
+  var sterSer=coreName('ster-ser');
+  if(sterSer&&!sterNm) push('Sterownik (seria)', sterSer, 1, 'szt');
+  [['pr3m','pr3','Promiennik 350W'],
+   ['pr5m','pr5','Promiennik 500W'],
+   ['pr7m','pr7','Promiennik 750W']
+  ].forEach(function(r){
+    var q=qv(r[1]); if(q<=0) return;
+    push(r[2], coreName(r[0]), q, 'szt');
+  });
+  flush('Piec i sterowanie');
+
+  // ===== OŚWIETLENIE =====
   var ledNm=coreName('ledt');
   if(ledNm){
     var ledLen=qv('ledq');
-    items.push('Oświetlenie LED: '+ledNm+(ledLen>0?' — '+ledLen+' mb':''));
+    var barwa=coreName('led-barwa');
+    push('Taśma LED'+(barwa?' ('+barwa+')':''), ledNm, ledLen>0?ledLen:null, 'mb');
   }
-  // Głośniki
+  var zastNm=coreName('zast'); var zastQ=qv('zastq');
+  if(zastNm&&zastQ>0) push('Zasilacz LED', zastNm, zastQ, 'szt');
+  var lstNm=coreName('lstt'); if(lstNm) push('Sterownik LED', lstNm, 1, 'szt');
+  flush('Oświetlenie');
+
+  // ===== AUDIO =====
   var audNm=coreName('audt'); var audQ=qv('audtq');
-  if(audNm&&audQ>0) items.push('Głośniki: '+audNm+' — '+audQ+' szt');
-  // Moduł BT
+  if(audNm&&audQ>0) push('Głośniki', audNm, audQ, 'szt');
   var btNm=coreName('btkt'); var btQ=qv('btktq');
-  if(btNm&&btQ>0) items.push('Moduł BT: '+btNm+' — '+btQ+' szt');
-  // Drzwi do sauny
-  var drNm=coreName('drzsauna');
-  if(drNm) items.push('Drzwi do sauny: '+drNm+' — 1 szt');
+  if(btNm&&btQ>0) push('Moduł BT', btNm, btQ, 'szt');
+  flush('Audio');
+
+  // ===== IZOLACJA =====
+  var wel=qv('welq');
+  if(wel>0) push(isZ?'Wełna skalna RockWool 100mm':'Wełna mineralna AKUPŁYTA 50mm', null, wel, 'm²');
+  flush('Izolacja');
+
+  // ===== DACH I FUNDAMENT [Z] =====
+  if(isZ){
+    var dach=qv('dachq'); if(dach>0) push('Dach', null, dach, 'm²');
+    var obrb=qv('obrbq'); if(obrb>0) push('Obróbki blacharskie', null, obrb, 'ark.');
+    var ryn=qv('rynq'); if(ryn>0) push('Rynny', null, ryn, 'kpl');
+    var epdm=qv('epdmq'); if(epdm>0) push('Membrana EPDM', null, epdm, 'm²');
+    var osbQ=qv('osbq');
+    if(osbQ>0){
+      var osbN=(document.getElementById('osbn')||{}).value||'';
+      push('Płyty OSB'+(osbN?' '+osbN.trim():''), null, osbQ, 'szt');
+    }
+    var ply=qv('plyq'); if(ply>0) push('Płyty betonowe', null, ply, 'szt');
+    var sty=qv('styq'); if(sty>0) push('Styrodur', null, sty, 'm²');
+    flush('Dach i fundament');
+
+    // ===== ELEKTRYKA [Z] =====
+    var skrz=qv('skrzq'); if(skrz>0) push('Skrzynka elektryczna', null, skrz, 'szt');
+    flush('Elektryka');
+  }
+
   return items;
 }
 
