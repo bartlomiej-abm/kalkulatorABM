@@ -477,68 +477,87 @@ var CLICKUP_FN_URL = SUPA_URL + '/functions/v1/send-to-clickup';
 // Zbierz wszystkie materiały z niezerowymi ilościami
 function collectMaterials(){
   var items=[];
-  function selName(id){
+  // Wyodrębnia czytelny rdzeń nazwy materiału z opcji "[Dostawca] Nazwa — cena zł | grupa"
+  function coreName(id){
     var el=document.getElementById(id);
     if(!el||!el.options||el.selectedIndex<0) return '';
-    var txt=el.options[el.selectedIndex].textContent||'';
-    txt=txt.replace(/\s*\([^)]*\)\s*$/,'').replace(/\s*\|.*$/,'').trim();
-    if(!txt||txt.indexOf('—')>=0||txt.toLowerCase().indexOf('wybierz')>=0||txt.toLowerCase().indexOf('bez ')>=0) return '';
+    var opt=el.options[el.selectedIndex];
+    // Jeśli wartość opcji to 0/pusta = "Bez..." → brak materiału
+    if(!opt || parseFloat(opt.value)===0 || opt.value==='0' || opt.value==='') return '';
+    var txt=opt.textContent||'';
+    txt=txt
+      .replace(/\[[^\]]*\]/g,'')                       // [Dostawca]
+      .replace(/[—–-]\s*[\d.,]+\s*(z[łl]?|\/mb|\/m).*$/i,'') // — 39.99 zł / — 41,90/mb (do końca)
+      .replace(/\(([^)]*)\)/g,function(m,p1){return /k?w\b/i.test(p1)?'('+p1+')':'';}) // usuń (cena), zostaw (kW)
+      .replace(/\|.*$/,'')                              // | grupa
+      .replace(/▸.*$/,'')                                // ▸ nagłówek
+      .replace(/\s+/g,' ')
+      .trim();
+    if(!txt || /wybierz|^bez\b/i.test(txt)) return '';
     return txt;
   }
   function qv(id){var e=document.getElementById(id);return e?(parseFloat(e.value)||0):0;}
-  // [qtyId, selectId|null, etykieta, jednostka]
-  var map=[
+
+  // Pozycje WSPÓLNE (wewnętrzne + zewnętrzne). Format: [qtyId, selectId|null, etykieta, jednostka]
+  var common=[
     ['b1q','b1m','Boazeria wewnętrzna','szt'],
     ['b2q','b2m','Boazeria wewnętrzna','szt'],
     ['zb1q','zb1m','Boazeria sufit','szt'],
-    ['bzq','bz-sel','Obicie zewnętrzne','szt'],
     ['l1q','l1m','Deski ławkowe','szt'],
     ['l2q','l2m','Deski ławkowe','szt'],
-    ['podq','podl-ext-sel','Deski podłogowe','szt'],
     ['k1q','k1m','Drewno konstrukcyjne','szt'],
     ['k2q','k2m','Drewno konstrukcyjne','szt'],
     ['bshq',null,'Konstrukcja BSH 100x100','szt'],
     ['panoq',null,'Szyba panoramiczna','m²'],
+    ['epdmq',null,'Membrana EPDM','m²']
+  ];
+  // Pozycje TYLKO dla sauny ZEWNĘTRZNEJ [Z]
+  var extOnly=[
+    ['bzq','bz-sel','Obicie zewnętrzne','szt'],
+    ['podq','podl-ext-sel','Deski podłogowe','m²'],
     ['dachq',null,'Dach','m²'],
     ['obrbq',null,'Obróbki blacharskie','ark.'],
     ['rynq',null,'Rynny','kpl'],
     ['plyq',null,'Płyty betonowe','szt'],
     ['styq',null,'Styrodur','m²'],
     ['osbq',null,'Płyty OSB','szt'],
-    ['epdmq',null,'Membrana EPDM','szt'],
-    ['skrzq',null,'Skrzynia/paleta','szt']
+    ['skrzq',null,'Skrzynka elektryczna','szt']
   ];
+  var map = isZ ? common.concat(extOnly) : common;
+
   map.forEach(function(row){
     var qty=qv(row[0]);
     if(qty<=0) return;
     var label=row[2];
     if(row[1]){
-      var nm=selName(row[1]);
+      var nm=coreName(row[1]);
       if(nm){ label+=': '+nm; }
       else { label+=' ⚠(uzupełnij materiał)'; }
     }
     items.push(label+' — '+qty+' '+row[3]);
   });
-  // PIEC: model w psel, ilość zawsze 1 gdy wybrany
-  var piecNm=selName('psel');
+
+  // PIEC: model w psel
+  var piecNm=coreName('psel');
   if(!piecNm){ var pnEl=document.getElementById('piec-name'); if(pnEl&&pnEl.value.trim()) piecNm=pnEl.value.trim(); }
   if(piecNm) items.push('Piec: '+piecNm+' — 1 szt');
-  // STEROWNIK: select ster
-  var sterNm=selName('ster');
+  // STEROWNIK
+  var sterNm=coreName('ster');
   if(sterNm) items.push('Sterownik: '+sterNm+' — 1 szt');
-  // LED: taśma ledt + ilość m (ledm jeśli jest)
-  var ledNm=selName('ledt');
+  // LED taśma
+  var ledNm=coreName('ledt');
   if(ledNm){
-    var ledLen=qv('ledm')||qv('ledq');
-    items.push('Oświetlenie LED: '+ledNm+(ledLen>0?' — '+ledLen+' m':''));
+    var ledLen=qv('ledq');
+    items.push('Oświetlenie LED: '+ledNm+(ledLen>0?' — '+ledLen+' mb':''));
   }
-  // AUDIO
-  var audNm=selName('audt'); var audQ=qv('audtq');
+  // Głośniki
+  var audNm=coreName('audt'); var audQ=qv('audtq');
   if(audNm&&audQ>0) items.push('Głośniki: '+audNm+' — '+audQ+' szt');
-  var btNm=selName('btkt'); var btQ=qv('btktq');
+  // Moduł BT
+  var btNm=coreName('btkt'); var btQ=qv('btktq');
   if(btNm&&btQ>0) items.push('Moduł BT: '+btNm+' — '+btQ+' szt');
   // Drzwi do sauny
-  var drNm=selName('drzsauna');
+  var drNm=coreName('drzsauna');
   if(drNm) items.push('Drzwi do sauny: '+drNm+' — 1 szt');
   return items;
 }
