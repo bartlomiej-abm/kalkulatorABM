@@ -497,21 +497,13 @@ function collectMaterials(){
     return txt;
   }
   function qv(id){var e=document.getElementById(id);return e?(parseFloat(e.value)||0):0;}
+  function ckv(id){var e=document.getElementById(id);return e?!!e.checked:false;}
 
-  // Bufor grupy: zbieramy pozycje, nagłówek dodajemy tylko gdy grupa niepusta
-  var grp=[];
   function push(label,nm,qty,unit){
     var t=label;
     if(nm) t+=': '+nm;
     if(qty!==null&&qty!==undefined) t+=' — '+qty+' '+unit;
-    grp.push(t);
-  }
-  function flush(title){
-    if(grp.length>0){
-      items.push('▬ '+title.toUpperCase()+' ▬');
-      grp.forEach(function(x){items.push(x);});
-      grp=[];
-    }
+    items.push(t);
   }
 
   // ===== DREWNO =====
@@ -524,8 +516,7 @@ function collectMaterials(){
    ['k2q','k2m','Drewno konstrukcyjne','szt']
   ].forEach(function(r){
     var q=qv(r[0]); if(q<=0) return;
-    var nm=coreName(r[1]);
-    push(r[2], nm||'⚠(uzupełnij materiał)', q, r[3]);
+    push(r[2], coreName(r[1])||'⚠(uzupełnij materiał)', q, r[3]);
   });
   if(isZ){
     var bzQ=qv('bzq');
@@ -534,33 +525,39 @@ function collectMaterials(){
     if(podQ>0) push('Deski podłogowe', coreName('podl-ext-sel')||'⚠(uzupełnij materiał)', podQ, 'm²');
     var bsh=qv('bshq'); if(bsh>0) push('Konstrukcja BSH 100x100', null, bsh, 'szt');
   }
-  flush('Drewno');
 
-  // ===== SZKŁO ===== (tylko typ + ilość)
+  // ===== SZKŁO =====
   var szkM=qv('szkm');
-  if(szkM>0){
-    var szkNm=coreName('szkt');
-    push('Szkło', szkNm||null, szkM, 'm²');
-  }
+  if(szkM>0) push('Szkło', coreName('szkt')||null, szkM, 'm²');
   var pano=qv('panoq'); if(pano>0) push('Szyba panoramiczna', null, pano, 'm²');
-  flush('Szkło');
 
-  // ===== OKUCIA =====
+  // ===== OKUCIA I DRZWI =====
   var zaw=qv('zawq'); if(zaw>0) push('Zawiasy', null, zaw, 'szt');
   var klmNm=coreName('klm'); var klmQ=qv('klmq');
   if(klmNm&&klmQ>0) push('Klamka / antaba', klmNm, klmQ, 'szt');
   var drNm=coreName('drzsauna'); if(drNm) push('Drzwi do sauny', drNm, 1, 'szt');
   if(isZ){ var drzwzNm=coreName('drzwz'); if(drzwzNm) push('Drzwi wejściowe zewnętrzne', drzwzNm, 1, 'szt'); }
   var scdNm=coreName('scd'); if(scdNm) push('Ściana dekoracyjna', scdNm, 1, 'szt');
-  flush('Okucia i drzwi');
 
   // ===== PIEC I STEROWANIE =====
   var piecNm=coreName('psel');
   if(!piecNm){ var pnEl=document.getElementById('piec-name'); if(pnEl&&pnEl.value.trim()) piecNm=pnEl.value.trim(); }
   if(piecNm) push('Piec', piecNm, 1, 'szt');
+  // Kamienie do pieca
+  var kamD=qv('kamd'); if(kamD>0) push('Kamienie Diabez', null, kamD, 'paczek');
+  var kamS=qv('kams'); if(kamS>0) push('Kamienie szare okrągłe', null, kamS, 'szt');
+  // Sterownik
   var sterNm=coreName('ster'); if(sterNm) push('Sterownik', sterNm, 1, 'szt');
   var sterSer=coreName('ster-ser');
   if(sterSer&&!sterNm) push('Sterownik (seria)', sterSer, 1, 'szt');
+  // Dodatki sterownika (checkboxy)
+  if(ckv('awifi')) push('Moduł WiFi XX-W', null, 1, 'szt');
+  if(ckv('abt')) push('Moduł Bluetooth XX-B', null, 1, 'szt');
+  if(ckv('asty')) push('Cichy stycznik X1/X2', null, 1, 'szt');
+  if(ckv('asty3')) push('Cichy stycznik X3', null, 1, 'szt');
+  if(ckv('aaw')) push('Awaryjne wyłączenie', null, 1, 'szt');
+  if(ckv('apbez')) push('Przycisk bezpieczeństwa', null, 1, 'szt');
+  // Promienniki
   [['pr3m','pr3','Promiennik 350W'],
    ['pr5m','pr5','Promiennik 500W'],
    ['pr7m','pr7','Promiennik 750W']
@@ -568,7 +565,6 @@ function collectMaterials(){
     var q=qv(r[1]); if(q<=0) return;
     push(r[2], coreName(r[0]), q, 'szt');
   });
-  flush('Piec i sterowanie');
 
   // ===== OŚWIETLENIE =====
   var ledNm=coreName('ledt');
@@ -580,19 +576,26 @@ function collectMaterials(){
   var zastNm=coreName('zast'); var zastQ=qv('zastq');
   if(zastNm&&zastQ>0) push('Zasilacz LED', zastNm, zastQ, 'szt');
   var lstNm=coreName('lstt'); if(lstNm) push('Sterownik LED', lstNm, 1, 'szt');
-  flush('Oświetlenie');
+
+  // ===== WENTYLACJA =====
+  var anoQ=qv('anoq'); if(anoQ>0) push('Anemostat', null, anoQ, 'szt');
 
   // ===== AUDIO =====
   var audNm=coreName('audt'); var audQ=qv('audtq');
   if(audNm&&audQ>0) push('Głośniki', audNm, audQ, 'szt');
   var btNm=coreName('btkt'); var btQ=qv('btktq');
   if(btNm&&btQ>0) push('Moduł BT', btNm, btQ, 'szt');
-  flush('Audio');
+
+  // ===== AKCESORIA =====
+  if(qv('akc-c')>0) push('Cebrzyk i chochla', null, 1, 'kpl');
+  if(qv('klep-c')>0) push('Klepsydra', null, 1, 'szt');
+  if(qv('arom-c')>0) push('Aromaterapia', null, 1, 'kpl');
+  if(qv('prysz-c')>0) push('Prysznic', null, 1, 'kpl');
+  if(qv('sol-c')>0) push('Ściana solna', null, 1, 'kpl');
 
   // ===== IZOLACJA =====
   var wel=qv('welq');
   if(wel>0) push(isZ?'Wełna skalna RockWool 100mm':'Wełna mineralna AKUPŁYTA 50mm', null, wel, 'm²');
-  flush('Izolacja');
 
   // ===== DACH I FUNDAMENT [Z] =====
   if(isZ){
@@ -607,11 +610,8 @@ function collectMaterials(){
     }
     var ply=qv('plyq'); if(ply>0) push('Płyty betonowe', null, ply, 'szt');
     var sty=qv('styq'); if(sty>0) push('Styrodur', null, sty, 'm²');
-    flush('Dach i fundament');
 
-    // ===== ELEKTRYKA [Z] =====
     var skrz=qv('skrzq'); if(skrz>0) push('Skrzynka elektryczna', null, skrz, 'szt');
-    flush('Elektryka');
   }
 
   return items;
