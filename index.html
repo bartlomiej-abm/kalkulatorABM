@@ -2518,14 +2518,19 @@ function loadStateToCalc(s){ return loadToCalc(s); } function _loadStateToCalcOL
   // Sterownik
   sv('ster-val',s.sterVal||0);
   // Restore sterownik model dropdown
-  if(s.sterModel!==undefined&&s.sterSer!==undefined){
+  if(s.sterSer!==undefined||s.sterModel!==undefined){
+    // 1) Najpierw SERIA (Z / Cmini / C)
+    var sterSerEl=document.getElementById('ster-ser');
+    if(sterSerEl&&s.sterSer){sterSerEl.value=s.sterSer;}
+    // 2) Potem MODEL — opcje mają format "01|cenaZ|cenaCmini|cenaC", więc dopasuj po 1. segmencie
     var sterEl=document.getElementById('ster');
-    if(sterEl){
-      var sterTarget=s.sterSer+'|'+s.sterModel;
+    if(sterEl&&s.sterModel&&s.sterModel!=='0'){
       for(var i=0;i<sterEl.options.length;i++){
-        if(sterEl.options[i].value===sterTarget){sterEl.selectedIndex=i;break;}
+        if(String(sterEl.options[i].value).split('|')[0]===String(s.sterModel)){sterEl.selectedIndex=i;break;}
       }
     }
+    // 3) Przelicz cenę wg wybranej serii
+    if(typeof onSterModel==='function')onSterModel();
   }
   sc('awifi',s.wifi);sc('abt',s.bt);sc('asty',s.sty);sc('asty3',s.sty3);sc('aaw',s.aw);sc('apbez',s.pbez);
   sc('acpir-g2',s.cpirG2);sc('acpir-g4',s.cpirG4);
@@ -2795,9 +2800,16 @@ function loadToCalc(s){
 
   // Sterownik
   sv('ster-val',s.sterVal||0);
-  if(s.sterModel!==undefined&&s.sterSer!==undefined){
-    var sterEl=document.getElementById('ster');
-    if(sterEl){var sterTarget=s.sterSer+'|'+s.sterModel;for(var i=0;i<sterEl.options.length;i++){if(sterEl.options[i].value===sterTarget){sterEl.selectedIndex=i;break;}}}
+  if(s.sterSer!==undefined||s.sterModel!==undefined){
+    var sterSerEl2=document.getElementById('ster-ser');
+    if(sterSerEl2&&s.sterSer){sterSerEl2.value=s.sterSer;}
+    var sterEl2=document.getElementById('ster');
+    if(sterEl2&&s.sterModel&&s.sterModel!=='0'){
+      for(var i=0;i<sterEl2.options.length;i++){
+        if(String(sterEl2.options[i].value).split('|')[0]===String(s.sterModel)){sterEl2.selectedIndex=i;break;}
+      }
+    }
+    if(typeof onSterModel==='function')onSterModel();
   }
   sc('awifi',s.wifi);sc('abt',s.bt);sc('asty',s.sty);sc('asty3',s.sty3);
   sc('aaw',s.aw);sc('apbez',s.pbez);sc('acpir-g2',s.cpirG2);sc('acpir-g4',s.cpirG4);
