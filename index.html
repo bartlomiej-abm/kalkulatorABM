@@ -1967,7 +1967,7 @@ function setWZ(t){
   // gpDach is set above AND in loop - dedupe is fine (same value)
   var wl=document.getElementById('wellb');
   if(wl)wl.textContent=isZ?'[Z] Wełna skalna RockWool 100mm (m2 x 38,59 zl)':'[W] Wełna mineralna AKUPŁYTA 50mm (m2 x 8,50 zl)';
-  setVAT(isZ?38.59:8);r();
+  setVAT(isZ?23:8);r();
 }
 
 function setTyp(t){
@@ -3840,8 +3840,14 @@ initLogin();
     var draft=localStorage.getItem('abm_draft');
     if(!draft)return;
     var d=JSON.parse(draft);
-    // Oferuj przywrócenie tylko gdy jest sensowna zawartość (klient lub wymiary)
-    var hasData=d&&(d.klient||(d.wA&&d.wA>0)||(d.b1&&d.b1.q>0));
+    // Oferuj przywrócenie tylko gdy jest sensowna zawartość
+    var hasData=d&&(
+      (d.klient&&d.klient.trim())||
+      (d.netto&&d.netto>0)||
+      (d.b1&&d.b1.q>0)||(d.b2&&d.b2.q>0)||
+      (d.k1&&d.k1.q>0)||(d.l1&&d.l1.q>0)||
+      (d.s1&&d.s1>0)||(d.s2&&d.s2>0)
+    );
     if(!hasData)return;
     var info=d.klient?('"'+d.klient+'"'):'ostatnią wycenę';
     if(confirm('Znaleziono niezapisaną wycenę ('+info+').\n\nPrzywrócić dane sprzed odświeżenia?')){
