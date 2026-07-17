@@ -339,11 +339,17 @@ const SUPA_URL = 'https://uuxnxvzwhvjlcxegtozk.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc';
 let supa = null;
 
-function initSupabase(){
+function initSupabase(_retries){
   try{
-    if(!window.supabase){console.warn('Supabase SDK not loaded');return;}
+    if(!window.supabase){
+      // SDK z CDN mógł się jeszcze nie załadować — spróbuj ponownie do 10x co 500ms
+      _retries=(_retries||0);
+      if(_retries<10){ setTimeout(function(){initSupabase(_retries+1);},500); return; }
+      console.warn('Supabase SDK not loaded po 10 próbach');return;
+    }
     supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     console.log('Supabase connected');
+    if(typeof syncLoad==='function'){try{syncLoad();}catch(e){}}
   }catch(e){
     console.error('Supabase init error:', e);
   }
@@ -2173,6 +2179,10 @@ function r(){
     // NKW
     nkwAuto:!!(document.getElementById('nkw-auto')&&document.getElementById('nkw-auto').checked)
 };
+  // AUTO-ZAPIS ROBOCZY: zabezpiecza dane przed utratą po odświeżeniu strony
+  if(!_loading){
+    try{ localStorage.setItem('abm_draft',JSON.stringify(STATE)); }catch(e){}
+  }
 }
 
 // ===== WIDOK KLIENTA =====
@@ -3047,13 +3057,22 @@ async function saveQuote(){
     hist.unshift(entry);if(hist.length>100)hist=hist.slice(0,100);
     localStorage.setItem('abm_history',JSON.stringify(hist));
   }catch(e){}
-  var cloudResult=await saveQuoteCloud(s);
+  // Zapis do chmury z timeoutem 8s — jeśli chmura nie odpowie, dane i tak są już lokalnie
+  var cloudResult=null;
+  try{
+    cloudResult=await Promise.race([
+      saveQuoteCloud(s),
+      new Promise(function(res){setTimeout(function(){res(null);},8000);})
+    ]);
+  }catch(e){cloudResult=null;}
+  // Wycena zapisana w historii — usuń wersję roboczą
+  try{ localStorage.removeItem('abm_draft'); }catch(e){}
   if(cloudResult){
     showSyncStatus('cloud','Zapisano w chmurze: '+s.klient);
-    alert('Zapisano w chmurze: '+s.klient+' — '+f(s.netto)+' netto');
+    alert('✓ Zapisano w chmurze: '+s.klient+' — '+f(s.netto)+' netto');
   }else{
-    var msg='Zapisano lokalnie: '+s.klient+' — '+f(s.netto)+' netto (brak polaczenia z chmura)';
-    alert(msg);
+    showSyncStatus('local','Zapisano lokalnie (bez chmury)');
+    alert('✓ Zapisano lokalnie: '+s.klient+' — '+f(s.netto)+' netto\n\n(Chmura niedostępna — wycena jest w historii na tym urządzeniu. Odśwież stronę i zapisz ponownie, aby wysłać do chmury.)');
   }
 }
 
@@ -3815,6 +3834,25 @@ rebP();r();
 initVslots();
 loadCustomSuppliers();loadSavedPiecePrices();loadSavedPromPrices();
 initLogin();
+// PRZYWRACANIE ROBOCZEJ WYCENY po odświeżeniu/awarii
+(function(){
+  try{
+    var draft=localStorage.getItem('abm_draft');
+    if(!draft)return;
+    var d=JSON.parse(draft);
+    // Oferuj przywrócenie tylko gdy jest sensowna zawartość (klient lub wymiary)
+    var hasData=d&&(d.klient||(d.wA&&d.wA>0)||(d.b1&&d.b1.q>0));
+    if(!hasData)return;
+    var info=d.klient?('"'+d.klient+'"'):'ostatnią wycenę';
+    if(confirm('Znaleziono niezapisaną wycenę ('+info+').\n\nPrzywrócić dane sprzed odświeżenia?')){
+      setTimeout(function(){
+        if(typeof loadToCalc==='function'){loadToCalc(d);showTab('calc');}
+      },300);
+    }else{
+      localStorage.removeItem('abm_draft');
+    }
+  }catch(e){}
+})();
 // Init Supabase
 initSupabase();
 if(supa&&CURRENT_USER){
