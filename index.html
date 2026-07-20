@@ -4927,11 +4927,16 @@ function dimCalc(){
   var ceilRows=Math.ceil(ceilW*10/(coverage||86)); // kept for display only
   var ceilPerRow=0, boazCeiling=0, ceilExtAreaM2=0, ceilExtWidthCm=0;
   if(czones.length===0){
-    // Default: full ceiling = boazeria (LINEAR: deski równolegle do D)
-    // liczba desek = bok A/C (ceilW) / krycie × 1.10; deski biegną wzdłuż D
+    // Default: cały sufit = boazeria. METODA Z ODZYSKIEM MATERIAŁU:
+    // 1) liczba pasów po szerokości = ceilW / krycie × 1.10
+    // 2) każdy pas ma długość ceilL → sumaryczna długość materiału
+    // 3) desek = suma długości / długość deski (w górę) — z jednej deski wychodzi kilka krótszych kawałków
     var covCm=(coverage||86)/10;
-    boazCeiling=Math.ceil(Math.round(ceilW/covCm*1.10*1000)/1000);
-    ceilPerRow=Math.ceil(ceilL/boazLen);
+    var ceilStrips=Math.ceil(Math.round(ceilW/covCm*1.10*1000)/1000);
+    var ceilTotalLenCm=ceilStrips*ceilL;
+    var _bl=Math.min(boazLen,MAX_BOAZ)||210;
+    boazCeiling=Math.ceil(Math.round(ceilTotalLenCm/_bl*1000)/1000);
+    ceilPerRow=Math.ceil(ceilL/_bl);
   } else {
     // Zone-based ceiling
     var boazCeilArea=0, totalCzLen=0;
@@ -4949,13 +4954,15 @@ function dimCalc(){
     // boazCeilArea / ceilW = total length (cm) of boazeria zones along D direction
     var covCm2=(coverage||86)/10;
     var boazCeilLenCm=ceilW>0?boazCeilArea/ceilW:0; // sumaryczna długość stref boaz wzdłuż D
-    // liczba desek = (głębokość ceilW / krycie) × (ile rzędów wzdłuż D = boazCeilLen / board_len)
-    // Deski równolegle do D: liczba pasów po szerokości ceilW, każdy rząd = board_len wzdłuż D
-    var rowsAlongD=Math.ceil(boazCeilLenCm/Math.min(boazLen,MAX_BOAZ));
-    boazCeiling=Math.ceil(Math.round(ceilW/covCm2*1.10*1000)/1000)*Math.max(1,rowsAlongD);
-    ceilPerRow=czones.length>0?'-':Math.ceil(ceilL/boazLen);
+    // METODA Z ODZYSKIEM: pasy po szerokości × łączna długość stref boaz, dzielone przez długość deski
+    var ceilStrips2=Math.ceil(Math.round(ceilW/covCm2*1.10*1000)/1000);
+    var _bl2=Math.min(boazLen,MAX_BOAZ)||210;
+    var ceilTotalLenCm2=ceilStrips2*boazCeilLenCm;
+    boazCeiling=ceilTotalLenCm2>0?Math.ceil(Math.round(ceilTotalLenCm2/_bl2*1000)/1000):0;
+    ceilPerRow='-';
   }
-  var ceilNote=boazMat?('deski równolegle do D, krycie '+coverage+'mm, dł. '+boazLen+'cm'):'—';
+  var _ceilStripsShow=boazMat?Math.ceil(Math.round(ceilW/((coverage||86)/10)*1.10*1000)/1000):0;
+  var ceilNote=boazMat?(_ceilStripsShow+' pasów × dł. sufitu ÷ deska '+Math.min(boazLen,MAX_BOAZ)+'cm (z odzyskiem), krycie '+coverage+'mm'):'—';
 
   var totalBoaz=boazMat?boazWalls+boazCeiling:0;
 
