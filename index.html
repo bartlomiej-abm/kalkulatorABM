@@ -338,6 +338,8 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 const SUPA_URL = 'https://uuxnxvzwhvjlcxegtozk.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc';
 let supa = null;
+// Migawka wersji roboczej pobrana najwcześniej jak się da
+try{ window._draftSnapshot=localStorage.getItem('abm_draft'); }catch(e){}
 
 function initSupabase(_retries){
   try{
@@ -2181,7 +2183,15 @@ function r(){
 };
   // AUTO-ZAPIS ROBOCZY: zabezpiecza dane przed utratą po odświeżeniu strony
   if(!_loading){
-    try{ localStorage.setItem('abm_draft',JSON.stringify(STATE)); }catch(e){}
+    try{
+      var _hasContent=(STATE.klient&&STATE.klient.trim())||
+                      (STATE.netto&&STATE.netto>0)||
+                      (STATE.b1&&STATE.b1.q>0)||(STATE.b2&&STATE.b2.q>0)||
+                      (STATE.k1&&STATE.k1.q>0)||(STATE.l1&&STATE.l1.q>0)||
+                      (STATE.s1&&STATE.s1>0)||(STATE.s2&&STATE.s2>0);
+      // Nie nadpisuj dobrej wersji roboczej pustym stanem (np. tuż po odświeżeniu)
+      if(_hasContent){ localStorage.setItem('abm_draft',JSON.stringify(STATE)); }
+    }catch(e){}
   }
 }
 
@@ -3837,7 +3847,8 @@ initLogin();
 // PRZYWRACANIE ROBOCZEJ WYCENY po odświeżeniu/awarii
 (function(){
   try{
-    var draft=localStorage.getItem('abm_draft');
+    // Odczyt NATYCHMIAST — zanim jakiekolwiek r() zdąży nadpisać wersję roboczą
+    var draft=window._draftSnapshot||localStorage.getItem('abm_draft');
     if(!draft)return;
     var d=JSON.parse(draft);
     // Oferuj przywrócenie tylko gdy jest sensowna zawartość
@@ -3851,9 +3862,24 @@ initLogin();
     if(!hasData)return;
     var info=d.klient?('"'+d.klient+'"'):'ostatnią wycenę';
     if(confirm('Znaleziono niezapisaną wycenę ('+info+').\n\nPrzywrócić dane sprzed odświeżenia?')){
-      setTimeout(function(){
-        if(typeof loadToCalc==='function'){loadToCalc(d);showTab('calc');}
-      },300);
+      // Czekaj aż cenniki (lokalne + z chmury) się załadują, potem wczytaj
+      var _tries=0;
+      (function waitAndLoad(){
+        _tries++;
+        var ready=(typeof loadToCalc==='function') &&
+                  (typeof KONSTR!=='undefined'&&KONSTR&&KONSTR.length>0) &&
+                  (typeof BOAZ!=='undefined'&&BOAZ&&BOAZ.length>0);
+        if(ready||_tries>25){
+          try{
+            loadToCalc(d);
+            if(typeof showTab==='function')showTab('calc');
+            // Dodatkowe przeliczenie po załadowaniu asynchronicznych list
+            setTimeout(function(){if(typeof r==='function')r();},600);
+          }catch(e){console.error('Błąd przywracania wersji roboczej:',e);}
+        }else{
+          setTimeout(waitAndLoad,200);
+        }
+      })();
     }else{
       localStorage.removeItem('abm_draft');
     }
@@ -4634,44 +4660,65 @@ function closeDimCalc(){
 }
 
 function dimGetBoardLen(name){
-  // Format: "14x90x2100", "28x90 2400mm", "15x90 Olcha 2,10m", "15x90 2.10m", "x2400"
-  // 1. Match "x2100" or "x2400" style
-  var m=name.match(/[x\u00d7X](\d{3,4})(?:\s|$)/);
+  // DŁUGOŚĆ deski w cm. Obsługa: "15x120x2100", "15x120mm x 2100mm", "28x90 2400mm",
+  //                              "15x90 Olcha 2,10m", "19x117x2400"
+  var raw=String(name||'');
+  // Wersja znormalizowana: bez "mm", ujednolicone separatory
+  var s=raw.replace(/(\d)\s*mm/gi,'$1').replace(/[×X]/g,'x').replace(/\s*x\s*/g,'x');
+  // 1. Pełny zapis 3-wymiarowy: grubość x szerokość x DŁUGOŚĆ
+  var m=s.match(/\d+x\d+x(\d{3,4})/);
   if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
-  // 2. Match "2400mm" or "2100 mm"
-  m=name.match(/(\d{3,4})\s*mm/i);
-  if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
-  // 3a. Match "x2,13" or "x2.13" (decimal meters after x separator, no 'm' unit)
-  m=name.match(/[x\u00d7X](\d)[,\.](\d{2})(?:\s|$|[^0-9])/);
-  if(m){var l=parseFloat(m[1]+'.'+m[2])*100;if(l>=150&&l<=300)return Math.round(l);}
-  // 3b. Match "2,10m" or "2.10m" or "2,40m"
-  m=name.match(/(\d)[,\.](\d{1,2})\s*m(?:\b|$)/i);
-  if(m){var l=parseFloat(m[1]+'.'+m[2])*100;if(l>=150&&l<=300)return Math.round(l);}
-  // 4. Plain 4-digit number at end: "...2100"
-  m=name.match(/(\d{4})\s*$/);
-  if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
+  // 2. Długość po separatorze x
+  m=s.match(/x(\d{3,4})(?:\s|$)/);
+  if(m){var l2=parseInt(m[1]);if(l2>=1500&&l2<=3000)return Math.round(l2/10);}
+  // 3. "2400mm" w oryginalnej nazwie
+  m=raw.match(/(\d{3,4})\s*mm/i);
+  if(m){var l3=parseInt(m[1]);if(l3>=1500&&l3<=3000)return Math.round(l3/10);}
+  // 4. "2,10m" / "2.40m"
+  m=raw.match(/(\d)[,\.](\d{1,2})\s*m(?:\b|$)/i);
+  if(m){var l4=parseFloat(m[1]+'.'+m[2])*100;if(l4>=150&&l4<=300)return Math.round(l4);}
+  // 5. 4-cyfrowa liczba na końcu
+  m=s.match(/(\d{4})\s*$/);
+  if(m){var l5=parseInt(m[1]);if(l5>=1500&&l5<=3000)return Math.round(l5/10);}
   return 240;
 }
 
 function dimGetCoverage(name){
-  // Extract width from name e.g. "14x96x2100", "19×117×2400", "21×146×2400", "28x90"
-  // Always: coverage = width - 10mm (lap joint)
-  // 1. Width is middle dim: 14x96x2100 or 19×117×2400
-  var m=name.match(/[x×](\d+)[x×]/i);
-  if(m){var w=parseInt(m[1]);return Math.max(w-10,1);}
-  // 2. Width is last dim: 28x90 or 15×90
-  var m2=name.match(/[x×](\d+)(?:\s*(?:mm)?\s*$|\s)/i);
-  if(m2){var w2=parseInt(m2[1]);if(w2>=60&&w2<=300)return Math.max(w2-10,1);}
-  return 86;
+  // ZASADA: krycie = SZEROKOŚĆ deski − 10mm (zakładka na pióro-wpust)
+  // Obsługiwane formaty: "15x120x2100", "15x120mm x 2100mm", "15 x 120 x 2100",
+  //                      "19×117×2400", "28x90 2100mm", "32x142", "15x120 210cm"
+  var s=String(name||'');
+  // Normalizacja: usuń jednostki przylegające do liczb, ujednolić separatory
+  s=s.replace(/(\d)\s*mm/gi,'$1')      // "120mm" → "120"
+     .replace(/[×X]/g,'x')              // × → x
+     .replace(/\s*x\s*/g,'x');         // "15 x 120" → "15x120"
+  // Wzorzec: grubość x SZEROKOŚĆ [x długość]
+  var m=s.match(/(\d+)x(\d+)(?:x(\d+))?/);
+  if(m){
+    var a=parseInt(m[1]),b=parseInt(m[2]);
+    // Szerokość to drugi wymiar; sanity-check zakresu desek 40-300mm
+    if(b>=40&&b<=300) return Math.max(b-10,1);
+    // Zapis bez grubości, np. "120x2100"
+    if(a>=40&&a<=300) return Math.max(a-10,1);
+  }
+  return 86; // fallback gdy nie da się odczytać wymiarów z nazwy
 }
 
 function dimGetDeskWidth(name){
-  // Extract desk width: "28x90x...", "28x95x...", "28x80x..."
-  var m=name.match(/[x\u00d7](\d+)[x\u00d7]/i);
-  if(m) return parseInt(m[1]);
-  if(name.indexOf('95')>=0) return 95;
-  if(name.indexOf('90')>=0) return 90;
-  if(name.indexOf('80')>=0) return 80;
+  // SZEROKOŚĆ deski ławkowej (2. wymiar). Obsługa: "28x90x2100", "28x90mm x 2100mm", "28 x 95 x 2400"
+  var s=String(name||'')
+    .replace(/(\d)\s*mm/gi,'$1')
+    .replace(/[×X]/g,'x')
+    .replace(/\s*x\s*/g,'x');
+  var m=s.match(/(\d+)x(\d+)(?:x(\d+))?/);
+  if(m){
+    var a=parseInt(m[1]),b=parseInt(m[2]);
+    if(b>=40&&b<=300) return b;
+    if(a>=40&&a<=300) return a;
+  }
+  if(s.indexOf('95')>=0) return 95;
+  if(s.indexOf('90')>=0) return 90;
+  if(s.indexOf('80')>=0) return 80;
   return 90;
 }
 
