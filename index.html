@@ -4660,27 +4660,46 @@ function closeDimCalc(){
 }
 
 function dimGetBoardLen(name){
-  // DŁUGOŚĆ deski w cm. Obsługa: "15x120x2100", "15x120mm x 2100mm", "28x90 2400mm",
-  //                              "15x90 Olcha 2,10m", "19x117x2400"
+  // DŁUGOŚĆ deski w CM — rozpoznaje cm, mm i metry, niezależnie od formatu nazwy.
+  // Obsługa: "28x90x210cm", "15x120 210cm", "15x120x2100", "15x120mm x 2100mm",
+  //          "28x90 2400mm", "15x90 2,10m", "Deska 3m", "19×117×2400"
   var raw=String(name||'');
-  // Wersja znormalizowana: bez "mm", ujednolicone separatory
-  var s=raw.replace(/(\d)\s*mm/gi,'$1').replace(/[×X]/g,'x').replace(/\s*x\s*/g,'x');
-  // 1. Pełny zapis 3-wymiarowy: grubość x szerokość x DŁUGOŚĆ
-  var m=s.match(/\d+x\d+x(\d{3,4})/);
-  if(m){var l=parseInt(m[1]);if(l>=1500&&l<=3000)return Math.round(l/10);}
-  // 2. Długość po separatorze x
-  m=s.match(/x(\d{3,4})(?:\s|$)/);
-  if(m){var l2=parseInt(m[1]);if(l2>=1500&&l2<=3000)return Math.round(l2/10);}
-  // 3. "2400mm" w oryginalnej nazwie
-  m=raw.match(/(\d{3,4})\s*mm/i);
-  if(m){var l3=parseInt(m[1]);if(l3>=1500&&l3<=3000)return Math.round(l3/10);}
-  // 4. "2,10m" / "2.40m"
-  m=raw.match(/(\d)[,\.](\d{1,2})\s*m(?:\b|$)/i);
-  if(m){var l4=parseFloat(m[1]+'.'+m[2])*100;if(l4>=150&&l4<=300)return Math.round(l4);}
-  // 5. 4-cyfrowa liczba na końcu
-  m=s.match(/(\d{4})\s*$/);
-  if(m){var l5=parseInt(m[1]);if(l5>=1500&&l5<=3000)return Math.round(l5/10);}
-  return 240;
+  var s=raw.replace(/[×X]/g,'x').replace(/\s*x\s*/g,'x');
+  var m;
+  // 1) Jawne CM: "210cm"
+  m=s.match(/(\d{2,3})\s*cm\b/i);
+  if(m){var c1=parseInt(m[1]);if(c1>=100&&c1<=600)return c1;}
+  // 2) Jawne MM: "2100mm"
+  m=s.match(/(\d{3,4})\s*mm\b/i);
+  if(m){var c2=parseInt(m[1]);if(c2>=1000&&c2<=6000)return Math.round(c2/10);}
+  // 3) Metry z ułamkiem: "2,10m" / "2.4 m"
+  m=s.match(/(\d)[,\.](\d{1,2})\s*m\b/i);
+  if(m){var c3=parseFloat(m[1]+'.'+m[2])*100;if(c3>=100&&c3<=600)return Math.round(c3);}
+  // 4) Metry całkowite: "3m"
+  m=s.match(/\b([1-6])\s*m\b/i);
+  if(m)return parseInt(m[1])*100;
+  // 5) Trzeci wymiar bez jednostki: "15x120x2100" (mm) lub "28x90x210" (cm)
+  m=s.match(/\d+x\d+x(\d{3,4})/);
+  if(m){
+    var c5=parseInt(m[1]);
+    if(c5>=1000&&c5<=6000)return Math.round(c5/10);
+    if(c5>=100&&c5<=600)return c5;
+  }
+  // 6) Po separatorze x: "x2100" / "x210"
+  m=s.match(/x(\d{3,4})(?:\D|$)/);
+  if(m){
+    var c6=parseInt(m[1]);
+    if(c6>=1000&&c6<=6000)return Math.round(c6/10);
+    if(c6>=100&&c6<=600)return c6;
+  }
+  // 7) Liczba na końcu nazwy
+  m=s.match(/(\d{3,4})\s*$/);
+  if(m){
+    var c7=parseInt(m[1]);
+    if(c7>=1000&&c7<=6000)return Math.round(c7/10);
+    if(c7>=100&&c7<=600)return c7;
+  }
+  return 240; // fallback
 }
 
 function dimGetCoverage(name){
@@ -5021,13 +5040,17 @@ function dimCalc(){
     floorArea=Math.max(0, sauna_area - benchFootprint);
     floorAreaM2=Math.round(floorArea)/10000;
     if(deskMat && floorArea>0){
-      // Podłoga: deski liniowo - szerokość wolnej przestrzeni / szerokość deski
-      // Wolna przestrzeń = pełna podłoga minus pas zajęty przez ławki
+      // Podłoga — METODA Z ODZYSKIEM MATERIAŁU (jak sufit i ławki):
+      // 1) pasy w poprzek = szerokość podłogi / szerokość deski
+      // 2) każdy pas ma długość efektywną → sumaryczne metry bieżące
+      // 3) desek = suma długości / długość deski (w górę), +10% zapas
       var floorW=Math.max(0,Math.min(wA,wB)); // krótszy bok = szerokość pasów
-      var floorL=Math.max(0,floorArea/floorW); // długość efektywna
-      var boardsAcross=floorW>0?Math.ceil(floorW*10/deskW):0;
-      var boardsAlong=floorL>0?Math.ceil(floorL/BOARD_LEN):0;
-      floorBoardCount=boardsAcross>0&&boardsAlong>0?Math.ceil(boardsAcross*boardsAlong*1.10):0;
+      var floorL=floorW>0?Math.max(0,floorArea/floorW):0; // długość efektywna
+      var floorStrips=floorW>0&&deskW>0?Math.ceil(Math.round(floorW*10/deskW*1000)/1000):0;
+      var floorTotalLenCm=floorStrips*floorL;
+      floorBoardCount=floorTotalLenCm>0&&BOARD_LEN>0
+        ?Math.ceil(Math.round(floorTotalLenCm/BOARD_LEN*1.10*1000)/1000)
+        :0;
     }
   }
 
@@ -5215,7 +5238,11 @@ function dimCalc(){
     html+=resultRow('  — ściana '+b.wall+' ('+b.len+'cm, '+lvlTxt+')', bDesks+' szt.', rows+' rzędów × '+b.len+'cm = '+bLenCm+'cm ÷ '+BOARD_LEN+'cm');
   });
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
-  if(calcPodloga&&deskMat&&floorBoardCount>0) html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | dł. '+BOARD_LEN+'cm');
+  if(calcPodloga&&deskMat&&floorBoardCount>0){
+    var _fW=Math.max(0,Math.min(wA,wB));
+    var _fStrips=(_fW>0&&deskW>0)?Math.ceil(Math.round(_fW*10/deskW*1000)/1000):0;
+    html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | '+_fStrips+' pasów (z odzyskiem) | dł. '+BOARD_LEN+'cm');
+  }
   else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
   var welDeductInfo=(welWinDeduct>0?' -okno '+Math.round(welWinDeduct*100)/100+'m²':'')+(welOpenDeduct>0?' -otwarta '+Math.round(welOpenDeduct*100)/100+'m²':'');
 html+=resultRow('Wełna+10%'+welDeductInfo, welTotal+' m²', 'ściany '+Math.round(welWalls*100)/100+' m² + sufit '+Math.round(welCeil*100)/100+' m² + 10% zakładka');
