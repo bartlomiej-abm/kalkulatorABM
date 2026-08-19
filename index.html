@@ -494,6 +494,18 @@ async function syncLoad(){
           if(drArr&&drArr.length>0){DOORS_LIST=drArr;localStorage.setItem('abm_doors',JSON.stringify(DOORS_LIST));}
         }catch(e){}
       }
+      if(row.key==='custom_piece'){
+        try{var cpArr=typeof row.value==='string'?JSON.parse(row.value):row.value;
+          if(cpArr&&cpArr.length>0){
+            cpArr.forEach(function(cp){
+              var exists=PIECE.some(function(p){return p.n===cp.n&&p.g===cp.g;});
+              if(!exists){cp.custom=true;PIECE.push(cp);}
+            });
+            localStorage.setItem('abm_custom_piece',JSON.stringify(PIECE.filter(function(p){return p.custom;})));
+            if(typeof rebP==='function')rebP();
+          }
+        }catch(e){}
+      }
     });
     // Rebuild selects with cloud data
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
@@ -3661,8 +3673,10 @@ function addMaterial(){
     var grpP=document.getElementById('add-group2').value.trim()||grp||'Inne';
     var eurP=parseFloat(document.getElementById('add-eur').value)||0;
     if(!grpP){alert('Wpisz serię pieca.');return;}
-    PIECE.push({g:grpP,n:name,eur:eurP});
+    PIECE.push({g:grpP,n:name,eur:eurP,custom:true});
     rebP();
+    try{localStorage.setItem('abm_custom_piece',JSON.stringify(PIECE.filter(function(p){return p.custom;})));}catch(e){}
+    if(typeof syncSavePrices==='function')syncSavePrices();
     alert('Dodano piec: '+name+'. Widoczny w dropdownie kalkulatora.');
     document.getElementById('add-name').value='';document.getElementById('add-price').value='0';
     document.getElementById('add-eur').value='0';
@@ -3975,6 +3989,18 @@ try{var _lc=localStorage.getItem('abm_led_ctrl');LED_CTRL_LIST=_lc?JSON.parse(_l
 try{var _lr=localStorage.getItem('abm_led_remote');LED_REMOTE_LIST=_lr?JSON.parse(_lr):JSON.parse(JSON.stringify(DEFAULT_LED_REMOTE));}catch(e){LED_REMOTE_LIST=JSON.parse(JSON.stringify(DEFAULT_LED_REMOTE));}
 try{var _ld=localStorage.getItem('abm_led_discount');LED_DISCOUNT=_ld!==null?parseFloat(_ld):LED_DISCOUNT_DEFAULT;}catch(e){LED_DISCOUNT=LED_DISCOUNT_DEFAULT;}
 if(typeof mkSelAllLed==='function')mkSelAllLed();
+// Wczytaj niestandardowe piece z localStorage i dołącz do listy
+try{
+  var _cp=localStorage.getItem('abm_custom_piece');
+  if(_cp){
+    var customPieces=JSON.parse(_cp);
+    customPieces.forEach(function(cp){
+      var exists=PIECE.some(function(p){return p.n===cp.n&&p.g===cp.g;});
+      if(!exists){cp.custom=true;PIECE.push(cp);}
+    });
+    if(typeof rebP==='function')rebP();
+  }
+}catch(e){}
 mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
 mkSelBZ();
 mkSelPodlExt();
