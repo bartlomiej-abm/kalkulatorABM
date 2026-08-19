@@ -338,6 +338,76 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;touch-action:manipula
 const SUPA_URL = 'https://uuxnxvzwhvjlcxegtozk.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc';
 let supa = null;
+
+// ===== DOMYŚLNE CENNIKI LED (zoomLED/kingLED) — ceny NETTO przed rabatem =====
+var LED_DISCOUNT_DEFAULT = 15; // % rabat wspólny dla całej kategorii LED
+var DEFAULT_LED_TAPES = [
+  {n:"COB Mono 2200K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 2700K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 3000K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 4000K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 5000K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 6500K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 3000K 10W IP65 wodoodporna",p:34.07,g:"mono"},
+  {n:"COB Mono 4000K 10W IP65 wodoodporna",p:34.07,g:"mono"},
+  {n:"COB Mono 6500K 10W IP65 wodoodporna",p:34.07,g:"mono"},
+  {n:"COB RGB+CCT 16W IP33",p:52.03,g:"rgbcct"},
+  {n:"COB RGB+CCT 16W IP65 wodoodporna",p:54.47,g:"rgbcct"},
+  {n:"Cyfrowa Magic CCT 2700-6500K 9W IP33",p:47.89,g:"cyfrowa"},
+  {n:"Cyfrowa Magic RGBW 16W IP33",p:56.1,g:"cyfrowa"}
+];
+var DEFAULT_LED_PSU = [
+  {n:"Jinbo 24W 1A IP67",p:36.5},
+  {n:"Jinbo 35W 1,5A IP67",p:51.95},
+  {n:"Jinbo 45W 1,875A IP67",p:56.83},
+  {n:"Jinbo 60W 2,5A IP67",p:61.71},
+  {n:"Jinbo 80W 3,33A IP67",p:72.36},
+  {n:"Jinbo 100W 4,17A IP67",p:95.12},
+  {n:"Jinbo 150W 6,25A IP67",p:129.27},
+  {n:"Jinbo 200W 8,33A IP67",p:178.05},
+  {n:"Jinbo 250W 10,42A IP67",p:186.18},
+  {n:"Jinbo 300W 12,5A IP67",p:234.96},
+  {n:"Jinbo 360W 15A IP67",p:259.35},
+  {n:"Jinbo 400W 16,67A IP67",p:283.74},
+  {n:"MeanWell 75W 3,12A IP67",p:113.01},
+  {n:"MeanWell 100W 4,16A IP67",p:119.51},
+  {n:"MeanWell 150W 6,25A IP67",p:137.4},
+  {n:"MeanWell 200W 8,33A IP67",p:186.99},
+  {n:"MeanWell 240W 10A IP67",p:202.44},
+  {n:"MeanWell 320W 18A IP67",p:251.22}
+];
+var DEFAULT_LED_CTRL = [
+  {n:"V1 Mono 8A",p:72.36},
+  {n:"V1-M Mono 5A",p:72.36},
+  {n:"V2 Mono/CCT 10,5A",p:78.86},
+  {n:"V3 Mono/CCT/RGB 12,5A",p:73.09},
+  {n:"V4 Mono/CCT/RGB/RGBW 20,5A",p:109.76},
+  {n:"WT5 Mono/CCT/RGB/RGBW/RGBCCT 15A WiFi",p:129.27},
+  {n:"S1-B 230V",p:104.88},
+  {n:"S1-B WT 230V WiFi",p:153.66},
+  {n:"ES32 Mono czujnik ruchu",p:341.46},
+  {n:"WT-SPI Magic WiFi",p:121.14},
+  {n:"ES-D Magic czujnik/PUSH-DIMM",p:129.27},
+  {n:"Manualny Mono 30A",p:24.31}
+];
+var DEFAULT_LED_REMOTE = [
+  {n:"R11 Mono 1-strefa",p:78.05},
+  {n:"R1-1 Mono 1-strefa",p:52.03},
+  {n:"RU4 Mono 4-strefy",p:72.36},
+  {n:"RK4-U Mono 4-strefy",p:79.67},
+  {n:"RU8 Mono 8-stref",p:77.24},
+  {n:"R12 CCT 1-strefa",p:96.75},
+  {n:"R2 CCT 1-strefa",p:72.36},
+  {n:"RT7 CCT 4-strefy",p:121.14},
+  {n:"R13 RGB 1-strefa",p:78.86},
+  {n:"R14 RGBW 1-strefa",p:79.67},
+  {n:"RT9 RGBW 4-strefy",p:121.14},
+  {n:"RT10 RGBCCT 4-strefy",p:121.14},
+  {n:"R9 MAGIC 1-strefa",p:74.8}
+];
+var LED_TAPES_LIST=[], LED_PSU_LIST=[], LED_CTRL_LIST=[], LED_REMOTE_LIST=[];
+var LED_DISCOUNT = LED_DISCOUNT_DEFAULT;
+
 // Migawka wersji roboczej pobrana najwcześniej jak się da
 try{ window._draftSnapshot=localStorage.getItem('abm_draft'); }catch(e){}
 
@@ -1769,74 +1839,6 @@ function migrateBoazGroups(){
     }catch(e){}
   });
 
-// ===== DOMYŚLNE CENNIKI LED (zoomLED/kingLED) — ceny NETTO przed rabatem =====
-var LED_DISCOUNT_DEFAULT = 15; // % rabat wspólny dla całej kategorii LED
-var DEFAULT_LED_TAPES = [
-  {n:"COB Mono 2200K 10W IP33",p:32.44,g:"mono"},
-  {n:"COB Mono 2700K 10W IP33",p:32.44,g:"mono"},
-  {n:"COB Mono 3000K 10W IP33",p:32.44,g:"mono"},
-  {n:"COB Mono 4000K 10W IP33",p:32.44,g:"mono"},
-  {n:"COB Mono 5000K 10W IP33",p:32.44,g:"mono"},
-  {n:"COB Mono 6500K 10W IP33",p:32.44,g:"mono"},
-  {n:"COB Mono 3000K 10W IP65 wodoodporna",p:34.07,g:"mono"},
-  {n:"COB Mono 4000K 10W IP65 wodoodporna",p:34.07,g:"mono"},
-  {n:"COB Mono 6500K 10W IP65 wodoodporna",p:34.07,g:"mono"},
-  {n:"COB RGB+CCT 16W IP33",p:52.03,g:"rgbcct"},
-  {n:"COB RGB+CCT 16W IP65 wodoodporna",p:54.47,g:"rgbcct"},
-  {n:"Cyfrowa Magic CCT 2700-6500K 9W IP33",p:47.89,g:"cyfrowa"},
-  {n:"Cyfrowa Magic RGBW 16W IP33",p:56.1,g:"cyfrowa"}
-];
-var DEFAULT_LED_PSU = [
-  {n:"Jinbo 24W 1A IP67",p:36.5},
-  {n:"Jinbo 35W 1,5A IP67",p:51.95},
-  {n:"Jinbo 45W 1,875A IP67",p:56.83},
-  {n:"Jinbo 60W 2,5A IP67",p:61.71},
-  {n:"Jinbo 80W 3,33A IP67",p:72.36},
-  {n:"Jinbo 100W 4,17A IP67",p:95.12},
-  {n:"Jinbo 150W 6,25A IP67",p:129.27},
-  {n:"Jinbo 200W 8,33A IP67",p:178.05},
-  {n:"Jinbo 250W 10,42A IP67",p:186.18},
-  {n:"Jinbo 300W 12,5A IP67",p:234.96},
-  {n:"Jinbo 360W 15A IP67",p:259.35},
-  {n:"Jinbo 400W 16,67A IP67",p:283.74},
-  {n:"MeanWell 75W 3,12A IP67",p:113.01},
-  {n:"MeanWell 100W 4,16A IP67",p:119.51},
-  {n:"MeanWell 150W 6,25A IP67",p:137.4},
-  {n:"MeanWell 200W 8,33A IP67",p:186.99},
-  {n:"MeanWell 240W 10A IP67",p:202.44},
-  {n:"MeanWell 320W 18A IP67",p:251.22}
-];
-var DEFAULT_LED_CTRL = [
-  {n:"V1 Mono 8A",p:72.36},
-  {n:"V1-M Mono 5A",p:72.36},
-  {n:"V2 Mono/CCT 10,5A",p:78.86},
-  {n:"V3 Mono/CCT/RGB 12,5A",p:73.09},
-  {n:"V4 Mono/CCT/RGB/RGBW 20,5A",p:109.76},
-  {n:"WT5 Mono/CCT/RGB/RGBW/RGBCCT 15A WiFi",p:129.27},
-  {n:"S1-B 230V",p:104.88},
-  {n:"S1-B WT 230V WiFi",p:153.66},
-  {n:"ES32 Mono czujnik ruchu",p:341.46},
-  {n:"WT-SPI Magic WiFi",p:121.14},
-  {n:"ES-D Magic czujnik/PUSH-DIMM",p:129.27},
-  {n:"Manualny Mono 30A",p:24.31}
-];
-var DEFAULT_LED_REMOTE = [
-  {n:"R11 Mono 1-strefa",p:78.05},
-  {n:"R1-1 Mono 1-strefa",p:52.03},
-  {n:"RU4 Mono 4-strefy",p:72.36},
-  {n:"RK4-U Mono 4-strefy",p:79.67},
-  {n:"RU8 Mono 8-stref",p:77.24},
-  {n:"R12 CCT 1-strefa",p:96.75},
-  {n:"R2 CCT 1-strefa",p:72.36},
-  {n:"RT7 CCT 4-strefy",p:121.14},
-  {n:"R13 RGB 1-strefa",p:78.86},
-  {n:"R14 RGBW 1-strefa",p:79.67},
-  {n:"RT9 RGBW 4-strefy",p:121.14},
-  {n:"RT10 RGBCCT 4-strefy",p:121.14},
-  {n:"R9 MAGIC 1-strefa",p:74.8}
-];
-var LED_TAPES_LIST=[], LED_PSU_LIST=[], LED_CTRL_LIST=[], LED_REMOTE_LIST=[];
-var LED_DISCOUNT = LED_DISCOUNT_DEFAULT;
 
 }
 function loadPrices(){
