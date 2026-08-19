@@ -429,7 +429,7 @@ async function syncLoad(){
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);mkSelG('k3m',KONSTR);
-    mkSelBZ();mkSelAudio();mkSelDoors();
+    mkSelBZ();mkSelAudio();mkSelDoors();mkSelAllLed();
     showSyncStatus('cloud','Dane załadowane z chmury');
   }catch(e){
     showSyncStatus('local','Tryb lokalny (brak połączenia)');
@@ -1157,10 +1157,11 @@ function showSyncStatus(mode,msg){
 
   <div class="sec"><div class="sh"><span class="st">6. Oświetlenie LED</span><span class="ss" id="sm6">0 zł</span></div><div class="sb">
     <div class="c4 row">
-      <div><div class="sub">Taśma LED</div><select id="ledt" onchange="r()"><option value="0">Bez oświetlenia</option><option value="41.9">Taśma LED COB 6500K 480 LED 10W 900lm IP65 (24V) — 41,90/mb</option><option value="34.9">Taśma LED 4000K 120 SMD 2835 10W 950lm IP54 (24V) — 34,90/mb</option><option value="67">Taśma LED COB RGBCCT (RGB+CCT) 5w1 840 LED 16W IP65 (24V) — 67,00/mb</option><option value="49.86">Taśma LED RGBW +4000K 60 SMD 19W LAKIEROWANA IP54 — 49,86/mb</option><option value="89.2">NEONICA Sauna PRO RGB 600 24V IP68 5m SERIA PROFESJONALNA — 89,20/mb</option><option value="53.5">NEONICA Sauna PRO 600 24V IP68 5m SERIA PROFESJONALNA — 53,50/mb</option></select></div>
+      <div><div class="sub">Taśma LED</div><select id="ledt" onchange="r()"><option value="0">Bez oświetlenia</option></select></div>
       <div><div class="sub">Ilość (mb/szt.)</div><input type="number" id="ledq" value="10" min="0" onchange="r()"></div>
-      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()"><option value="0">Bez zasilacza</option><option value="44.9">IP67 24V 1A 24W — 44,90</option><option value="63.9">IP67 24V 1.5A 36W — 63,90</option><option value="69.9">IP67 24V 1.875A 45W — 69,90</option><option value="75.9">IP67 24V 2.5A 60W — 75,90</option><option value="89.0">IP67 24V 3.33A 80W — 89,00</option><option value="117.0">IP67 24V 4.17A 100W — 117,00</option><option value="169.0">XLG MEAN WELL IP67 24V 6.25A 150W — 169,00</option><option value="230.0">XLG MEAN WELL IP67 24V 8.33A 200W — 230,00</option><option value="249.0">ELG MEAN WELL IP67 24V 10A 240W — 249,00</option><option value="309.0">XLG MEAN WELL IP67 24V 312W 13A — 309,00</option></select><input type="number" id="zastq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
-      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option><option value="135">V4 4-kan. (135)</option><option value="159">WT5 WiFi (159)</option><option value="250">Moduł+ster. (250)</option></select><input type="number" id="lsttq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
+      <div><div class="sub">Zasilacz LED</div><select id="zast" onchange="r()" style="flex:1"><option value="0">Bez zasilacza</option></select><input type="number" id="zastq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
+      <div><div class="sub">Sterownik LED</div><select id="lstt" onchange="r()"><option value="0">Bez</option></select><input type="number" id="lsttq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
+      <div><div class="sub">Pilot LED</div><select id="ledpilot" onchange="r()"><option value="0">Bez pilota</option></select><input type="number" id="ledpilotq" value="1" min="0" max="20" onchange="r()" style="width:50px;height:26px;font-size:12px;padding:0 4px;border:0.5px solid var(--mbm-light);border-radius:5px;text-align:center"></div>
     </div>
     <div class="c2 row" style="margin-top:4px">
       <div><div class="sub">Umiejscowienie LED</div>
@@ -1862,6 +1863,61 @@ function mkSelBZ(){
     o.textContent=i.n+' ('+i.p+' zl)';el.appendChild(o);
   });
 }
+
+// Cena LED po rabacie (netto × (1 - rabat%))
+function ledNet(price){ return Math.round(price*(1-LED_DISCOUNT/100)*100)/100; }
+
+
+// ===== DROPDOWNY LED (zasilane z edytowalnych list) =====
+function mkSelLedTapes(){
+  var el=document.getElementById('ledt');if(!el)return;
+  var cur=el.value;
+  el.innerHTML='<option value="0">Bez oświetlenia</option>';
+  var groups={mono:'▸ MONO (jednokolorowe)',rgbcct:'▸ RGB+CCT (kolorowe)',cyfrowa:'▸ CYFROWE (Magic)'};
+  ['mono','rgbcct','cyfrowa'].forEach(function(g){
+    var items=LED_TAPES_LIST.filter(function(x){return (x.g||'mono')===g;});
+    if(items.length===0)return;
+    var og=document.createElement('optgroup');og.label=groups[g];
+    items.forEach(function(it){
+      var net=ledNet(it.p);
+      og.appendChild(new Option(it.n+' — '+net.toFixed(2)+' zł/mb',net));
+    });
+    el.appendChild(og);
+  });
+  el.value=cur; if(el.value!==cur)el.selectedIndex=0;
+}
+function mkSelLedPsu(){
+  var el=document.getElementById('zast');if(!el)return;
+  var cur=el.value;
+  el.innerHTML='<option value="0">Bez zasilacza</option>';
+  LED_PSU_LIST.forEach(function(it){
+    var net=ledNet(it.p);
+    el.appendChild(new Option(it.n+' — '+net.toFixed(2)+' zł',net));
+  });
+  el.value=cur; if(el.value!==cur)el.selectedIndex=0;
+}
+function mkSelLedCtrl(){
+  var el=document.getElementById('lstt');if(!el)return;
+  var cur=el.value;
+  el.innerHTML='<option value="0">Bez</option>';
+  LED_CTRL_LIST.forEach(function(it){
+    var net=ledNet(it.p);
+    el.appendChild(new Option(it.n+' — '+net.toFixed(2)+' zł',net));
+  });
+  el.value=cur; if(el.value!==cur)el.selectedIndex=0;
+}
+function mkSelLedRemote(){
+  var el=document.getElementById('ledpilot');if(!el)return;
+  var cur=el.value;
+  el.innerHTML='<option value="0">Bez pilota</option>';
+  LED_REMOTE_LIST.forEach(function(it){
+    var net=ledNet(it.p);
+    el.appendChild(new Option(it.n+' — '+net.toFixed(2)+' zł',net));
+  });
+  el.value=cur; if(el.value!==cur)el.selectedIndex=0;
+}
+function mkSelAllLed(){mkSelLedTapes();mkSelLedPsu();mkSelLedCtrl();mkSelLedRemote();}
+
 function mkSelDoors(){
   var el=document.getElementById('drzsauna');
   if(!el)return;
@@ -2080,7 +2136,7 @@ function r(){
   se('profk',f(profK));se('profp',f(profP));
   var kabLedK=gv('kabq-led')*7.9,kabLedP=kabLedK*mL;
   se('ledc-k',f(kabLedK));se('ledc-p',f(kabLedP));
-  var ledMat=ledQ*gv('ledt')+gv('zast')*(gv('zastq')||1)+gv('lstt')*(gv('lsttq')||1),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
+  var ledMat=ledQ*gv('ledt')+gv('zast')*(gv('zastq')||1)+gv('lstt')*(gv('lsttq')||1)+gv('ledpilot')*(gv('ledpilotq')||1),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
   se('ledk',f(ledK));se('ledp',f(ledP));se('sm6',f(ledP));
   var audK=gv('audt')*(gv('audtq')||0)+gv('btkt')*(gv('btktq')||0),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
   var mD=gv('md')||1.5;var dodK=gv('prysz-c')+gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
@@ -3302,6 +3358,75 @@ var PODL_EXT=[];
 var AUDIO_LIST=[];
 var AUDIO_BT_LIST=[];
 var DOORS_LIST=[];
+// ===== DOMYŚLNE CENNIKI LED (zoomLED/kingLED) — ceny NETTO przed rabatem =====
+var LED_DISCOUNT_DEFAULT = 15; // % rabat wspólny dla całej kategorii LED
+var DEFAULT_LED_TAPES = [
+  {n:"COB Mono 2200K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 2700K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 3000K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 4000K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 5000K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 6500K 10W IP33",p:32.44,g:"mono"},
+  {n:"COB Mono 3000K 10W IP65 wodoodporna",p:34.07,g:"mono"},
+  {n:"COB Mono 4000K 10W IP65 wodoodporna",p:34.07,g:"mono"},
+  {n:"COB Mono 6500K 10W IP65 wodoodporna",p:34.07,g:"mono"},
+  {n:"COB RGB+CCT 16W IP33",p:52.03,g:"rgbcct"},
+  {n:"COB RGB+CCT 16W IP65 wodoodporna",p:54.47,g:"rgbcct"},
+  {n:"Cyfrowa Magic CCT 2700-6500K 9W IP33",p:47.89,g:"cyfrowa"},
+  {n:"Cyfrowa Magic RGBW 16W IP33",p:56.1,g:"cyfrowa"}
+];
+var DEFAULT_LED_PSU = [
+  {n:"Jinbo 24W 1A IP67",p:36.5},
+  {n:"Jinbo 35W 1,5A IP67",p:51.95},
+  {n:"Jinbo 45W 1,875A IP67",p:56.83},
+  {n:"Jinbo 60W 2,5A IP67",p:61.71},
+  {n:"Jinbo 80W 3,33A IP67",p:72.36},
+  {n:"Jinbo 100W 4,17A IP67",p:95.12},
+  {n:"Jinbo 150W 6,25A IP67",p:129.27},
+  {n:"Jinbo 200W 8,33A IP67",p:178.05},
+  {n:"Jinbo 250W 10,42A IP67",p:186.18},
+  {n:"Jinbo 300W 12,5A IP67",p:234.96},
+  {n:"Jinbo 360W 15A IP67",p:259.35},
+  {n:"Jinbo 400W 16,67A IP67",p:283.74},
+  {n:"MeanWell 75W 3,12A IP67",p:113.01},
+  {n:"MeanWell 100W 4,16A IP67",p:119.51},
+  {n:"MeanWell 150W 6,25A IP67",p:137.4},
+  {n:"MeanWell 200W 8,33A IP67",p:186.99},
+  {n:"MeanWell 240W 10A IP67",p:202.44},
+  {n:"MeanWell 320W 18A IP67",p:251.22}
+];
+var DEFAULT_LED_CTRL = [
+  {n:"V1 Mono 8A",p:72.36},
+  {n:"V1-M Mono 5A",p:72.36},
+  {n:"V2 Mono/CCT 10,5A",p:78.86},
+  {n:"V3 Mono/CCT/RGB 12,5A",p:73.09},
+  {n:"V4 Mono/CCT/RGB/RGBW 20,5A",p:109.76},
+  {n:"WT5 Mono/CCT/RGB/RGBW/RGBCCT 15A WiFi",p:129.27},
+  {n:"S1-B 230V",p:104.88},
+  {n:"S1-B WT 230V WiFi",p:153.66},
+  {n:"ES32 Mono czujnik ruchu",p:341.46},
+  {n:"WT-SPI Magic WiFi",p:121.14},
+  {n:"ES-D Magic czujnik/PUSH-DIMM",p:129.27},
+  {n:"Manualny Mono 30A",p:24.31}
+];
+var DEFAULT_LED_REMOTE = [
+  {n:"R11 Mono 1-strefa",p:78.05},
+  {n:"R1-1 Mono 1-strefa",p:52.03},
+  {n:"RU4 Mono 4-strefy",p:72.36},
+  {n:"RK4-U Mono 4-strefy",p:79.67},
+  {n:"RU8 Mono 8-stref",p:77.24},
+  {n:"R12 CCT 1-strefa",p:96.75},
+  {n:"R2 CCT 1-strefa",p:72.36},
+  {n:"RT7 CCT 4-strefy",p:121.14},
+  {n:"R13 RGB 1-strefa",p:78.86},
+  {n:"R14 RGBW 1-strefa",p:79.67},
+  {n:"RT9 RGBW 4-strefy",p:121.14},
+  {n:"RT10 RGBCCT 4-strefy",p:121.14},
+  {n:"R9 MAGIC 1-strefa",p:74.8}
+];
+var LED_TAPES_LIST=[], LED_PSU_LIST=[], LED_CTRL_LIST=[], LED_REMOTE_LIST=[];
+var LED_DISCOUNT = LED_DISCOUNT_DEFAULT;
+
 
 function loadPricesExt(){
   try{var be=localStorage.getItem('abm_boaz_ext');BOAZ_EXT=be?JSON.parse(be):[];}catch(e){BOAZ_EXT=[];}
@@ -3309,6 +3434,11 @@ function loadPricesExt(){
   try{var au=localStorage.getItem('abm_audio');AUDIO_LIST=au?JSON.parse(au):[];}catch(e){AUDIO_LIST=[];}
   try{var bt=localStorage.getItem('abm_audio_bt');AUDIO_BT_LIST=bt?JSON.parse(bt):[];}catch(e){AUDIO_BT_LIST=[];}
   try{var dr=localStorage.getItem('abm_doors');DOORS_LIST=dr?JSON.parse(dr):[];}catch(e){DOORS_LIST=[];}
+    try{var lt=localStorage.getItem('abm_led_tapes');LED_TAPES_LIST=lt?JSON.parse(lt):JSON.parse(JSON.stringify(DEFAULT_LED_TAPES));}catch(e){LED_TAPES_LIST=JSON.parse(JSON.stringify(DEFAULT_LED_TAPES));}
+    try{var lp=localStorage.getItem('abm_led_psu');LED_PSU_LIST=lp?JSON.parse(lp):JSON.parse(JSON.stringify(DEFAULT_LED_PSU));}catch(e){LED_PSU_LIST=JSON.parse(JSON.stringify(DEFAULT_LED_PSU));}
+    try{var lc=localStorage.getItem('abm_led_ctrl');LED_CTRL_LIST=lc?JSON.parse(lc):JSON.parse(JSON.stringify(DEFAULT_LED_CTRL));}catch(e){LED_CTRL_LIST=JSON.parse(JSON.stringify(DEFAULT_LED_CTRL));}
+    try{var lr=localStorage.getItem('abm_led_remote');LED_REMOTE_LIST=lr?JSON.parse(lr):JSON.parse(JSON.stringify(DEFAULT_LED_REMOTE));}catch(e){LED_REMOTE_LIST=JSON.parse(JSON.stringify(DEFAULT_LED_REMOTE));}
+    try{var ld=localStorage.getItem('abm_led_discount');LED_DISCOUNT=ld!==null?parseFloat(ld):LED_DISCOUNT_DEFAULT;}catch(e){LED_DISCOUNT=LED_DISCOUNT_DEFAULT;}
 }
 
 function buildPriceTables(){
@@ -3711,7 +3841,7 @@ function savePricesQuiet(){
     localStorage.setItem('abm_doors',JSON.stringify(DOORS_LIST));
     syncSavePrices();
     mkSelG('b1m',BOAZ);mkSelG('b2m',BOAZ);mkSelG('zb1m',BOAZ);
-    mkSelBZ();mkSelPodlExt();mkSelAudio();mkSelDoors();
+    mkSelBZ();mkSelPodlExt();mkSelAudio();mkSelDoors();mkSelAllLed();
     mkSelG('l1m',DESKI);mkSelG('l2m',DESKI);mkSelG('podlm',DESKI);
     mkSelG('k1m',KONSTR);mkSelG('k2m',KONSTR);
   }catch(e){}
