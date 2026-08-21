@@ -911,7 +911,8 @@ function showSyncStatus(mode,msg){
     <button onclick="clearVariants()" style="font-size:11px;color:var(--mbm-mid);background:none;border:0.5px solid var(--mbm-light);border-radius:4px;padding:3px 8px;cursor:pointer;font-family:inherit">✕ Wyczyść</button>
     <button onclick="clearCalc()" style="background:none;border:0.5px solid #c00;color:#c00;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px">🗑 Wyczyść kalkulator</button>
     <span style="flex:1"></span>
-    <button class="btn grn" onclick="saveQuote()">💾 Zapisz wycenę</button>
+    <button class="btn grn" id="btn-save-new" onclick="saveQuote()">💾 Zapisz nową</button>
+    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button>
     <button class="btn act" onclick="showTab('client')">Widok klienta →</button>
     <button class="btn" onclick="openDimCalc()" style="background:var(--mbm-primary);color:#fff;border-color:var(--mbm-primary)">📐 Kalkulator wymiarów</button>
   </div>
@@ -1368,7 +1369,8 @@ function showSyncStatus(mode,msg){
       <button class="btn act" onclick="printPDF()">🖨️ Zapisz PDF (poziomo)</button>
       <button id="lang-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleLang()">EN</button>
       <button id="curr-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleCurr()">€ EUR</button>
-      <button class="btn grn" onclick="saveQuote()">💾 Zapisz wycenę</button>
+      <button class="btn grn" id="btn-save-new" onclick="saveQuote()">💾 Zapisz nową</button>
+    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button>
       <button class="btn" onclick="showTab('calc')">← Wróć</button>
       <span style="font-size:11px;color:#999;margin-left:8px">Aktywne warianty: <span id="active-variants-label">—</span></span>
     </div>
@@ -1867,6 +1869,7 @@ function loadPrices(){
 }
 
 var isZ=false,typ='F',vat=8,STATE={};
+var _loadedQuote=null; // {localId, cloudId, klient} wczytanej wyceny — do aktualizacji
 
 function showTab(t){
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on');});
@@ -3198,6 +3201,74 @@ function buildOrder(){
 }
 
 // ===== HISTORIA =====
+
+// Pokazuje przycisk 'Aktualizuj' gdy wczytano wycenę z historii
+function updateSaveButtons(){
+  var btnU=document.getElementById('btn-save-update');
+  if(!btnU)return;
+  if(_loadedQuote&&_loadedQuote.klient){
+    btnU.style.display='';
+    btnU.textContent='🔄 Aktualizuj: '+_loadedQuote.klient;
+  }else{
+    btnU.style.display='none';
+  }
+}
+
+// Aktualizuje wczytaną wycenę (lokalnie + w chmurze) zamiast tworzyć nową
+async function updateQuote(){
+  var s=STATE;
+  if(!s||!s.klient){alert('Wpisz imię i nazwisko klienta.');return;}
+  if(!_loadedQuote){alert('Brak wczytanej wyceny do aktualizacji. Użyj „Zapisz nową".');return;}
+  if(!confirm('Zaktualizować wycenę „'+_loadedQuote.klient+'"?\n\nStara wersja zostanie nadpisana.')){return;}
+
+  // Zachowaj powiązanie z ID w danych (na przyszłość)
+  s._localId=_loadedQuote.localId||_loadedQuote.cloudId;
+
+  // 1) AKTUALIZACJA LOKALNA
+  try{
+    var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
+    var variants_snap={}; ['A','B','C'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));});
+    var targetId=_loadedQuote.localId;
+    var idx=targetId!=null?hist.findIndex(function(e){return e.id===targetId;}):-1;
+    var entry={
+      id: targetId!=null?targetId:Date.now(),
+      date:new Date().toLocaleDateString('pl-PL'),
+      klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,isZ:s.isZ,typ:s.typ,
+      state:JSON.stringify(s),variants:variants_snap
+    };
+    if(idx>=0){ hist[idx]=entry; } else { hist.unshift(entry); }
+    localStorage.setItem('abm_history',JSON.stringify(hist));
+  }catch(e){}
+
+  // 2) AKTUALIZACJA W CHMURZE
+  var cloudOk=false;
+  if(_loadedQuote.cloudId&&supa){
+    try{
+      var payload={
+        klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,
+        typ:s.typ,is_z:s.isZ,data:s,variants:JSON.parse(JSON.stringify(VARIANTS))
+      };
+      var upd=await Promise.race([
+        supa.from('quotes').update(payload).eq('id',_loadedQuote.cloudId).select(),
+        new Promise(function(res){setTimeout(function(){res({error:'timeout'});},8000);})
+      ]);
+      cloudOk=upd&&!upd.error;
+    }catch(e){cloudOk=false;}
+  }
+
+  try{ localStorage.removeItem('abm_draft'); }catch(e){}
+
+  if(cloudOk){
+    showSyncStatus('cloud','Zaktualizowano: '+s.klient);
+    alert('✓ Zaktualizowano wycenę: '+s.klient+' — '+f(s.netto)+' netto');
+  }else if(_loadedQuote.cloudId){
+    alert('✓ Zaktualizowano lokalnie: '+s.klient+'\n\n(Chmura niedostępna — zmiana zapisana na tym urządzeniu.)');
+  }else{
+    alert('✓ Zaktualizowano lokalnie: '+s.klient+' — '+f(s.netto)+' netto');
+  }
+  if(typeof buildHistory==='function')buildHistory();
+}
+
 async function saveQuote(){
   var s=STATE;
   if(!s||!s.klient){alert('Wpisz imie i nazwisko klienta przed zapisem.');return;}
@@ -3217,6 +3288,9 @@ async function saveQuote(){
   }catch(e){cloudResult=null;}
   // Wycena zapisana w historii — usuń wersję roboczą
   try{ localStorage.removeItem('abm_draft'); }catch(e){}
+  // Nowo zapisana wycena staje się 'wczytaną' (kolejny zapis może ją aktualizować)
+  _loadedQuote={localId:(function(){try{var h=JSON.parse(localStorage.getItem('abm_history')||'[]');return h[0]?h[0].id:null;}catch(e){return null;}})(), cloudId:(cloudResult&&cloudResult.id)||null, klient:s.klient};
+  if(typeof updateSaveButtons==='function')updateSaveButtons();
   if(cloudResult){
     showSyncStatus('cloud','Zapisano w chmurze: '+s.klient);
     alert('✓ Zapisano w chmurze: '+s.klient+' — '+f(s.netto)+' netto');
@@ -3295,6 +3369,13 @@ async function buildHistory(){
         if(s&&s.state&&s.state.klient){s=s.state;}
         if(!s||!s.klient){alert('Brak danych wyceny.');return;}
         loadToCalc(s);
+        // Zapamiętaj którą wycenę wczytano (do aktualizacji)
+        _loadedQuote={
+          localId: row._local?row.id:(row.data&&row.data._localId)||null,
+          cloudId: row._local?null:row.id,
+          klient: s.klient
+        };
+        if(typeof updateSaveButtons==='function')updateSaveButtons();
         // Restore variants if saved
         var savedVariants=null;
         try{
@@ -5540,6 +5621,7 @@ function applyDimCalc(){
 
 
 function clearCalc(){
+  _loadedQuote=null;if(typeof updateSaveButtons==='function')updateSaveButtons();
   if(!confirm('Wyczyścić wszystkie pola kalkulatora?')) return;
   _loading=true;
 
