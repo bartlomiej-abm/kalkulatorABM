@@ -682,6 +682,7 @@ function collectMaterials(){
   if(qv('arom-c')>0) push('Aromaterapia', null, 1, 'kpl');
   if(qv('prysz-c')>0) push('Prysznic', null, 1, 'kpl');
   if(qv('sol-c')>0) push('Ściana solna', null, 1, 'kpl');
+  if(qv('star-c')>0) push('Sufit Starlight (gwieździste niebo)', null, 1, 'kpl');
 
   // ===== IZOLACJA =====
   var wel=qv('welq');
@@ -1315,6 +1316,7 @@ function showSyncStatus(mode,msg){
     <div class="c4 row">
       <div><div class="sub">Prysznic (zł)</div><input type="number" id="prysz-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Ściana solna (zł)</div><input type="number" id="sol-c" value="0" min="0" onchange="r()"></div>
+      <div><div class="sub">Sufit Starlight (zł)</div><input type="number" id="star-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Aromaterapia (zł)</div><input type="number" id="arom-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Cebrzyk i chochla (zł)</div><input type="number" id="akc-c" value="0" min="0" onchange="r()"></div>
       <div><div class="sub">Klepsydra (zł)</div><input type="number" id="klep-c" value="0" min="0" onchange="r()"></div>
@@ -2226,7 +2228,7 @@ function r(){
   var ledMat=ledQ*gv('ledt')+gv('zast')*(gv('zastq')||1)+gv('lstt')*(gv('lsttq')||1)+gv('ledpilot')*(gv('ledpilotq')||1),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
   se('ledk',f(ledK));se('ledp',f(ledP));se('sm6',f(ledP));
   var audK=gv('audt')*(gv('audtq')||0)+gv('btkt')*(gv('btktq')||0),audP=audK*mL;se('audk',f(audK));se('audp',f(audP));se('sm7',f(audP));
-  var mD=gv('md')||1.5;var dodK=gv('prysz-c')+gv('sol-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
+  var mD=gv('md')||1.5;var dodK=gv('prysz-c')+gv('sol-c')+gv('star-c')+gv('arom-c')+gv('akc-c')+gv('klep-c'),dodP=dodK*mD;
   se('dod-k',f(dodK));se('dod-p',f(dodP));se('sm9',f(dodP));
   var panoCena=gv('panoc')||820;
   var panoK=isZ&&document.getElementById('pano-show')&&document.getElementById('pano-show').checked?(gv('panoq')||0)*panoCena:0;
@@ -2309,7 +2311,7 @@ function r(){
     // Section 7 - audio
     audio:selTxt('audt'),audtVal:gv('audt'),audtq:gv('audtq')||2,btkt:gv('btkt'),
     // Section 8 - dodatkowe
-    pryszC:gv('prysz-c'),solC:gv('sol-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),
+    pryszC:gv('prysz-c'),solC:gv('sol-c'),starC:gv('star-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),
     // Section 9 - logistyka
     transport:gv('trn'),trnOpt:(document.getElementById('trn-opt')?document.getElementById('trn-opt').value:'w_cenie'),
     dostawa:gv('dos'),projekt:gv('prj'),godz:gv('gdz'),logist:logist,
@@ -2579,6 +2581,7 @@ function buildVariantHTML(s,vkey){
   if(s.pryszC>0)vrowYN('Prysznic',true);
   // Ściana solna - z ceną
   var mDv=s.md||1.5;if(s.solC>0)vrowPrice('Ściana solna',s.solC*mDv);
+  if(s.starC>0)vrowPrice('Sufit Starlight (gwieździste niebo)',s.starC*mDv);
   else vrowYN(tr('sciana_sol'),false);
   // Aromaterapia
   if(s.aromC>0)vrowPrice('Aromaterapia',s.aromC*mDv);
@@ -2717,7 +2720,7 @@ function loadStateToCalc(s){ return loadToCalc(s); } function _loadStateToCalcOL
   sv('trn',s.transport||0);sv('dos',s.dostawa||0);sv('prj',s.projekt||0);sv('gdz',s.godz||0);
 
   // Dodatkowe
-  sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+  sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('star-c',s.starC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
   // === COMPLETE FIELD RESTORATIONS ===
   // Quantities
@@ -2993,7 +2996,7 @@ function loadToCalc(s){
   sso('audt',s.audtVal||0);sv('audtq',s.audtq||2);sv('btkt',s.btkt||0);
 
   // Section 8 - Dodatkowe
-  sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
+  sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('star-c',s.starC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
 
   // Section 9 - Logistyka
   sv('trn',s.transport||0);sv('dos',s.dostawa||0);sv('prj',s.projekt||0);sv('gdz',s.godz||0);
@@ -4272,7 +4275,7 @@ function showQuoteModal(entry){
   html+=row('Dostawa drewna',s.dostawa>0?f(s.dostawa)+' zł':0);
   html+=row('Projekt 2D',s.projekt>0?f(s.projekt)+' zł':0);
   html+=row('Roboczogodziny',s.godz>0?s.godz+'h × 60 zł':0);
-  html+=yn('Ściana solna',s.solC>0);html+=yn('Aromaterapia',s.aromC>0);
+  html+=yn('Ściana solna',s.solC>0);html+=yn('Sufit Starlight',s.starC>0);html+=yn('Aromaterapia',s.aromC>0);
   html+=yn('Cebrzyk i chochla',s.akcC>0);html+=yn('Klepsydra',s.klepC>0);
 
   html+=sec('Marże i parametry');
@@ -4347,6 +4350,7 @@ function buildActual(reload){
     if(s.zasilVal > 0) add('LED', 'Zasilacz LED', 1, 'szt.', s.zasilVal, 'zasil');
     if(s.audtVal > 0) add('Audio', 'Nagłośnienie', 1, 'kpl.', s.audtVal, 'aud');
     if(s.solC > 0) add('Dodatki', 'Ściana solna', 1, 'szt.', s.solC, 'sol');
+    if(s.starC > 0) add('Dodatki', 'Sufit Starlight', 1, 'szt.', s.starC, 'star');
     if(s.aromC > 0) add('Dodatki', 'Aromaterapia', 1, 'szt.', s.aromC, 'arom');
     if(s.akcC > 0) add('Dodatki', 'Cebrzyk i chochla', 1, 'kpl.', s.akcC, 'akc');
     if(s.klepC > 0) add('Dodatki', 'Klepsydra', 1, 'szt.', s.klepC, 'klep');
@@ -5280,7 +5284,17 @@ function dimCalc(){
   var calcPodloga=document.getElementById('dw-podloga')&&document.getElementById('dw-podloga').checked;
   var floorBoardCount=0, floorAreaM2=0, floorArea=0;
   if(calcPodloga){
-    var sauna_area=wA*wB; // cm²
+    // Podłoga TYLKO w strefie SAUNA (nie w przedsionku/prysznicu/balii/relaksie)
+    var saunaZoneLen=0;
+    if(typeof getActiveZones==='function'){
+      var _az=getActiveZones();
+      var _sauna=_az.find(function(z){return z.mod==='sauna';});
+      if(_sauna) saunaZoneLen=_sauna.len; // długość strefy sauna (cm)
+    }
+    // Jeśli brak stref (pojedyncza sauna) — cała długość budynku
+    var floorLenCm = saunaZoneLen>0 ? saunaZoneLen : wB;
+    var floorWidthCm = wA; // szerokość budynku = szerokość podłogi sauny
+    var sauna_area=floorWidthCm*floorLenCm; // cm² — tylko strefa sauny
     var sdCm=Math.round(seatDepth/10); // głębokość ławki cm
     // Odejmij rzut każdej ławki (długość × głębokość siedziska)
     var benchFootprint=0;
@@ -5292,8 +5306,8 @@ function dimCalc(){
       // 1) pasy w poprzek = szerokość podłogi / szerokość deski
       // 2) każdy pas ma długość efektywną → sumaryczne metry bieżące
       // 3) desek = suma długości / długość deski (w górę), +10% zapas
-      var floorW=Math.max(0,Math.min(wA,wB)); // krótszy bok = szerokość pasów
-      var floorL=floorW>0?Math.max(0,floorArea/floorW):0; // długość efektywna
+      var floorW=floorWidthCm; // szerokość podłogi = szerokość budynku
+      var floorL=floorW>0?Math.max(0,floorArea/floorW):0; // długość efektywna (po odjęciu ławek)
       var floorStrips=floorW>0&&deskW>0?Math.ceil(Math.round(floorW*10/deskW*1000)/1000):0;
       var floorTotalLenCm=floorStrips*floorL;
       floorBoardCount=floorTotalLenCm>0&&BOARD_LEN>0
@@ -5487,9 +5501,8 @@ function dimCalc(){
   });
   html+=resultRow('Głębokość siedziska', Math.round(seatDepth/10)+' cm', '5 desek × '+deskW+'mm + 4 × 5mm przerwy');
   if(calcPodloga&&deskMat&&floorBoardCount>0){
-    var _fW=Math.max(0,Math.min(wA,wB));
-    var _fStrips=(_fW>0&&deskW>0)?Math.ceil(Math.round(_fW*10/deskW*1000)/1000):0;
-    html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'wolna przestrzeń '+Math.round(floorAreaM2*100)/100+' m² | '+_fStrips+' pasów (z odzyskiem) | dł. '+BOARD_LEN+'cm');
+    var _fStrips=(wA>0&&deskW>0)?Math.ceil(Math.round(wA*10/deskW*1000)/1000):0;
+    html+=resultRow('Deski podłogowe', floorBoardCount+' szt.', 'strefa sauny '+Math.round(floorAreaM2*100)/100+' m² | '+_fStrips+' pasów (z odzyskiem) | dł. '+BOARD_LEN+'cm');
   }
   else if(calcPodloga&&!deskMat) html+=resultRow('Deski podłogowe','— wybierz materiał desek','');
   var welDeductInfo=(welWinDeduct>0?' -okno '+Math.round(welWinDeduct*100)/100+'m²':'')+(welOpenDeduct>0?' -otwarta '+Math.round(welOpenDeduct*100)/100+'m²':'');
