@@ -913,7 +913,7 @@ function showSyncStatus(mode,msg){
     <button onclick="clearCalc()" style="background:none;border:0.5px solid #c00;color:#c00;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px">🗑 Wyczyść kalkulator</button>
     <span style="flex:1"></span>
     <button class="btn grn" id="btn-save-new" onclick="saveQuote()">💾 Zapisz nową</button>
-    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button>
+    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button><button class="btn" id="btn-oferta" onclick="openOferta()" style="background:#fff;color:var(--mbm-primary,#7B4B27);border:1px solid var(--mbm-primary,#7B4B27)">📄 Zrób ofertę</button>
     <button class="btn act" onclick="showTab('client')">Widok klienta →</button>
     <button class="btn" onclick="openDimCalc()" style="background:var(--mbm-primary);color:#fff;border-color:var(--mbm-primary)">📐 Kalkulator wymiarów</button>
   </div>
@@ -1372,7 +1372,7 @@ function showSyncStatus(mode,msg){
       <button id="lang-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleLang()">EN</button>
       <button id="curr-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleCurr()">€ EUR</button>
       <button class="btn grn" id="btn-save-new" onclick="saveQuote()">💾 Zapisz nową</button>
-    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button>
+    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button><button class="btn" id="btn-oferta" onclick="openOferta()" style="background:#fff;color:var(--mbm-primary,#7B4B27);border:1px solid var(--mbm-primary,#7B4B27)">📄 Zrób ofertę</button>
       <button class="btn" onclick="showTab('calc')">← Wróć</button>
       <span style="font-size:11px;color:#999;margin-left:8px">Aktywne warianty: <span id="active-variants-label">—</span></span>
     </div>
@@ -2471,7 +2471,7 @@ function fC(val){
 function buildVariantHTML(s,vkey){
   if(!s)return '';
   var html='';
-  var mG=s.mg||1.4, mL=s.ml||1.4;
+  var mG=s.mg||1.4, mL=s.ml||1.4, mP=s.mp||1.5;
 
   function vsec(t){html+='<div class="v-sec-hd">'+t+'</div>';}
   function vrow(label,val){html+='<div class="v-row"><span class="v-label">'+label+'</span><span class="v-val">'+val+'</span></div>';}
@@ -3218,6 +3218,13 @@ function updateSaveButtons(){
 }
 
 // Aktualizuje wczytaną wycenę (lokalnie + w chmurze) zamiast tworzyć nową
+
+function openOferta(){
+  var id = (typeof _loadedQuote !== 'undefined' && _loadedQuote) ? _loadedQuote.cloudId : null;
+  if(!id){ alert('Najpierw zapisz wycenę w chmurze — generator czyta ją po numerze.'); return; }
+  window.open('generator-ofert.html?quote=' + encodeURIComponent(id), '_blank');
+}
+
 async function updateQuote(){
   var s=STATE;
   if(!s||!s.klient){alert('Wpisz imię i nazwisko klienta.');return;}
