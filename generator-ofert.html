@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator ofert ABM</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#F6F1EA;--panel:#FFF;--ink:#2A211C;--mid:#6B5849;--soft:#9A8371;--line:#E3D9CE;
+--brand:#594035;--deep:#2E241E;--accent:#B5794C;--tint:#EDE2D6;--x:#BF5B3C}
+*{box-sizing:border-box}
+body{margin:0;background:#EDE7DF;color:var(--ink);font-family:'Jost',system-ui,sans-serif}
+a{color:#7A5B47}
+
+/* ---------- powłoka ---------- */
+.app{display:grid;grid-template-columns:352px minmax(0,1fr);gap:20px;padding:20px;align-items:start}
+@media(max-width:1000px){.app{grid-template-columns:1fr}}
+.side{background:var(--panel);padding:20px;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto}
+.head{display:flex;align-items:baseline;gap:10px}
+.h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:26px;font-weight:500;line-height:1}
+.sub{font-size:11.5px;color:var(--soft)}
+.sec{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft);margin:18px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+label{display:block;font-size:11.5px;color:var(--mid);margin-bottom:4px}
+input,select,textarea{width:100%;font-family:inherit;font-size:13px;color:var(--ink);background:#FFF;border:1px solid var(--line);border-radius:3px;padding:6px 8px}
+input,select{height:32px}
+textarea{resize:vertical;min-height:56px;line-height:1.45}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.fld{margin-bottom:9px}
+.btn{font-family:inherit;font-size:12.5px;padding:8px 13px;border-radius:3px;cursor:pointer;border:1px solid var(--brand);background:var(--brand);color:#FFF}
+.btn.ghost{background:none;color:var(--brand)}
+.btn:hover{background:var(--deep);border-color:var(--deep);color:#FFF}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.wide{width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11.5px;padding:6px 10px;border:1px solid var(--line);background:#FFF;color:var(--mid);cursor:pointer;border-radius:3px;font-family:inherit}
+.chip[aria-pressed=true]{background:var(--tint);border-color:var(--accent);color:#5A4436;font-weight:500}
+.range{display:flex;align-items:center;gap:9px}
+.range input{height:26px;accent-color:var(--accent)}
+.rv{font-size:11.5px;color:var(--ink);min-width:74px;text-align:right}
+
+.qlist{display:flex;flex-direction:column;gap:5px;max-height:230px;overflow:auto;margin-top:8px}
+.q{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:8px 9px;background:var(--bg);border:1px solid transparent;cursor:pointer;font-size:12.5px}
+.q:hover{border-color:var(--accent)}
+.q[aria-selected=true]{background:var(--tint);border-color:var(--accent)}
+.qn{font-weight:500;color:var(--ink)}
+.qm{font-size:11px;color:var(--soft);white-space:nowrap}
+
+.pglist{display:flex;flex-direction:column;gap:5px}
+.pg{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:7px 9px;background:var(--bg);font-size:12.5px}
+.pg input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);margin:0}
+.pg.off{opacity:.45}
+.ib{width:23px;height:26px;border:1px solid var(--line);background:#FFF;color:var(--mid);cursor:pointer;font-size:12px;border-radius:3px;font-family:inherit;padding:0}
+.ib:hover{border-color:var(--accent);color:var(--accent)}
+.ib:disabled{opacity:.3;cursor:default}
+.planprev{background:#FFF;border:1px solid var(--line);padding:8px;margin-top:10px}
+.planprev svg{width:100%;height:auto;display:block}
+.empty{background:var(--panel);padding:60px 40px;text-align:center;color:var(--soft);font-size:13px;line-height:1.7}
+.note{font-size:11px;color:var(--soft);line-height:1.5;margin-top:12px}
+.msg{font-size:12px;padding:9px 11px;margin-bottom:10px;line-height:1.45}
+.msg.err{color:#8A4A32;background:#FAEDE6;border-left:2px solid var(--x)}
+.msg.ok{color:#4A6138;background:#EEF3E8;border-left:2px solid #6F8A5E}
+
+/* ---------- podgląd ---------- */
+.stack{display:flex;flex-direction:column;gap:20px;align-items:center}
+.sheet{width:1123px;height:794px;background:#FFF;box-shadow:0 2px 14px rgba(58,42,32,.14);overflow:hidden;flex:none;
+  transform-origin:top center;font-family:'Jost',sans-serif;color:var(--ink);position:relative}
+.scaler{width:100%;display:flex;flex-direction:column;align-items:center;gap:20px}
+
+/* ---------- strony oferty ---------- */
+.p{width:1123px;height:794px;background:#F6F1EA;padding:32px 44px 24px;display:flex;flex-direction:column;gap:16px}
+.phead{display:flex;align-items:baseline;justify-content:space-between;gap:24px}
+.ptitle{font-family:'Cormorant Garamond',Georgia,serif;font-size:32px;font-weight:300;line-height:1}
+.pkicker{font-size:12.5px;color:var(--soft)}
+.pmeta{text-align:right;font-size:11.5px;line-height:1.5;color:var(--mid);flex:none}
+.pmeta span{color:var(--soft)}
+.pfoot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:26px;font-size:11px;color:var(--soft)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:.22em;color:var(--brand);opacity:.75;white-space:nowrap}
+
+.cards{display:grid;gap:22px;flex:1;min-height:0}
+.card{display:flex;flex-direction:column;background:#FFF;overflow:hidden}
+.chead{background:var(--brand);padding:10px 15px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.cname{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:500;color:#FFF;line-height:1}
+.ctag{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#C9A88A;white-space:nowrap}
+.cbody{padding:0 15px;flex:1}
+.csec{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:#A6937F;padding:7px 0 3px}
+.r{display:flex;align-items:baseline;justify-content:space-between;gap:9px;padding:2.5px 5px 2.5px 0;border-bottom:1px solid #F0E9E0;min-height:13px}
+.r.x{background:#FAF2E7;padding-left:5px}
+.rk{font-size:10.5px;color:var(--mid);line-height:1.25}
+.rv{font-size:10.5px;font-weight:500;color:var(--ink);line-height:1.25;white-space:nowrap}
+.ry{font-size:9.5px;font-weight:500;color:#6F8A5E;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.st{display:flex;align-items:baseline;justify-content:space-between;gap:8px;background:var(--tint);padding:4px 9px;margin:4px -15px 0}
+.stk{font-size:10px;font-weight:500;color:#5A4436}
+.stv{font-size:12.5px;font-weight:600;color:var(--ink)}
+.cfoot{background:var(--deep);padding:9px 15px 11px;display:flex;flex-direction:column;gap:1px;margin-top:7px}
+.fn{font-size:10.5px;color:#A98D77}
+.fb{font-family:'Cormorant Garamond',serif;font-size:29px;font-weight:500;color:#FFF;line-height:1.05}
+
+.slot{background:#EFE7DD;border:1px dashed #CFC0AF;display:flex;align-items:center;justify-content:center;
+  color:#A6937F;font-size:11px;text-align:center;padding:10px;line-height:1.4}
+.slot img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+
+/* ---------- druk ---------- */
+@page{size:A4 landscape;margin:0}
+@media print{
+  body{background:#FFF}
+  .side,.toolbar{display:none!important}
+  .app{display:block;padding:0}
+  .scaler{gap:0;display:block}
+  .sheet{box-shadow:none;transform:none!important;margin:0;break-after:page;page-break-after:always}
+  .sheet:last-child{break-after:auto;page-break-after:auto}
+}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.tinfo{font-size:12px;color:var(--mid)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="side">
+    <div class="head"><span class="h1">Generator ofert</span><span class="sub">ABM Sauny</span></div>
+    <div id="msg"></div>
+
+    <div class="sec">Wycena z kalkulatora</div>
+    <div class="fld"><input type="search" id="search" placeholder="Szukaj klienta…"></div>
+    <div class="qlist" id="qlist"><div class="sub">Ładowanie…</div></div>
+    <button class="btn ghost wide" id="reload" type="button" style="margin-top:9px">Odśwież listę</button>
+
+    <div class="sec">Oferta</div>
+    <div class="g2">
+      <div class="fld"><label for="mNr">Numer</label><input id="mNr"></div>
+      <div class="fld"><label for="mData">Data</label><input id="mData" type="date"></div>
+    </div>
+    <div class="fld"><label for="mOp">Opiekun</label><input id="mOp" value="Bartłomiej Gębala"></div>
+    <div class="fld"><label for="mWaz">Oferta ważna do (puste = nie pokazuj)</label><input id="mWaz" type="date"></div>
+
+    <div class="sec">Strony</div>
+    <div class="pglist" id="pglist"></div>
+
+    <div class="sec">Układ sauny</div>
+    <div class="g2">
+      <div class="fld"><label for="pDepth">Głębokość (mm)</label><input type="number" id="pDepth" value="2300" step="10"></div>
+      <div class="fld"><label for="pWall">Ściana (mm)</label><input type="number" id="pWall" value="100" step="5"></div>
+    </div>
+    <div class="pglist" id="mods" style="margin-bottom:8px"></div>
+    <button class="btn ghost wide" id="addMod" type="button">+ pomieszczenie</button>
+    <div class="fld" style="margin-top:10px"><label>Ławy</label>
+      <div class="chips" id="benchMode">
+        <button class="chip" type="button" data-v="proste">Proste</button>
+        <button class="chip" type="button" data-v="L">W literę L</button>
+      </div>
+    </div>
+    <div class="fld" id="wallsFld"><label>Ściany ław</label>
+      <div class="chips" id="benchWalls">
+        <button class="chip" type="button" data-v="gora-prawa">Góra + prawa</button>
+        <button class="chip" type="button" data-v="gora-lewa">Góra + lewa</button>
+        <button class="chip" type="button" data-v="dol-prawa">Dół + prawa</button>
+        <button class="chip" type="button" data-v="dol-lewa">Dół + lewa</button>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label for="pUpper">Ława górna</label><input type="number" id="pUpper" value="550" step="10"></div>
+      <div class="fld"><label for="pLower" id="lowLbl">Podnóżek</label><input type="number" id="pLower" value="280" step="10"></div>
+    </div>
+    <div class="fld"><label>Piec — kształt</label>
+      <div class="chips" id="piecShape">
+        <button class="chip" type="button" data-v="prostokatny">Prostokątny</button>
+        <button class="chip" type="button" data-v="okragly">Okrągły</button>
+      </div>
+    </div>
+    <div class="fld" id="piecRound"><label for="piecD">Średnica (mm)</label><input type="number" id="piecD" value="500" step="10"></div>
+    <div class="g2" id="piecRect">
+      <div class="fld"><label for="piecW">Szer. pieca</label><input type="number" id="piecW" value="420" step="10"></div>
+      <div class="fld"><label for="piecH">Głęb. pieca</label><input type="number" id="piecH" value="470" step="10"></div>
+    </div>
+    <div class="fld"><label>Narożnik pieca</label>
+      <div class="chips" id="piecCorner">
+        <button class="chip" type="button" data-v="ld">Lewy dolny</button>
+        <button class="chip" type="button" data-v="pd">Prawy dolny</button>
+        <button class="chip" type="button" data-v="lg">Lewy górny</button>
+        <button class="chip" type="button" data-v="pg">Prawy górny</button>
+      </div>
+    </div>
+    <div class="fld"><label>Drzwi sauny — ściana</label>
+      <div class="chips" id="saunaDoorWall">
+        <button class="chip" type="button" data-v="przod">Z przodu</button>
+        <button class="chip" type="button" data-v="lewa">Z lewej</button>
+        <button class="chip" type="button" data-v="prawa">Z prawej</button>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label for="pDoorW">Szer. drzwi</label><input type="number" id="pDoorW" value="700" step="10"></div>
+      <div class="fld"><label for="pEntr">Wejście</label><select id="pEntr"></select></div>
+    </div>
+    <div class="fld"><label for="doorPos">Położenie drzwi</label>
+      <div class="range"><input type="range" id="doorPos" min="0" max="100" value="70"><span class="rv" id="doorPosV">środek</span></div>
+    </div>
+    <div class="planprev" id="planPrev"></div>
+    <div class="sub" id="planInfo" style="margin-top:6px"></div>
+
+    <div class="sec">Warunki</div>
+    <div class="fld"><label for="wGwar">Gwarancja — konstrukcja</label><input id="wGwar" value="5 lat"></div>
+    <div class="fld"><label for="wGwarU">Gwarancja — urządzenia</label><input id="wGwarU" value="24 miesiące"></div>
+    <div class="fld"><label for="wTermin">Termin realizacji</label><input id="wTermin" value="6 tygodni od podpisania umowy"></div>
+    <div class="fld"><label for="wPlat">Płatność</label><input id="wPlat" value="60% po rozpoczęciu realizacji, 40% po odbiorze"></div>
+
+    <div class="sec">Zdjęcia</div>
+    <div class="fld"><label for="imgBase">Folder ze zdjęciami (ścieżka lub URL)</label><input id="imgBase" value="zdjecia/" placeholder="zdjecia/"></div>
+    <div class="fld"><label for="imgReal">Realizacje — nazwy plików, po przecinku</label><textarea id="imgReal" placeholder="realizacje/sosnowiecka-1.jpg, ...">realizacje/sosnowiecka-1.jpg, realizacje/zieleniec-1.jpg, realizacje/baranska-2.jpg, realizacje/sosnowiecka-3.jpg</textarea></div>
+    <div class="note">Puste pola zostawiają na stronach ramki z opisem, co ma tam trafić — oferta nadal się drukuje. Docelowo zdjęcia będą się dobierać same z biblioteki.</div>
+  </div>
+
+  <div>
+    <div class="toolbar">
+      <div class="tinfo" id="tinfo">Wybierz wycenę z listy po lewej.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" id="zoomOut" type="button">−</button>
+        <button class="btn ghost" id="zoomIn" type="button">+</button>
+        <button class="btn" id="print" type="button">Drukuj / PDF</button>
+      </div>
+    </div>
+    <div class="scaler" id="scaler"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ konfiguracja ============ */
+var SUPA_URL = "https://uuxnxvzwhvjlcxegtozk.supabase.co";
+var SUPA_KEY = window.ABM_SUPA_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc";   // patrz uwaga w komentarzu na dole pliku
+var supa = null;
+
+var $ = function(id){return document.getElementById(id);};
+var esc = function(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");};
+var fmt = function(n){return String(Math.round(n||0)).replace(/\B(?=(\d{3})+(?!\d))/g," ");};
+var zl  = function(n){return fmt(n)+" zł";};
+var X   = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#BF5B3C" stroke-width="1.8" stroke-linecap="round"><path d="M2.6 2.6 L9.4 9.4"></path><path d="M9.4 2.6 L2.6 9.4"></path></svg>';
+
+/* ============ stan ============ */
+var Q = [];          // lista wycen
+var cur = null;      // wybrana wycena (pełny wiersz)
+var zoom = 0.62;
+
+var PAGES = [
+  {id:"okladka",  name:"Okładka",           on:true},
+  {id:"propozycja",name:"Propozycja",       on:true},
+  {id:"wyposazenie",name:"Wyposażenie",     on:true},
+  {id:"drewno",   name:"Drewno w saunie",   on:true},
+  {id:"uklad",    name:"Układ sauny",       on:true},
+  {id:"warunki",  name:"Warunki i etapy",   on:true},
+  {id:"realizacje",name:"Wybrane realizacje",on:true}
+];
+
+var P = {   // rzut
+  depth:2300, wall:100,
+  modules:[{type:"sauna",width:2100}],
+  benchMode:"L", benchWalls:"gora-prawa", upper:550, lower:280,
+  piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
+  doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70
+};
+
+var TYPES = {sauna:{label:"Sauna",def:2100},przedsionek:{label:"Przedsionek",def:1200},
+             prysznic:{label:"Prysznic",def:1200},taras:{label:"Taras / balia",def:2600}};
+
+function msg(kind, text){
+  $("msg").innerHTML = text ? '<div class="msg '+kind+'">'+esc(text)+'</div>' : "";
+}
+
+/* ============ Supabase ============ */
+async function connect(){
+  if(!window.supabase){ msg("err","Nie wczytała się biblioteka Supabase — sprawdź połączenie."); return false; }
+  if(!SUPA_KEY){ msg("err","Brak klucza Supabase. Wklej go do zmiennej SUPA_KEY na dole pliku (ten sam, którego używa kalkulator)."); return false; }
+  supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  return true;
+}
+
+async function loadQuotes(){
+  $("qlist").innerHTML = '<div class="sub">Ładowanie…</div>';
+  if(!supa && !(await connect())){ $("qlist").innerHTML = '<div class="sub">Brak połączenia z bazą.</div>'; return; }
+  try{
+    // LEKKIE zapytanie: same kolumny widoczne na liscie.
+    // Ciezkie data+variants (pelne STATE) dociagamy dopiero przy kliknieciu — patrz hydrate().
+    var res = await supa.from("quotes")
+      .select("id,created_at,klient,opis,netto,brutto,vat,typ,is_z")
+      .order("created_at",{ascending:false}).limit(60);
+    if(res.error) throw res.error;
+    Q = res.data || [];
+    msg("", "");
+    drawQuotes();
+    // ?quote=<id> — otwarcie prosto z kalkulatora
+    var want = new URLSearchParams(location.search).get("quote");
+    if(want && !cur){
+      var hit = Q.filter(function(q){ return String(q.id) === String(want); })[0];
+      if(hit) pick(hit);
+      else {
+        var one = await supa.from("quotes")
+          .select("id,created_at,klient,opis,netto,brutto,vat,typ,is_z")
+          .eq("id", want).limit(1);
+        if(!one.error && one.data && one.data[0]){ Q.unshift(one.data[0]); drawQuotes(); pick(one.data[0]); }
+        else msg("err","Nie znalazłem wyceny o numerze "+want+" — wybierz ją z listy.");
+      }
+    }
+  }catch(e){
+    $("qlist").innerHTML = '<div class="sub">Nie udało się pobrać wycen.</div>';
+    msg("err","Baza odpowiedziała błędem: "+(e.message||e));
+  }
+}
+
+function drawQuotes(){
+  var f = ($("search").value||"").toLowerCase().trim();
+  var list = Q.filter(function(q){ return !f || (q.klient||"").toLowerCase().indexOf(f)>-1; });
+  if(!list.length){ $("qlist").innerHTML = '<div class="sub">Brak wycen.</div>'; return; }
+  $("qlist").innerHTML = "";
+  list.slice(0,80).forEach(function(q){
+    var d = document.createElement("div");
+    d.className="q"; d.setAttribute("aria-selected", String(cur && cur.id===q.id));
+    d.innerHTML = '<span class="qn">'+esc(q.klient||"bez nazwy")+'</span>'+
+                  '<span class="qm">'+zl(q.brutto)+'</span>';
+    d.onclick = function(){ pick(q); };
+    $("qlist").appendChild(d);
+  });
+}
+
+/* Dociaga pelna tresc wyceny (data + variants) dla jednego wiersza. Raz na wycene. */
+async function hydrate(q){
+  if(q._hydrated) return q;
+  if(!supa && !(await connect())) return q;
+  var res = await supa.from("quotes").select("data,variants").eq("id", q.id).limit(1);
+  if(res.error) throw res.error;
+  var row = (res.data||[])[0] || {};
+  q.data = row.data; q.variants = row.variants; q._hydrated = true;
+  return q;
+}
+
+async function pick(q){
+  cur = q;
+  drawQuotes();
+  if(!q._hydrated){
+    msg("", "");
+    $("qlist").setAttribute("aria-busy","true");
+    try{ await hydrate(q); }
+    catch(e){ msg("err","Nie udało się wczytać treści wyceny: "+(e.message||e)); }
+    $("qlist").removeAttribute("aria-busy");
+    if(cur !== q) return;
+  }
+  var st = typeof q.data === "string" ? JSON.parse(q.data) : q.data;
+  cur._s = st || {};
+  cur._v = variantsOf(q);
+  // podpowiedz układ z wyceny
+  P.modules = (cur._s.isZ) ? [{type:"taras",width:2600},{type:"przedsionek",width:1200},{type:"sauna",width:2100}]
+                           : [{type:"sauna",width:2100}];
+  P.entrance = P.modules.length>1 ? 1 : 0;
+  if(!$("mNr").value) $("mNr").value = suggestNr();
+  if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
+  syncPlan(); drawQuotes(); render();
+}
+
+function variantsOf(q){
+  var v = q.variants; if(typeof v === "string"){ try{ v = JSON.parse(v); }catch(e){ v=null; } }
+  var out = [];
+  ["A","B","C","D","E"].forEach(function(k){
+    var s = v && v[k]; if(!s) return;
+    if(typeof s === "string"){ try{ s = JSON.parse(s); }catch(e){ return; } }
+    out.push({key:k, name:s.variantName || ("Wariant "+k), s:s});
+  });
+  if(!out.length) out.push({key:"A", name:q.klient||"Oferta", s:q._s || {}});
+  return out.slice(0,3);
+}
+
+function suggestNr(){
+  var y = new Date().getFullYear();
+  var n = 1;
+  try{ n = (parseInt(localStorage.getItem("abm_of_nr_"+y),10)||0) + 1; }catch(e){}
+  return "OF/"+y+"/"+String(n).padStart(3,"0");
+}
+
+/* ============ mapowanie wyceny na wiersze ============ */
+function rowsFor(s){
+  var mG = s.mg||1.4, mL = s.ml||1.4, mP = s.mp||1.5, mD = s.md||1.5;
+  var out = [];
+  function sec(t){ out.push({sec:t}); }
+  function mat(k,v){ out.push(v ? {k:k,v:v,t:"mat"} : {k:k,t:"no"}); }
+  function pri(k,v){ out.push({k:k,v:zl(v),t:"mat"}); }
+  function yn(k,ok,txt){ out.push(ok ? {k:k,v:txt||"Tak",t:"yes"} : {k:k,t:"no"}); }
+  function sub(k,v){ out.push({sub:k, v:zl(v)}); }
+
+  sec("Wykończenie sauny");
+  mat("Boazeria wewnętrzna", s.b1 && s.b1.q>0 ? (s.b1.g||s.b1.name) : null);
+  if(s.b2 && s.b2.q>0) mat("Boazeria (2)", s.b2.g||s.b2.name);
+  if(!s.isZ) mat("Zabudowa nad sauną", s.zb1 && s.zb1.q>0 ? (s.zb1.g||s.zb1.name) : null);
+  mat("Ławki i oparcia", s.l1 && s.l1.q>0 ? (s.l1.g||s.l1.name) : null);
+  if(s.l2 && s.l2.q>0) mat("Ławki (2)", s.l2.g||s.l2.name);
+  mat("Okno panoramiczne", (s.panoShow && s.panoq>0) ? (String(s.panoq).replace(".",",")+" m²") : null);
+  var glass = String(s.szktTxt||s.szkt||"").replace(/\([^)]*\)/g,"").trim().split(" ")[0] || "";
+  yn("Szklenie"+(glass?" — "+glass:""), s.szkm>0);
+
+  if(s.isZ){
+    sec("Elewacja i konstrukcja");
+    mat("Elewacja zewnętrzna", s.obicieZew ? (s.bzn||"Tak") : null);
+    yn("Dach — blacha zaginana na rąbek", true);
+    yn("Wełna skalna — ocieplenie", true);
+    yn("Konstrukcja BSH 100×100", (s.bshq||0)>0);
+    yn("Płyta XPS", (s.styq||0)>0);
+  }
+
+  var wypos = (s.grzP||0)+(s.ledP||0)+(s.audP||0)+(s.dodP||0);
+  var sauna = s.cenaSaunyOverride>0 ? s.cenaSaunyOverride : (s.netto||0) - wypos;
+  sub("Cena sauny", sauna);
+
+  sec("Wyposażenie sauny");
+  if(s.typ!=="I" && s.piec && s.piec.cena>0) pri("Piec — "+String(s.piec.name||"").split("--")[0].trim(), s.piec.cena*mG);
+  else yn("Piec", false);
+  if(s.kamd>0) pri("Kamienie Diabez ("+(s.kamd*20)+" kg)", s.kamd*50*mG);
+  if(s.kams>0) pri("Kamienie szare ("+(s.kams*15)+" kg)", s.kams*130*mG);
+  if(s.osl>0)  pri("Osłona na piec", s.osl*mG);
+  if(s.typ!=="F"){
+    [["pr3",350,"pr3name","pr3m",660],["pr5",500,"pr5name","pr5m",710],["pr7",750,"pr7name","pr7m",765]].forEach(function(a){
+      var n = s[a[0]]||0; if(!n) return;
+      var nm = s[a[2]] && s[a[2]]!=="Bez" ? s[a[2]] : ("Promienniki "+a[1]+"W");
+      var up = parseFloat(String(s[a[3]]||a[4]).split("|")[0]) || a[4];
+      pri(nm+" × "+n, up*n*mG);
+    });
+  }
+  if(s.sterVal>0){
+    var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C " : "Z ");
+    pri("Sterownik FFES "+ser+(s.sterModel||""), (s.sterVal + (s.sty?100:0) + (s.sty3?250:0))*mG);
+  } else yn("Sterownik FFES", false);
+  if(s.wifi) pri("Zdalne sterowanie WiFi", 400*mG); else yn("Zdalne sterowanie WiFi", false);
+  if(s.bt) pri("Moduł Bluetooth", 300*mG);
+  if(s.pbez) pri("Przycisk bezpieczeństwa", 220*mG);
+  if(s.cpirG2) pri("Moduł CPiR G2", 350*mG);
+  if(s.cpirG4) pri("Moduł CPiR G4", 400*mG);
+  if(s.aw) pri("System awaryjnego wyłączania", 600*mG);
+  if(s.ledtVal>0 && s.ledq>0){
+    var ex = []; if(s.ledMiejsce) ex.push(s.ledMiejsce); if(s.ledBarwa) ex.push(s.ledBarwa);
+    pri("Oświetlenie LED"+(ex.length?" — "+ex.join(", "):""), s.ledP);
+  } else yn("Oświetlenie LED", false);
+  if(s.audtVal>0) pri("Nagłośnienie", s.audP); else yn("Nagłośnienie", false);
+  if(s.scd && s.scd!=="Bez") pri("Ściana dekoracyjna z kamienia", (parseFloat(s.scd)||0)*mP);
+  else yn("Ściana dekoracyjna z kamienia", false);
+  if(s.pryszC>0) yn("Prysznic", true);
+  if(s.solC>0) pri("Ściana solna", s.solC*mD); else yn("Ściana solna", false);
+  if(s.starC>0) pri("Sufit Starlight", s.starC*mD);
+  if(s.aromC>0) pri("Aromaterapia", s.aromC*mD); else yn("Aromaterapia", false);
+  sub("Cena wyposażenia", wypos);
+
+  sec("Akcesoria");
+  yn("Cebrzyk i chochla", s.akcC>0);
+  yn("Klepsydra", s.klepC>0);
+
+  sec("Logistyka");
+  yn("Transport", s.trnOpt!=="nie_wliczono", "W cenie");
+  yn("Montaż / Podłączenie", true, "W cenie");
+
+  return out;
+}
+
+/* ============ strony ============ */
+function meta(){
+  var s = cur._s||{};
+  var typ = s.typ==="I" ? "Infrared" : (s.typ==="C" ? "Combi" : "Fińska");
+  return {
+    klient: cur.klient || "Klient",
+    nr: $("mNr").value || "",
+    data: $("mData").value || "",
+    opiekun: $("mOp").value || "",
+    wazna: $("mWaz").value || "",
+    opis: (s.isZ ? "Zewnętrzna " : "Wewnętrzna ") + typ + (s.opis ? " · "+s.opis : ""),
+    vat: s.vat || 8
+  };
+}
+function dPL(iso){
+  if(!iso) return "";
+  var m = ["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","września","października","listopada","grudnia"];
+  var d = new Date(iso+"T00:00:00");
+  return d.getDate()+" "+m[d.getMonth()]+" "+d.getFullYear();
+}
+function pmeta(){
+  var m = meta();
+  return '<div class="pmeta">'+esc(m.klient)+(m.nr?" · "+esc(m.nr):"")+'<br><span>'+esc(m.opis)+' · VAT '+m.vat+'%</span></div>';
+}
+function pfoot(txt){
+  return '<div class="pfoot"><span>'+txt+'</span><span class="logo">ABM SAUNY</span></div>';
+}
+function head(title, kicker){
+  return '<div class="phead"><div style="display:flex;align-items:baseline;gap:15px">'+
+    '<div class="ptitle">'+esc(title)+'</div><div class="pkicker">'+esc(kicker||"")+'</div></div>'+pmeta()+'</div>';
+}
+function slot(h, text){
+  var b = ($("imgBase").value||"").trim();
+  return '<div class="slot" style="height:'+h+'px">'+esc(text)+'</div>';
+}
+function abs(src){
+  var b = ($("imgBase").value||"").trim();
+  return /^(https?:|\/|data:)/.test(src) ? src : (b + src);
+}
+function img(src, h, alt){
+  if(!src) return slot(h, alt);
+  return '<div class="slot" style="height:'+h+'px;border:none;background:none;padding:0">'+
+         '<img src="'+esc(abs(src))+'" alt="'+esc(alt)+'" onerror="ABMimg(this)"></div>';
+}
+// szuka pliku po kolejnych, coraz krótszych nazwach; gdy nic nie znajdzie — zostaje ramka z opisem
+function imgOf(dir, name, h, alt){
+  var list = [];
+  slugCandidates(name).forEach(function(sl){
+    list.push(abs(dir+"/"+sl+".png"));
+    list.push(abs(dir+"/"+sl+".jpg"));
+  });
+  return '<div class="slot" style="height:'+h+'px;border:none;background:none;padding:0" data-alt="'+esc(alt)+'">'+
+         '<img src="'+esc(list[0])+'" alt="'+esc(alt)+'" data-c="'+esc(list.join("|"))+'" data-i="0" onerror="ABMimg(this)"></div>';
+}
+window.ABMimg = function(el){
+  var list = (el.getAttribute("data-c")||"").split("|").filter(Boolean);
+  var i = parseInt(el.getAttribute("data-i")||"0",10) + 1;
+  if(list.length && i < list.length){ el.setAttribute("data-i", String(i)); el.src = list[i]; return; }
+  var box = el.parentNode;
+  box.className = "slot";
+  box.style.border = ""; box.style.background = ""; box.style.padding = "";
+  box.textContent = box.getAttribute("data-alt") || "brak zdjęcia";
+};
+
+function pageOkladka(){
+  var m = meta();
+  return '<div class="p" style="background:'+"#594035"+';color:#F3EDE7;justify-content:space-between;padding:60px 66px 56px">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between">'+
+      '<span style="font-family:\'Cormorant Garamond\',serif;font-size:26px;letter-spacing:.24em;color:#FFF">ABM SAUNY</span>'+
+      '<span style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#A98D77;line-height:2;text-align:right">Tworzymy sauny,<br>które pasują do Ciebie</span>'+
+    '</div>'+
+    '<div style="display:flex;flex-direction:column;gap:22px;max-width:720px">'+
+      '<div style="font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#B79E8B">Oferta indywidualna</div>'+
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:76px;line-height:.98;font-weight:300;color:#FFF">Sauna dla<br>'+esc(m.klient)+'</div>'+
+      '<div style="width:80px;height:1px;background:#A98D77"></div>'+
+      '<div style="font-size:17px;line-height:1.55;color:#E0D2C6;max-width:560px">'+esc(m.opis)+' — komplet wyposażenia, transport i montaż w cenie.</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px">'+
+      '<div style="display:flex;gap:50px">'+
+        metaCell("Numer oferty", m.nr)+metaCell("Data", dPL(m.data))+metaCell("Opiekun", m.opiekun)+
+        (m.wazna ? metaCell("Ważna do", dPL(m.wazna)) : "")+
+      '</div>'+
+      '<div style="text-align:right;font-size:13px;line-height:1.7;color:#B79E8B">+48 797 913 615<br>kontakt@abmsauny.pl · abmsauny.pl</div>'+
+    '</div></div>';
+}
+function metaCell(k,v){
+  return '<div style="display:flex;flex-direction:column;gap:4px">'+
+    '<span style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#967C68">'+esc(k)+'</span>'+
+    '<span style="font-size:15px;color:#F3EDE7">'+esc(v||"—")+'</span></div>';
+}
+
+function pagePropozycja(){
+  var vs = cur._v, m = meta();
+  var tags = ["Premium","Klasyka","Ciepły odcień"];
+  var cards = vs.map(function(v,i){
+    var rows = rowsFor(v.s), body = "";
+    rows.forEach(function(r){
+      if(r.sec){ body += '<div class="csec">'+esc(r.sec)+'</div>'; return; }
+      if(r.sub){ body += '<div class="st"><span class="stk">'+esc(r.sub)+'</span><span class="stv">'+esc(r.v)+'</span></div>'; return; }
+      if(r.t==="no") body += '<div class="r x"><span class="rk">'+esc(r.k)+'</span>'+X+'</div>';
+      else if(r.t==="yes") body += '<div class="r"><span class="rk">'+esc(r.k)+'</span><span class="ry">'+esc(r.v)+'</span></div>';
+      else body += '<div class="r"><span class="rk">'+esc(r.k)+'</span><span class="rv">'+esc(r.v)+'</span></div>';
+    });
+    return '<div class="card"><div class="chead"><span class="cname">'+esc(v.name)+'</span>'+
+      '<span class="ctag">'+esc(tags[i]||"")+'</span></div>'+
+      '<div class="cbody">'+body+'</div>'+
+      '<div class="cfoot"><span class="fn">'+zl(v.s.netto)+' netto</span>'+
+      '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">'+
+      '<span class="fb">'+zl(v.s.brutto)+'</span><span style="font-size:10px;color:#A98D77">brutto, VAT '+m.vat+'%</span>'+
+      '</div></div></div>';
+  }).join("");
+  return '<div class="p">'+head("Propozycja", vs.length>1 ? vs.length+" warianty — każdy to kompletna oferta" : "")+
+    '<div class="cards" style="grid-template-columns:repeat('+vs.length+',minmax(0,1fr))">'+cards+'</div>'+
+    pfoot('<span style="display:inline-flex;align-items:center;gap:8px">'+X+' pozycja nieuwzględniona w tym wariancie — możemy ją doliczyć w każdej chwili</span>')+'</div>';
+}
+
+function pageWyposazenie(){
+  var s = cur._v[0].s;
+  var items = [];
+  if(s.piec && s.piec.cena>0) items.push({lbl:"Piec", nm:String(s.piec.name||"").split("--")[0].trim(), dir:"piece", key:s.piec.name});
+  if(s.sterVal>0){
+    var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C " : "Z ");
+    items.push({lbl:"Sterownik · seria "+(s.sterSer==="Cmini"?"C mini":s.sterSer||"Z"), nm:"FFES "+ser+(s.sterModel||""), dir:"sterowniki", key:"FFES "+(s.sterSer==="Cmini"?"C mini":s.sterSer||"Z")});
+  }
+  if(s.typ!=="F" && (s.pr3>0||s.pr5>0||s.pr7>0)){
+    items.push({lbl:"Promienniki", nm:s.pr5name||s.pr3name||"Promienniki IR", dir:"promienniki", key:s.pr5name||s.pr3name||"VitalSun"});
+  }
+  if(!items.length) items.push({lbl:"Wyposażenie", nm:"Brak urządzeń w wycenie", dir:"piece", key:""});
+  var cols = Math.min(items.length,3);
+  var cards = items.map(function(it){
+    return '<div class="card" style="border-top:2px solid #594035;padding:20px 22px 18px;gap:14px">'+
+      imgOf(it.dir, it.key, 230, "zdjęcie: "+it.nm)+
+      '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:14px">'+esc(it.lbl)+'</div>'+
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;line-height:1.1;margin-top:6px">'+esc(it.nm)+'</div>'+
+      '</div>';
+  }).join("");
+  return '<div class="p">'+head("Wyposażenie sauny","serce sauny i sterowanie")+
+    '<div class="cards" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+cards+'</div>'+
+    pfoot("Karty powstają wyłącznie dla urządzeń z Twojej konfiguracji.")+'</div>';
+}
+function foldPL(v){
+  return String(v==null?"":v)
+    .replace(/[\u0105\u0104]/g,"a").replace(/[\u0107\u0106]/g,"c").replace(/[\u0119\u0118]/g,"e")
+    .replace(/[\u0142\u0141]/g,"l").replace(/[\u0144\u0143]/g,"n").replace(/[\u00F3\u00D3]/g,"o")
+    .replace(/[\u015B\u015A]/g,"s").replace(/[\u017C\u017A\u017B\u0179]/g,"z");
+}
+function slugify(v){
+  return foldPL(v).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60);
+}
+// "HUUM CLIFF 6 (6 kW)" -> ["huum-cliff-6-6-kw","huum-cliff","huum"]
+// dzięki temu jedno zdjęcie modelu obsługuje wszystkie moce
+function slugCandidates(v){
+  var base = slugify(v), out = [base];
+  var toks = base.split("-").filter(function(t){ return t && !/^\d+$/.test(t) && t !== "kw"; });
+  for(var i = toks.length; i >= 1; i--){
+    var c = toks.slice(0,i).join("-");
+    if(out.indexOf(c) === -1) out.push(c);
+  }
+  return out;
+}
+
+function pageDrewno(){
+  var vs = cur._v;
+  var woods = [];
+  vs.forEach(function(v){
+    var g = v.s.b1 && (v.s.b1.g || v.s.b1.name);
+    if(g && woods.indexOf(g)===-1) woods.push(g);
+  });
+  if(!woods.length) woods = ["—"];
+  var cols = Math.min(woods.length,3);
+  var cards = woods.map(function(w){
+    return '<div class="card" style="padding:22px;gap:14px;align-items:stretch">'+
+      imgOf("drewno", w, 300, "próbka: "+w)+
+      '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:16px">Drewno w saunie</div>'+
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:500;line-height:1.05;margin-top:6px">'+esc(w)+'</div>'+
+      '</div>';
+  }).join("");
+  return '<div class="p">'+head("Drewno w saunie","gatunki z Twoich wariantów")+
+    '<div class="cards" style="grid-template-columns:repeat('+cols+',minmax(0,1fr))">'+cards+'</div>'+
+    pfoot("Ten sam projekt przeliczymy w innym gatunku — wystarczy dać znać.")+'</div>';
+}
+
+function pageUklad(){
+  var b = buildPlan();
+  var rows = [
+    ["Bryła zewnętrzna", fmt(b.extW)+" × "+fmt(b.extH)+" mm"],
+    ["Głębokość wewnętrzna", fmt(P.depth)+" mm"]
+  ];
+  P.modules.forEach(function(m){ rows.push([TYPES[m.type].label, fmt(m.width)+" mm"]); });
+  rows.push(["Ławy", P.benchMode==="L" ? "L — "+P.benchWalls.replace("-"," i ") : "proste, dwa poziomy"]);
+  rows.push([P.benchMode==="L"?"Podnóżek":"Ława dolna", fmt(P.lower)+" mm"]);
+  rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
+  rows.push(["Drzwi sauny", fmt(P.doorW)+" mm, "+({przod:"ściana frontowa",lewa:"ściana lewa",prawa:"ściana prawa"}[P.saunaDoorWall])]);
+  var list = rows.map(function(r){
+    return '<div class="r"><span class="rk" style="font-size:12px">'+esc(r[0])+'</span><span class="rv" style="font-size:12px">'+esc(r[1])+'</span></div>';
+  }).join("");
+  return '<div class="p">'+head("Układ sauny","rzut z góry, wygenerowany z konfiguracji")+
+    '<div style="display:flex;gap:30px;flex:1;min-height:0">'+
+      '<div style="width:272px;flex:none;display:flex;flex-direction:column">'+list+
+        '<div style="margin-top:auto;padding:11px 13px;background:#EDE2D6;border-left:2px solid #A0724A">'+
+        '<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A6A55;margin-bottom:4px">Rysunek poglądowy</div>'+
+        '<div style="font-size:11.5px;line-height:1.45;color:#5A4436">Ostateczny układ potwierdzamy na etapie projektu szczegółowego.</div></div>'+
+      '</div>'+
+      '<div style="flex:1;background:#FFF;padding:14px;display:flex;align-items:center;justify-content:center;min-width:0">'+b.svg+'</div>'+
+    '</div>'+
+    pfoot("Drzwi sauny zawsze otwierają się na zewnątrz.")+'</div>';
+}
+
+function pageWarunki(){
+  var m = meta();
+  var items = [
+    ["Gwarancja na konstrukcję drewnianą", $("wGwar").value],
+    ["Gwarancja na urządzenia i osprzęt", $("wGwarU").value],
+    ["Transport i kompleksowy montaż", "w cenie oferty"],
+    ["Termin realizacji", $("wTermin").value],
+    ["Płatność", $("wPlat").value]
+  ];
+  if(m.wazna) items.push(["Oferta ważna do", dPL(m.wazna)]);
+  var steps = [
+    ["Akceptacja wyceny","Wybierasz wariant, odpowiadamy na pytania i nanosimy korekty do koncepcji."],
+    ["Podpisanie umowy","Formalizujemy ustalenia i rezerwujemy termin realizacji."],
+    ["Wpłata zaliczki","Zaliczka na zakup materiałów i zabezpieczenie miejsca w harmonogramie."],
+    ["Projekt szczegółowy","Dopracowujemy układ wnętrza, drewno, oświetlenie i rozwiązania techniczne."],
+    ["Produkcja i montaż","Produkujemy saunę na wymiar, dostarczamy i montujemy na miejscu."],
+    ["Odbiór i przekazanie","Odbiór, szkolenie z obsługi i rozliczenie pozostałej części płatności."]
+  ];
+  return '<div class="p">'+head("Warunki i etapy","co obejmuje oferta i jak wygląda realizacja")+
+    '<div style="display:flex;gap:34px;flex:1;min-height:0">'+
+      '<div style="width:390px;flex:none">'+
+        items.map(function(i){
+          return '<div class="r" style="padding:9px 0"><span class="rk" style="font-size:12px">'+esc(i[0])+'</span>'+
+                 '<span class="rv" style="font-size:12px;white-space:normal;text-align:right;max-width:200px">'+esc(i[1])+'</span></div>';
+        }).join("")+
+      '</div>'+
+      '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:18px 26px;align-content:start">'+
+        steps.map(function(st,i){
+          return '<div><div style="display:flex;gap:9px;align-items:baseline">'+
+            '<span style="font-size:11px;color:#B5794C;font-weight:500">'+(i+1)+'</span>'+
+            '<span style="font-family:\'Cormorant Garamond\',serif;font-size:19px;font-weight:500">'+esc(st[0])+'</span></div>'+
+            '<div style="font-size:11.5px;line-height:1.5;color:#6B5849;margin-top:5px;padding-left:20px">'+esc(st[1])+'</div></div>';
+        }).join("")+
+      '</div>'+
+    '</div>'+pfoot("")+'</div>';
+}
+
+function pageRealizacje(){
+  var names = ($("imgReal").value||"").split(",").map(function(v){return v.trim();}).filter(Boolean);
+  while(names.length < 4) names.push("");
+  var tiles = names.slice(0,4).map(function(n){
+    return '<div style="display:flex;flex-direction:column;gap:11px;min-width:0">'+
+      img(n, 470, "zdjęcie realizacji")+
+      '<div style="font-size:11.5px;color:#6B5849">'+esc(n ? n.split("/").pop().replace(/\.[a-z]+$/i,"").replace(/[-_]/g," ") : "—")+'</div></div>';
+  }).join("");
+  return '<div class="p">'+head("Wybrane realizacje","kilka saun, które zbudowaliśmy")+
+    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;flex:1;min-height:0">'+tiles+'</div>'+
+    pfoot("Więcej realizacji na abmsauny.pl oraz na Instagramie @abm.sauny")+'</div>';
+}
+
+/* ============ rzut ============ */
+var MYc = 600, lastPiec = null;
+function saunaIdx(){ for(var i=0;i<P.modules.length;i++) if(P.modules[i].type==="sauna") return i; return -1; }
+function freeRect(x0,w){
+  var iy = MYc+P.wall, iy2 = iy+P.depth;
+  if(P.benchMode==="proste"){
+    var d2 = P.lower>0?P.lower:420, used = P.upper+d2;
+    return {x:x0,w:w,y:iy+used,h:Math.max(300,P.depth-used)};
+  }
+  var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
+  var band = P.upper + (P.lower>0?P.lower:0);
+  return {x: right?x0:x0+band, w:Math.max(300,w-band), y: top?iy+band:iy, h:Math.max(300,P.depth-band)};
+}
+function slats(x0,x1,y0,y1,step,color,vert){
+  var d=[],p;
+  if(vert){ for(p=x0+step;p<x1-25;p+=step) d.push("M "+p+" "+(y0+14)+" L "+p+" "+(y1-14)); }
+  else { for(p=y0+step;p<y1-25;p+=step) d.push("M "+(x0+14)+" "+p+" L "+(x1-14)+" "+p); }
+  return d.length ? '<path d="'+d.join(" ")+'" stroke="'+color+'" stroke-width="9" fill="none"></path>' : "";
+}
+function sweepOf(tx,ty,fx,fy){ return (tx*fy-ty*fx)>0 ? 1 : 0; }
+function doorV(x,y0,w,open,hinge){
+  var t=P.wall, hx=x+t/2, hy=hinge==="top"?y0:y0+w, tx=hx+open*w, fy=hinge==="top"?y0+w:y0;
+  return '<rect x="'+(x-4)+'" y="'+y0+'" width="'+(t+8)+'" height="'+w+'" fill="#FFF"></rect>'+
+    '<path d="M '+hx+" "+hy+" L "+tx+" "+hy+'" stroke="#2A211C" stroke-width="30" fill="none"></path>'+
+    '<path d="M '+tx+" "+hy+" A "+w+" "+w+" 0 0 "+sweepOf(open*w,0,0,fy-hy)+" "+hx+" "+fy+'" stroke="#B9A797" stroke-width="14" stroke-dasharray="45 32" fill="none"></path>';
+}
+function doorH(x0,y,w,open,hinge){
+  var t=P.wall, hy=y+t/2, hx=hinge==="left"?x0:x0+w, ty=hy+open*w, fx=hinge==="left"?x0+w:x0;
+  return '<rect x="'+x0+'" y="'+(y-4)+'" width="'+w+'" height="'+(t+8)+'" fill="#FFF"></rect>'+
+    '<path d="M '+hx+" "+hy+" L "+hx+" "+ty+'" stroke="#2A211C" stroke-width="30" fill="none"></path>'+
+    '<path d="M '+hx+" "+ty+" A "+w+" "+w+" 0 0 "+sweepOf(0,open*w,fx-hx,0)+" "+fx+" "+hy+'" stroke="#B9A797" stroke-width="14" stroke-dasharray="45 32" fill="none"></path>';
+}
+function T(x,y,str,size,color,extra){
+  return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Jost, sans-serif" font-size="'+size+'" fill="'+color+'"'+(extra||"")+'>'+esc(str)+'</text>';
+}
+function fitF(str,box,max){ return Math.max(70, Math.min(max||150, box/(String(str).length*0.66))); }
+
+function benches(x0,w){
+  var iy=MYc+P.wall, iy2=iy+P.depth, up=P.upper, low=P.lower, o=[];
+  function strip(bx,by,bw,bh,fill,sc,step,vert){
+    o.push('<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" fill="'+fill+'" stroke="#2A211C" stroke-width="14"></rect>');
+    o.push(slats(bx,bx+bw,by,by+bh,step,sc,vert));
+  }
+  if(P.benchMode==="proste"){
+    var d2=low>0?low:420;
+    strip(x0,iy,w,up,"#F3EDE7","#B9A797",130,true);
+    strip(x0,iy+up,w,d2,"#FAF6F1","#C8B9AB",130,true);
+    o.push(T(x0+w/2, iy+up/2+36, "ŁAWA GÓRNA · "+fmt(up)+" mm", 100, "#6B5849"));
+    o.push(T(x0+w/2, iy+up+d2/2+34, "ŁAWA DOLNA · "+fmt(d2)+" mm", 95, "#6B5849"));
+    return o.join("");
+  }
+  var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
+  var hy = top?iy:iy2-up, vx = right?x0+w-up:x0, hx0 = right?x0:x0+up, hw = w-up;
+  strip(vx,iy,up,P.depth,"#F3EDE7","#B9A797",130,false);
+  strip(hx0,hy,hw,up,"#F3EDE7","#B9A797",130,true);
+  if(low>0){
+    var fy = top?iy+up:iy2-up-low;
+    strip(right?vx-low:vx+up, top?iy+up:iy, low, P.depth-up, "#FAF6F1","#C8B9AB",100,false);
+    strip(right?x0:x0+up+low, fy, hw-low, low, "#FAF6F1","#C8B9AB",100,true);
+    o.push(T(hx0+hw/2, fy+low/2+32, "PODNÓŻEK · "+fmt(low)+" mm", 92, "#6B5849"));
+  }
+  o.push(T(hx0+hw/2, hy+up/2+34, "ŁAWA GÓRNA · "+fmt(up)+" mm", 100, "#6B5849"));
+  return o.join("");
+}
+function piecBox(x0,w){
+  var fr=freeRect(x0,w), m=90, c=P.piecCorner;
+  var pw = P.piecShape==="okragly"?P.piecD:P.piecW, ph = P.piecShape==="okragly"?P.piecD:P.piecH;
+  return {x:(c==="ld"||c==="lg")?fr.x+m:fr.x+fr.w-m-pw, y:(c==="ld"||c==="pd")?fr.y+fr.h-m-ph:fr.y+m, w:pw, h:ph};
+}
+function piec(x0,w){
+  var b=piecBox(x0,w); lastPiec=b;
+  var o=[], round=P.piecShape==="okragly", r=b.w/2;
+  o.push(round
+    ? '<circle cx="'+(b.x+r)+'" cy="'+(b.y+r)+'" r="'+r+'" fill="#FFF" stroke="#2A211C" stroke-width="16"></circle>'
+    : '<rect x="'+b.x+'" y="'+b.y+'" width="'+b.w+'" height="'+b.h+'" rx="22" fill="#FFF" stroke="#2A211C" stroke-width="16"></rect>');
+  var st=[], step=110, cx=b.x+b.w/2, cy=b.y+b.h/2;
+  for(var gy=b.y+80; gy<b.y+b.h-50; gy+=step) for(var gx=b.x+80; gx<b.x+b.w-50; gx+=step){
+    var jx = gx + (((gy/step)|0)%2 ? 16 : 0);
+    if(round && Math.pow(jx-cx,2)+Math.pow(gy-cy,2) > Math.pow(r-78,2)) continue;
+    if(!round && (jx>b.x+b.w-70 || gy>b.y+b.h-70)) continue;
+    st.push('<circle cx="'+jx+'" cy="'+gy+'" r="'+(26+(st.length%3)*3)+'"></circle>');
+  }
+  o.push('<g fill="#8A7A6C">'+st.join("")+'</g>');
+  var iy2=MYc+P.wall+P.depth;
+  var ly = (b.y+b.h+150 < iy2-30) ? b.y+b.h+150 : b.y-60;
+  var lab = round?("PIEC Ø "+fmt(b.w)):("PIEC "+fmt(b.w)+" × "+fmt(b.h));
+  var half = lab.length*32;
+  var lx = Math.max(x0+half+40, Math.min(x0+w-half-40, b.x+b.w/2));
+  o.push(T(lx, ly, lab, 96, "#6B5849"));
+  return o.join("");
+}
+
+function buildPlan(){
+  var wall=P.wall, depth=P.depth, dw=P.doorW, n=P.modules.length;
+  var innerW=0; P.modules.forEach(function(m){ innerW+=m.width; }); innerW += wall*(n-1);
+  var si=saunaIdx(), sdw = si===-1?null:P.saunaDoorWall;
+  var hasEntr = P.entrance>=0 && P.entrance<n && P.modules[P.entrance].type!=="sauna";
+  var leftExt = sdw==="lewa" && si===0, rightExt = sdw==="prawa" && si===n-1;
+  var MX = leftExt?dw+500:460, MY=600, MR = rightExt?dw+300:220;
+  var MB = (hasEntr || sdw==="przod") ? dw+520 : 300;
+  MYc = MY;
+  var extW=innerW+2*wall, extH=depth+2*wall, vbW=MX+extW+MR, vbH=MY+extH+MB;
+  var ix=MX+wall, iy=MY+wall, iy2=iy+depth, s=[];
+
+  s.push('<g stroke="#2A211C" stroke-width="14" fill="none">'+
+    '<path d="M '+ix+' '+(MY-330)+' L '+ix+' '+(MY-40)+'"></path>'+
+    '<path d="M '+(ix+innerW)+' '+(MY-330)+' L '+(ix+innerW)+' '+(MY-40)+'"></path>'+
+    '<path d="M '+ix+' '+(MY-260)+' L '+(ix+innerW)+' '+(MY-260)+'"></path>'+
+    '<path d="M '+(MX-260)+' '+iy+' L '+(MX-40)+' '+iy+'"></path>'+
+    '<path d="M '+(MX-260)+' '+iy2+' L '+(MX-40)+' '+iy2+'"></path>'+
+    '<path d="M '+(MX-190)+' '+iy+' L '+(MX-190)+' '+iy2+'"></path></g>');
+  s.push(T(ix+innerW/2, MY-330, fmt(innerW)+" mm", 130, "#2A211C"));
+  s.push(T(MX-300, iy+depth/2, fmt(depth)+" mm", 130, "#2A211C", ' transform="rotate(-90 '+(MX-300)+' '+(iy+depth/2)+')"'));
+  s.push('<rect x="'+MX+'" y="'+MY+'" width="'+extW+'" height="'+extH+'" fill="#2A211C"></rect>');
+  s.push('<rect x="'+ix+'" y="'+iy+'" width="'+innerW+'" height="'+depth+'" fill="#FFF"></rect>');
+
+  var xs=[], curx=ix; P.modules.forEach(function(m){ xs.push(curx); curx += m.width+wall; });
+  var doorY = iy2-350-dw; if(doorY<iy+200) doorY = iy+Math.max(60,(depth-dw)/2);
+
+  P.modules.forEach(function(m,i){
+    var x0=xs[i], w=m.width, cx=x0+w/2;
+    if(m.type==="taras"){
+      s.push(slats(x0,x0+w,iy,iy2,180,"#DCD2C6",false));
+      var o0=x0+Math.min(200,w*0.1), o1=x0+w-Math.min(200,w*0.1);
+      s.push('<rect x="'+o0+'" y="'+(iy2-5)+'" width="'+(o1-o0)+'" height="'+(wall+10)+'" fill="#FFF"></rect>');
+      s.push('<path d="M '+o0+' '+iy2+' L '+o1+' '+iy2+'" stroke="#2A211C" stroke-width="14" stroke-dasharray="90 60" fill="none"></path>');
+      var r=Math.min(w,depth)*0.26;
+      s.push('<circle cx="'+cx+'" cy="'+(iy+depth*0.42)+'" r="'+r+'" fill="#FFF" stroke="#2A211C" stroke-width="16"></circle>');
+      s.push('<circle cx="'+cx+'" cy="'+(iy+depth*0.42)+'" r="'+(r-95)+'" fill="none" stroke="#B9A797" stroke-width="10"></circle>');
+      s.push(T(cx, iy+depth*0.86, "TARAS ZADASZONY", fitF("TARAS ZADASZONY",w-120,140), "#2A211C"));
+      s.push(T(cx, iy+depth*0.86+130, "miejsce na balię · "+fmt(w)+" mm", 104, "#9A8371"));
+    }
+    if(m.type==="prysznic"){
+      var tw=Math.min(w-240,depth-240,900), bx=x0+120, by=iy+120;
+      s.push('<rect x="'+bx+'" y="'+by+'" width="'+tw+'" height="'+tw+'" fill="#FAF6F1" stroke="#2A211C" stroke-width="14"></rect>');
+      s.push('<circle cx="'+(bx+tw/2)+'" cy="'+(by+tw/2)+'" r="55" fill="none" stroke="#2A211C" stroke-width="14"></circle>');
+      s.push('<path d="M '+(bx+tw)+' '+by+' A '+tw+' '+tw+' 0 0 1 '+bx+' '+(by+tw)+'" fill="none" stroke="#B9A797" stroke-width="12" stroke-dasharray="40 30"></path>');
+      s.push(T(cx, iy+depth*0.80, "PRYSZNIC", fitF("PRYSZNIC",w-120,140), "#2A211C"));
+      s.push(T(cx, iy+depth*0.80+130, fmt(w)+" mm", 104, "#9A8371"));
+    }
+    if(m.type==="przedsionek"){
+      s.push('<rect x="'+(x0+120)+'" y="'+iy+'" width="'+(w-240)+'" height="200" fill="#F3EDE7" stroke="#2A211C" stroke-width="14"></rect>');
+      s.push(T(cx, iy+148, "WIESZAKI", fitF("WIESZAKI",w-300,100), "#6B5849"));
+      s.push(T(cx, iy+depth*0.44, "PRZEDSIONEK", fitF("PRZEDSIONEK",w-120,140), "#2A211C"));
+      s.push(T(cx, iy+depth*0.44+130, fmt(w)+" mm", 104, "#9A8371"));
+    }
+    if(m.type==="sauna"){
+      s.push(benches(x0,w)); s.push(piec(x0,w));
+      var fr=freeRect(x0,w), pl=P.piecCorner==="ld"||P.piecCorner==="lg";
+      var lx=pl?fr.x+fr.w*0.62:fr.x+fr.w*0.38;
+      var ly=(P.piecCorner==="ld"||P.piecCorner==="pd")?fr.y+fr.h*0.34:fr.y+fr.h*0.72;
+      s.push(T(lx, ly, "SAUNA", fitF("SAUNA",fr.w*0.9,150), "#2A211C"));
+      s.push(T(lx, ly+130, fmt(w)+" × "+fmt(depth)+" mm", 100, "#9A8371"));
+    }
+  });
+
+  function sdY(){ var lo=iy+90, hi=iy2-dw-90; return hi<lo?lo:lo+(hi-lo)*(P.doorPos/100); }
+  function sdX(){ var m=P.modules[si], lo=xs[si]+90, hi=xs[si]+m.width-dw-90; return hi<lo?lo:lo+(hi-lo)*(P.doorPos/100); }
+  var saunaPart = -1;
+  if(si!==-1 && sdw==="lewa" && si>0) saunaPart = si;
+  if(si!==-1 && sdw==="prawa" && si<n-1) saunaPart = si+1;
+
+  for(var i=1;i<n;i++){
+    var px = xs[i]-wall;
+    s.push('<rect x="'+px+'" y="'+iy+'" width="'+wall+'" height="'+depth+'" fill="#2A211C"></rect>');
+    if(i===saunaPart) s.push(doorV(px, sdY(), dw, sdw==="lewa"?-1:1, "top"));
+    else if(i===si || i===si+1){ /* ściana przy saunie bez drzwi */ }
+    else s.push(doorV(px, Math.max(iy+80,Math.min(iy2-dw-80,doorY)), dw, 1, "top"));
+  }
+  if(si!==-1 && sdw==="przod"){
+    var sm=P.modules[si], sw2=Math.min(dw, sm.width-200);
+    s.push(doorH(sdX(), iy2, sw2, 1, "left"));
+    s.push(T(sdX()+sw2/2, iy2+sw2+330, "DRZWI SAUNY "+fmt(sw2)+" mm", 110, "#2A211C"));
+  }
+  if(si!==-1 && leftExt)  s.push(doorV(MX, sdY(), dw, -1, "top"));
+  if(si!==-1 && rightExt) s.push(doorV(ix+innerW, sdY(), dw, 1, "top"));
+  if(hasEntr){
+    var em=P.modules[P.entrance], ew=Math.min(dw, em.width-200), edx=xs[P.entrance]+(em.width-ew)/2;
+    s.push(doorH(edx, iy2, ew, 1, "right"));
+    s.push(T(edx+ew/2, iy2+ew+330, "WEJŚCIE "+fmt(ew)+" mm", 110, "#2A211C"));
+  }
+
+  return {extW:extW, extH:extH, innerW:innerW,
+    svg:'<svg viewBox="0 0 '+vbW+' '+vbH+'" style="width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">'+
+        '<rect x="0" y="0" width="'+vbW+'" height="'+vbH+'" fill="#FFF"></rect>'+s.join("")+'</svg>'};
+}
+
+function drawPlanPrev(){
+  try{
+    var b = buildPlan();
+    $("planPrev").innerHTML = b.svg;
+    $("planInfo").textContent = "Bryła zewnętrzna " + fmt(b.extW) + " × " + fmt(b.extH) + " mm";
+  }catch(e){
+    $("planPrev").innerHTML = "";
+    $("planInfo").textContent = "Nie da się złożyć rzutu z tych ustawień.";
+  }
+}
+
+/* ============ render ============ */
+var BUILD = {okladka:pageOkladka, propozycja:pagePropozycja, wyposazenie:pageWyposazenie,
+             drewno:pageDrewno, uklad:pageUklad, warunki:pageWarunki, realizacje:pageRealizacje};
+
+function render(){
+  drawPlanPrev();
+  var host = $("scaler");
+  if(!cur){
+    host.innerHTML = '<div class="empty">Wybierz wycenę z listy po lewej, żeby złożyć ofertę.<br>' +
+      'Rzut sauny możesz ustawiać od razu — podgląd jest pod jego suwakami w panelu.</div>';
+    $("tinfo").textContent = "Nie wybrano wyceny.";
+    return;
+  }
+  var on = PAGES.filter(function(p){ return p.on; });
+  host.innerHTML = on.map(function(p){
+    var html = "";
+    try{ html = BUILD[p.id](); }
+    catch(e){ html = '<div class="p"><div class="ptitle">Błąd strony „'+esc(p.name)+'”</div><div style="font-size:12px;color:#8A4A32">'+esc(e.message)+'</div></div>'; }
+    return '<div class="sheet">'+html+'</div>';
+  }).join("");
+  applyZoom();
+  var m = meta();
+  $("tinfo").innerHTML = "<b>"+esc(m.klient)+"</b> · "+on.length+" stron · "+cur._v.length+" wariant"+(cur._v.length>1?"y":"");
+}
+
+function applyZoom(){
+  var sheets = document.querySelectorAll(".sheet");
+  var host = $("scaler");
+  var avail = host.clientWidth || 1123;
+  var z = Math.min(zoom, avail/1123);
+  Array.prototype.forEach.call(sheets, function(el){
+    el.style.transform = "scale("+z+")";
+    el.style.marginBottom = (794*z - 794 + 20) + "px";
+  });
+  host.style.minHeight = "10px";
+}
+
+/* ============ panel ============ */
+function drawPages(){
+  var host = $("pglist"); host.innerHTML = "";
+  PAGES.forEach(function(p,i){
+    var row = document.createElement("div");
+    row.className = "pg" + (p.on?"":" off");
+    var cb = document.createElement("input"); cb.type="checkbox"; cb.checked=p.on;
+    cb.onchange = function(){ p.on = cb.checked; drawPages(); render(); };
+    var nm = document.createElement("span"); nm.textContent = p.name;
+    var btns = document.createElement("div"); btns.style.display="flex"; btns.style.gap="3px";
+    btns.appendChild(mkIb("↑", i===0, function(){ swapPage(i,i-1); }));
+    btns.appendChild(mkIb("↓", i===PAGES.length-1, function(){ swapPage(i,i+1); }));
+    row.appendChild(cb); row.appendChild(nm); row.appendChild(btns);
+    host.appendChild(row);
+  });
+}
+function mkIb(t,dis,fn){ var b=document.createElement("button"); b.type="button"; b.className="ib"; b.textContent=t; b.disabled=dis; b.onclick=fn; return b; }
+function swapPage(a,b){ var t=PAGES[a]; PAGES[a]=PAGES[b]; PAGES[b]=t; drawPages(); render(); }
+
+function drawMods(){
+  var host = $("mods"); host.innerHTML = "";
+  P.modules.forEach(function(m,i){
+    var row = document.createElement("div"); row.className="pg"; row.style.gridTemplateColumns="1fr 66px auto";
+    var sel = document.createElement("select");
+    Object.keys(TYPES).forEach(function(k){ var o=document.createElement("option"); o.value=k; o.textContent=TYPES[k].label; if(k===m.type)o.selected=true; sel.appendChild(o); });
+    sel.style.height="28px"; sel.style.fontSize="12px";
+    sel.onchange=function(){ m.type=sel.value; if(!m.touched) m.width=TYPES[sel.value].def; syncPlan(); render(); };
+    var inp = document.createElement("input"); inp.type="number"; inp.value=m.width; inp.step=10; inp.style.height="28px"; inp.style.fontSize="12px";
+    inp.oninput=function(){ m.width=parseInt(inp.value,10)||0; m.touched=true; render(); };
+    var btns=document.createElement("div"); btns.style.display="flex"; btns.style.gap="3px";
+    btns.appendChild(mkIb("↑", i===0, function(){ var t=P.modules[i]; P.modules[i]=P.modules[i-1]; P.modules[i-1]=t; syncPlan(); render(); }));
+    btns.appendChild(mkIb("↓", i===P.modules.length-1, function(){ var t=P.modules[i]; P.modules[i]=P.modules[i+1]; P.modules[i+1]=t; syncPlan(); render(); }));
+    btns.appendChild(mkIb("✕", P.modules.length<2, function(){ P.modules.splice(i,1); syncPlan(); render(); }));
+    row.appendChild(sel); row.appendChild(inp); row.appendChild(btns);
+    host.appendChild(row);
+  });
+}
+function drawEntr(){
+  var sel=$("pEntr"); sel.innerHTML="";
+  // sauna ma własne drzwi, taras jest otwarty — żadne z nich nie bierze osobnego wejścia
+  P.modules.forEach(function(m,i){
+    if(m.type==="taras" || m.type==="sauna") return;
+    var o=document.createElement("option"); o.value=i; o.textContent=TYPES[m.type].label; sel.appendChild(o);
+  });
+  if(!sel.options.length){
+    var n=document.createElement("option"); n.value="-1"; n.textContent="brak — wejściem są drzwi sauny";
+    sel.appendChild(n); P.entrance=-1;
+  } else {
+    var vals=Array.prototype.map.call(sel.options,function(o){return parseInt(o.value,10);});
+    if(vals.indexOf(P.entrance)===-1) P.entrance=vals[0];
+  }
+  sel.value=String(P.entrance);
+}
+function chips(id,key,after){
+  Array.prototype.forEach.call($(id).querySelectorAll(".chip"), function(b){
+    b.setAttribute("aria-pressed", String(b.dataset.v===P[key]));
+    b.onclick=function(){ P[key]=b.dataset.v; syncPlan(); render(); if(after)after(); };
+  });
+}
+function syncPlan(){
+  P.depth=+$("pDepth").value||2300; P.wall=+$("pWall").value||100;
+  P.upper=+$("pUpper").value||550; P.lower=+$("pLower").value||0;
+  P.doorW=+$("pDoorW").value||700; P.doorPos=+$("doorPos").value;
+  P.piecD=+$("piecD").value||500; P.piecW=+$("piecW").value||420; P.piecH=+$("piecH").value||470;
+  $("doorPosV").textContent = P.doorPos===50 ? "środek" : (P.doorPos<50 ? "bliżej początku" : "bliżej końca");
+  $("wallsFld").style.display = P.benchMode==="L" ? "" : "none";
+  $("lowLbl").textContent = P.benchMode==="L" ? "Podnóżek" : "Ława dolna";
+  $("piecRound").style.display = P.piecShape==="okragly" ? "" : "none";
+  $("piecRect").style.display = P.piecShape==="okragly" ? "none" : "";
+  drawMods(); drawEntr();
+  drawPlanPrev();
+  chips("benchMode","benchMode"); chips("benchWalls","benchWalls");
+  chips("piecShape","piecShape"); chips("piecCorner","piecCorner"); chips("saunaDoorWall","saunaDoorWall");
+}
+
+/* ============ zdarzenia ============ */
+["pDepth","pWall","pUpper","pLower","pDoorW","piecD","piecW","piecH","doorPos"].forEach(function(id){
+  $(id).addEventListener("input", function(){ syncPlan(); render(); });
+});
+["mNr","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","imgBase","imgReal"].forEach(function(id){
+  $(id).addEventListener("input", render);
+});
+$("pEntr").addEventListener("change", function(){ P.entrance=+$("pEntr").value; render(); });
+$("search").addEventListener("input", drawQuotes);
+$("reload").onclick = loadQuotes;
+$("addMod").onclick = function(){ P.modules.splice(Math.max(0,P.modules.length-1),0,{type:"przedsionek",width:1200}); syncPlan(); render(); };
+$("zoomIn").onclick = function(){ zoom=Math.min(1,zoom+0.1); applyZoom(); };
+$("zoomOut").onclick = function(){ zoom=Math.max(0.3,zoom-0.1); applyZoom(); };
+$("print").onclick = function(){
+  if(!cur){ msg("err","Najpierw wybierz wycenę."); return; }
+  var m=meta(), y=new Date().getFullYear();
+  var n=parseInt(String(m.nr).split("/").pop(),10);
+  if(n) try{ localStorage.setItem("abm_of_nr_"+y, String(n)); }catch(e){}
+  window.print();
+};
+window.addEventListener("resize", applyZoom);
+
+/* ============ start ============ */
+$("mData").value = new Date().toISOString().slice(0,10);
+drawPages(); syncPlan(); render(); loadQuotes();
+
+})();
+</script>
+
+<!--
+  KLUCZ SUPABASE
+  Ten plik czyta wyceny z tej samej bazy co kalkulator. Klucz anon wklej jedną linijką
+  PRZED znacznikiem <script> z logiką (albo wprost w zmiennej SUPA_KEY na początku skryptu):
+
+      <script>window.ABM_SUPA_KEY = "eyJhbGciOi...";</script>
+
+  To ten sam ciąg, który masz w kalkulatorze w stałej SUPA_KEY.
+  Celowo go tu nie wpisałem, żeby nie kopiować Waszego klucza do pliku, który przechodzi przez czat.
+-->
+</body>
+</html>
