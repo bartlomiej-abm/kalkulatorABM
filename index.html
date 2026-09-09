@@ -797,15 +797,29 @@ async function loadQuotesCloud(){
   if(!supa)return [];
   try{
     const {data,error} = await supa.from('quotes')
-      .select('id,created_at,klient,opis,netto,brutto,vat,typ,is_z,data,variants')
+      .select('id,created_at,klient,opis,netto,brutto,vat,typ,is_z')
       .order('created_at',{ascending:false})
-      .limit(200);
+      .limit(60);
     if(error)throw error;
     return data||[];
   }catch(e){
     console.error('loadQuotesCloud:',e);
     return [];
   }
+}
+
+// Lista historii ladowana jest bez ciezkich kolumn data+variants.
+// Pelna tresc jednej wyceny dociagamy dopiero przy Podgladzie / Wczytaniu.
+async function hydrateQuote(row){
+  if(!row || row._hydrated || row._local) return row;
+  if(!supa) return row;
+  try{
+    const {data,error} = await supa.from('quotes').select('data,variants').eq('id',row.id).limit(1);
+    if(error) throw error;
+    const r=(data||[])[0]||{};
+    row.data=r.data; row.variants=r.variants; row._hydrated=true;
+  }catch(e){ console.error('hydrateQuote:',e); }
+  return row;
 }
 
 async function deleteQuoteCloud(id){
@@ -3326,7 +3340,7 @@ async function buildHistory(){
       rows=local.map(function(e){
         return{id:e.id,created_at:e.date,klient:e.klient,opis:e.opis||'',
           netto:e.netto,brutto:e.brutto,vat:e.vat,typ:e.typ,is_z:e.isZ,
-          _local:true,
+          _local:true, _hydrated:true,
           variants:e.variants||null,
           data:(function(){try{return JSON.parse(e.state||'{}');}catch(x){return e;}})()};
       });
@@ -3360,7 +3374,10 @@ async function buildHistory(){
     // PODGLĄD button
     var btnV=document.createElement('button');btnV.className='btn';btnV.textContent='Podgląd';
     (function(row){
-      btnV.onclick=function(){
+      btnV.onclick=async function(){
+        var _t=btnV.textContent; btnV.disabled=true; btnV.textContent='...';
+        try{ await hydrateQuote(row); }catch(ex){}
+        btnV.disabled=false; btnV.textContent=_t;
         var s=row.data||null;
         if(!s||!s.klient){
           try{s=JSON.parse(row.state||'{}');}catch(ex){s=row;}
@@ -3372,7 +3389,10 @@ async function buildHistory(){
     // WCZYTAJ button
     var btnL=document.createElement('button');btnL.className='btn grn';btnL.textContent='↩ Wczytaj';
     (function(row){
-      btnL.onclick=function(){
+      btnL.onclick=async function(){
+        var _t=btnL.textContent; btnL.disabled=true; btnL.textContent='...';
+        try{ await hydrateQuote(row); }catch(ex){}
+        btnL.disabled=false; btnL.textContent=_t;
         var s=row.data||null;
         if(!s||!s.klient){try{s=JSON.parse(row.state||'{}');}catch(ex){s=null;}}
         // Try to get state from nested structure (Supabase format)
