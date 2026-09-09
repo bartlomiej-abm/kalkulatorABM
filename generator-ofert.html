@@ -100,6 +100,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .slot{background:#EFE7DD;border:1px dashed #CFC0AF;display:flex;align-items:center;justify-content:center;
   color:#A6937F;font-size:11px;text-align:center;padding:10px;line-height:1.4}
 .slot img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.slot.cover{border:none;background:none;padding:0}
+.slot.cover img{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover}
 
 /* ---------- druk ---------- */
 @page{size:A4 landscape;margin:0}
@@ -232,7 +234,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 
 /* ============ konfiguracja ============ */
 var SUPA_URL = "https://uuxnxvzwhvjlcxegtozk.supabase.co";
-var SUPA_KEY = window.ABM_SUPA_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc";   // patrz uwaga w komentarzu na dole pliku
+var SUPA_KEY = window.ABM_SUPA_KEY || "";   // patrz uwaga w komentarzu na dole pliku
 var supa = null;
 
 var $ = function(id){return document.getElementById(id);};
@@ -252,7 +254,8 @@ var PAGES = [
   {id:"wyposazenie",name:"Wyposażenie",     on:true},
   {id:"drewno",   name:"Drewno w saunie",   on:true},
   {id:"uklad",    name:"Układ sauny",       on:true},
-  {id:"warunki",  name:"Warunki i etapy",   on:true},
+  {id:"warunki",  name:"Etapy realizacji",  on:true},
+  {id:"gwarancje",name:"Gwarancje i zakres", on:true},
   {id:"realizacje",name:"Wybrane realizacje",on:true}
 ];
 
@@ -283,11 +286,11 @@ async function loadQuotes(){
   $("qlist").innerHTML = '<div class="sub">Ładowanie…</div>';
   if(!supa && !(await connect())){ $("qlist").innerHTML = '<div class="sub">Brak połączenia z bazą.</div>'; return; }
   try{
-    // LEKKIE zapytanie: same kolumny widoczne na liscie.
-    // Ciezkie data+variants (pelne STATE) dociagamy dopiero przy kliknieciu — patrz hydrate().
+    // LEKKIE zapytanie: same kolumny widoczne na liście.
+    // Ciężkie data+variants (pełne STATE) dociągamy dopiero przy kliknięciu — patrz hydrate().
     var res = await supa.from("quotes")
       .select("id,created_at,klient,opis,netto,brutto,vat,typ,is_z")
-      .order("created_at",{ascending:false}).limit(60);
+      .order("created_at",{ascending:false}).limit(300);
     if(res.error) throw res.error;
     Q = res.data || [];
     msg("", "");
@@ -298,6 +301,7 @@ async function loadQuotes(){
       var hit = Q.filter(function(q){ return String(q.id) === String(want); })[0];
       if(hit) pick(hit);
       else {
+        // wyceny nie ma w ostatnich 60 — dociągamy ją pojedynczo
         var one = await supa.from("quotes")
           .select("id,created_at,klient,opis,netto,brutto,vat,typ,is_z")
           .eq("id", want).limit(1);
@@ -326,7 +330,7 @@ function drawQuotes(){
   });
 }
 
-/* Dociaga pelna tresc wyceny (data + variants) dla jednego wiersza. Raz na wycene. */
+/* Dociąga pełną treść wyceny (data + variants) dla jednego wiersza. Raz na wycenę. */
 async function hydrate(q){
   if(q._hydrated) return q;
   if(!supa && !(await connect())) return q;
@@ -346,7 +350,7 @@ async function pick(q){
     try{ await hydrate(q); }
     catch(e){ msg("err","Nie udało się wczytać treści wyceny: "+(e.message||e)); }
     $("qlist").removeAttribute("aria-busy");
-    if(cur !== q) return;
+    if(cur !== q) return;   // w międzyczasie kliknięto inną
   }
   var st = typeof q.data === "string" ? JSON.parse(q.data) : q.data;
   cur._s = st || {};
@@ -427,7 +431,7 @@ function rowsFor(s){
     });
   }
   if(s.sterVal>0){
-    var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C " : "Z ");
+    var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C" : "Z");
     pri("Sterownik FFES "+ser+(s.sterModel||""), (s.sterVal + (s.sty?100:0) + (s.sty3?250:0))*mG);
   } else yn("Sterownik FFES", false);
   if(s.wifi) pri("Zdalne sterowanie WiFi", 400*mG); else yn("Zdalne sterowanie WiFi", false);
@@ -504,6 +508,12 @@ function img(src, h, alt){
   return '<div class="slot" style="height:'+h+'px;border:none;background:none;padding:0">'+
          '<img src="'+esc(abs(src))+'" alt="'+esc(alt)+'" onerror="ABMimg(this)"></div>';
 }
+// zdjęcie kadrowane do wskazanej wysokości (realizacje) — wypełnia kafelek bez białych pasów
+function imgCover(src, h, alt){
+  if(!src) return slot(h, alt);
+  return '<div class="slot cover" style="height:'+h+'px">'+
+         '<img src="'+esc(abs(src))+'" alt="'+esc(alt)+'" onerror="ABMimg(this)"></div>';
+}
 // szuka pliku po kolejnych, coraz krótszych nazwach; gdy nic nie znajdzie — zostaje ramka z opisem
 function imgOf(dir, name, h, alt){
   var list = [];
@@ -526,18 +536,19 @@ window.ABMimg = function(el){
 
 function pageOkladka(){
   var m = meta();
-  return '<div class="p" style="background:'+"#594035"+';color:#F3EDE7;justify-content:space-between;padding:60px 66px 56px">'+
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between">'+
-      '<span style="font-family:\'Cormorant Garamond\',serif;font-size:26px;letter-spacing:.24em;color:#FFF">ABM SAUNY</span>'+
+  return '<div class="p" style="background:'+"#594035"+';color:#F3EDE7;justify-content:space-between;padding:60px 66px 56px;position:relative;overflow:hidden">'+
+    '<img src="'+MARK_W+'" alt="" style="position:absolute;right:-120px;bottom:-80px;width:560px;opacity:.07;pointer-events:none">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative">'+
+      '<img src="'+LOGO_W+'" alt="ABM Sauny" style="height:46px;width:auto">'+
       '<span style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#A98D77;line-height:2;text-align:right">Tworzymy sauny,<br>które pasują do Ciebie</span>'+
     '</div>'+
-    '<div style="display:flex;flex-direction:column;gap:22px;max-width:720px">'+
+    '<div style="display:flex;flex-direction:column;gap:22px;max-width:720px;position:relative">'+
       '<div style="font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#B79E8B">Oferta indywidualna</div>'+
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:76px;line-height:.98;font-weight:300;color:#FFF">Sauna dla<br>'+esc(m.klient)+'</div>'+
       '<div style="width:80px;height:1px;background:#A98D77"></div>'+
       '<div style="font-size:17px;line-height:1.55;color:#E0D2C6;max-width:560px">'+esc(m.opis)+' — komplet wyposażenia, transport i montaż w cenie.</div>'+
     '</div>'+
-    '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px">'+
+    '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;position:relative">'+
       '<div style="display:flex;gap:50px">'+
         metaCell("Numer oferty", m.nr)+metaCell("Data", dPL(m.data))+metaCell("Opiekun", m.opiekun)+
         (m.wazna ? metaCell("Ważna do", dPL(m.wazna)) : "")+
@@ -576,24 +587,74 @@ function pagePropozycja(){
     pfoot('<span style="display:inline-flex;align-items:center;gap:8px">'+X+' pozycja nieuwzględniona w tym wariancie — możemy ją doliczyć w każdej chwili</span>')+'</div>';
 }
 
+/* ============ opisy produktów — przeniesione 1:1 z szablonu ofertowego ABM ============ */
+var LOGO_W = "data:image/png;base64,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";
+var MARK_W = "data:image/png;base64,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";
+var OPISY = {"cedr-kanadyjski":{"kat":"drewno","lead":"Cedr to najbardziej ekskluzywne drewno do saun premium","p":["naturalnie olejowany – nie wymaga impregnacji","odporny na wilgoć i wysoką temperaturę","piękny, głęboki zapach utrzymujący się nawet 15 lat"]},"osika-biala":{"kat":"drewno","lead":"Osika biała to najczęściej wybierane drewno do saun domowych i komercyjnych","p":["jasny, szlachetny kolor","nie nagrzewa się tak mocno – komfort dla skóry","odporna na pękanie i odkształcenia"]},"olcha":{"kat":"drewno","lead":"Olcha to drewno, które nadaje saunie wyjątkowo przytulny, naturalny charakter","p":["piękny, ciepły odcień drewna","stabilna struktura – dobrze znosi wysoką temperaturę","odporna na pęknięcia i żywicowanie"]},"jodla-kanadyjska":{"kat":"drewno","lead":"Hemlock to drewno premium, wyjątkowo stabilne termicznie i cenione w saunach na całym świecie","p":["brak żywicy – idealne pod wysokie temperatury","bardzo niska kurczliwość i odkształcenia","jednolity, elegancki kolor"]},"abachi-egzotyczny-luksus":{"kat":"drewno","lead":"Abachi to jedno z najbardziej cenionych gatunków drewna stosowanych w saunach premium. Dzięki swojej naturalnie niskiej przewodności cieplnej zapewnia wyjątkowy komfort użytkowania nawet w bardzo wysokich temperaturach","p":["brak żywicy – bezpieczne w saunach fińskich","bardzo niska przewodność cieplna – drewno pozostaje przyjemne w dotyku","stabilna struktura – odporność na odkształcenia w wysokiej temperaturze"]},"termoosika":{"kat":"drewno","lead":"Termoosika to drewno poddane głębokiej obróbce termicznej, dzięki czemu zyskuje wyjątkową stabilność i odporność — idealne do wymagających saun","p":["brak żywicy dzięki obróbce termicznej","wysoka odporność na wilgoć i odkształcenia","piękny, ciemniejszy kolor o eleganckim, jednolitym rysunku"]},"termo-abachi":{"kat":"drewno","lead":"Termo Abachi to drewno klasy PREMIUM poddane zaawansowanej obróbce termicznej, która dodatkowo zwiększa jego naturalne właściwości użytkowe. To jeden z najbardziej komfortowych materiałów stosowanych w nowoczesnych saunach","p":["całkowity brak żywicy – idealne do wysokich temperatur","wyjątkowo niska przewodność cieplna – nie parzy nawet przy 90 – 100°C","bardzo wysoka stabilność wymiarowa po obróbce termicznej"]},"drewno-thermo":{"kat":"elewacja","lead":"To najbardziej prestiżowy wybór dla osób ceniących naturalne piękno, które nie wymaga uciążliwej konserwacji. Drewno poddane obróbce termicznej (modyfikowane w wysokiej temperaturze) zmienia swoją strukturę komórkową","p":["Estetyka: Głęboki, szlachetny kolor i jednolita struktura","Trwałość: Materiał „nie pracuje” – nie pęcznieje i nie wykrzywia się pod wpływem deszczu czy…","Użytkowanie: Brak konieczności regularnego malowania"]},"nowoczesne-obicie-blacha":{"kat":"elewacja","lead":"Idealne rozwiązanie, jeśli mini SPA ma nawiązywać do nowoczesnej architektury domu typu „stodoła” lub projektów industrialnych. Blacha w kolorze antracytowym lub czarnym nadaje budynkowi charakteru i wizualnej lekkości","p":["Estetyka: Czyste linie, brak widocznych łączeń i świetny kontrast w połączeniu z dużymi…","Trwałość: Całkowita odporność na warunki atmosferyczne. To rozwiązanie „zamontuj i zapomnij”","Użytkowanie: Najłatwiejsza w utrzymaniu czystości elewacja"]},"klasyczna-boazeria-elewacyjna":{"kat":"elewacja","lead":"Sprawdzone rozwiązanie, które pozwala na idealne dopasowanie kolorystyczne sauny do istniejącej architektury ogrodu, ogrodzenia czy elewacji domu","p":["Estetyka: Naturalny rysunek drewna widoczny pod powłoką farby lub lazury","Trwałość: Wyselekcjonowane drewno świerkowe lub modrzewiowe","Użytkowanie: Wymaga okresowej renowacji (odświeżenia powłoki malarskiej co kilka lat)"]},"narvi-saana":{"kat":"wyp","lead":"Nowoczesny piec elektryczny klasy premium, zaprojektowany z myślą o wydajności i estetyce","p":["Dzięki pionowej konstrukcji i dużej ilości kamieni, zapewnia długie","Minimalistyczna forma i czarne wykończenie doskonale wpisują się w nowoczesne wnętrza","Idealny do seansów fińskich – także przy większych przeszkleniach"]},"narvi-peak-15":{"kat":"wyp","lead":"Nowoczesny piec elektryczny klasy premium, stworzony z myślą o większych saunach, gdzie liczy się wydajność, moc i elegancja","p":["Imponująca pojemność kamieni (do 100 kg) zapewnia długie","Solidna stalowa konstrukcja i charakterystyczna pionowa forma gwarantują trwałość i doskonałą…","Czarne, matowe wykończenie nadaje piecowi nowoczesny, elegancki wygląd"]},"harvia-glow":{"kat":"wyp","lead":"Smukły, kolumnowy piec do sauny zaprojektowany z myślą o równomiernym, intensywnym cieple oraz nowoczesnej estetyce. Dzięki konstrukcji mieszczącej aż do 80 kg kamieni Harvia Glow gwarantuje miękką","p":["Kolumnowa forma – prestiżowy, nowoczesny design idealny do eleganckich saun","Kołnierz montażowy – czyste, wykończone przejście przez ławę oraz maksymalna estetyka zabudowy","Precyzyjna dystrybucja ciepła – kamienie nagrzewane równomiernie na całej wysokości"]},"huum-drop":{"kat":"wyp","lead":"Nowoczesny piec ścienny inspirowany kroplą wody – kompaktowy, elegancki i wyjątkowo wydajny. Dzięki dużej ilości kamieni (do 55 kg) zapewnia łagodne","p":["Nowoczesny design – nagradzana forma idealnie komponuje się z saunami premium","Montaż ścienny – oszczędność przestrzeni i łatwość instalacji","Delikatna emisja ciepła – dzięki dużej ilości kamieni"]},"huum-cliff":{"kat":"wyp","lead":"Nowoczesny, minimalistyczny piec elektryczny zaprojektowany z myślą o maksymalnej ilości kamieni i intensywnych doznaniach saunowych","p":["Smukła, pionowa forma — nowoczesny design inspirowany skandynawskim minimalizmem","Duża pojemność kamieni — nawet do 75 kg dla łagodnego, stabilnego ciepła i intensywnej pary","Kompaktowa konstrukcja przy ścianie — maksymalna wydajność przy minimalnym zajęciu przestrzeni"]},"huum-steel":{"kat":"wyp","lead":"Nowoczesny, kompaktowy piec elektryczny o geometrycznej, stalowej formie zaprojektowany do wydajnego nagrzewania sauny przy zachowaniu minimalistycznej estetyki","p":["Minimalistyczna, architektoniczna forma, elegancka stalowa bryła pasująca do nowoczesnych…","Bardzo duża pojemność kamieni długiej, głębokiej pary","Wydajne nagrzewanie - szybkie osiąganie temperatury roboczej"]},"huum-hive":{"kat":"wyp","lead":"Profesjonalny piec wolnostojący stworzony z myślą o dużych saunach prywatnych i komercyjnych. Jego elegancka, minimalistyczna forma oraz ogromna pojemność kamieni (do 250 kg) gwarantują równomierne","p":["Duża pojemność kamieni (250 kg) – długie, stabilne nagrzewanie i delikatna para","Idealny do większych saun – doskonały wybór dla hoteli, SPA i saun rodzinnych","Wysoka jakość wykonania – nierdzewna stal klasy premium, precyzyjnie wykończona w Estonii"]},"huum-hive-mini":{"kat":"wyp","lead":"Designerski piec klasy premium, który zmienia zwykłe nagrzewanie sauny w prawdziwy rytuał. Dzięki dużej ilości kamieni oddaje ciepło łagodnie i równomiernie, dlatego w saunie nie odczuwa się dusznego","p":["Miękkie, naturalne ciepło zamiast „uderzenia gorąca”","Długie utrzymywanie temperatury i stabilny klimat seansu","Minimalistyczny, skandynawski wygląd – ozdoba wnętrza sauny"]},"huum-core-wall-combi":{"kat":"wyp","lead":"Nowoczesny piec elektryczny klasy premium, który łączy tradycyjną saunę fińską z możliwością korzystania z delikatniejszego, bardziej wilgotnego klimatu dzięki zintegrowanemu parownikowi","p":["Możliwość wyboru między klasyczną sauną fińską a bardziej wilgotnym seansem dzięki funkcji…","Zintegrowany parownik umożliwiający precyzyjną regulację wilgotności w saunie","Minimalistyczny, skandynawski design, który doskonale komponuje się z nowoczesnymi wnętrzami"]},"huum-flow-mini-ls":{"kat":"wyp","lead":"Kompaktowy piec opalany drewnem do saun premium Nowoczesny, wolnostojący piec na drewno stworzony z myślą o mniejszych i średnich saunach prywatnych","p":["Opalany drewnem – prawdziwy rytuał saunowy i niezależność od prądu","Kompaktowa moc 8,5 kW – idealny do saun o kubaturze ok. 6 – 12 m³","Duża powierzchnia kamieni – stabilne ciepło i delikatna, głęboka para"]},"huum-hive-wood-13":{"kat":"wyp","lead":"Nowoczesny piec wolnostojący opalany drewnem, stworzony z myślą o przestronnych saunach prywatnych i strefach wellness","p":["Opalany drewnem – naturalne doświadczenie saunowania i niezależność od prądu","Moc 13 kW – idealny do saun o kubaturze ok. 8 – 18 m³","Duża pojemność kamieni – łagodna, głęboka para i długie utrzymywanie temperatury"]},"narvi-nse-450":{"kat":"wyp","lead":"Nowoczesny piec ścienny do saun domowych o kubaturze 5 – 8 m³. Dzięki fińskiej jakości wykonania, kompaktowej konstrukcji i odpowiedniej masie kamieni zapewnia równomierne, komfortowe ciepło i przyjemną parę","p":["Montaż ścienny – oszczędność miejsca i nowoczesny wygląd","Pojemność do 35 kg kamieni – stabilne i łagodne nagrzewanie wnętrza","Prosty serwis i trwała obudowa ze stali nierdzewnej"]},"narvi-nse-mini-36":{"kat":"wyp","lead":"💡 Typ: Elektryczny piec ścienny ⚙ Moc: 3,6 kW – idealny do saun o kubaturze do 4 m³ 🪨 Kamienie: do 20 kg – zapewniają intensywną, równomierną i długotrwałą parę 🎛 Sterowanie: zewnętrzne (np","p":["Idealny wybór do saun prywatnych i ogrodowych","Przystosowany do współpracy z zewnętrznym panelem sterującym (większa wygoda i bezpieczeństwo)","Duża masa kamieni = lepsza para i stabilna temperatura"]},"harvia-delta-d36e":{"kat":"wyp","lead":"Nowoczesny, kompaktowy piec elektryczny zaprojektowany z myślą o małych saunach – stylowy, praktyczny i bardzo efektywny. Dzięki pojemności na kamienie (do ok","p":["Trójkątny kształt — możliwość instalacji w narożniku lub na ścianie","Kompaktowe wymiary (34 × 20 × 63 cm) — idealny do domowych saun, gdzie liczy się miejsce","Moc 3,6 kW — szybkie nagrzewanie i komfortowe warunki kąpieli w niewielkiej saunie"]},"harvia-the-wall":{"kat":"wyp","lead":"Minimalistyczny piec ścienny zaprojektowany z myślą o funkcjonalności, trwałości i nowoczesnym wyglądzie. Kompaktowa konstrukcja w połączeniu z optymalną ilością kamieni (do 20 kg) zapewnia szybkie nagrzewanie oraz stabilne","p":["Nowoczesny, prosty design – uniwersalna forma pasująca do większości aranżacji saun","Montaż ścienny – oszczędność miejsca i wygodna instalacja","Szybkie nagrzewanie – efektywna praca i stabilna temperatura"]},"harvia-cilindro-pc90":{"kat":"wyp","lead":"Nowoczesny piec elektryczny, który łączy wysoką wydajność nagrzewania z komfortem seansu. Duża ilość kamieni pozwala regulować charakter sauny – od suchej","p":["Szybkie nagrzewanie sauny i stabilna temperatura","Duża powierzchnia polewania – możliwość regulacji wilgotności","Sprawdzona konstrukcja fińskiego producenta"]},"eos-blackrock":{"kat":"wyp","lead":"Luksusowy piec elektryczny od niemieckiego lidera branży, który redefiniuje wygląd nowoczesnej sauny. Jego monolityczna, kubistyczna forma przyciąga wzrok","p":["Najwyższa precyzja wykonania – legendarna niemiecka jakość marki EOS","Nowoczesny, surowy design idealny do saun typu Premium i Loft","Duża bezwładność cieplna dzięki pojemnej komorze na kamienie (40 kg)"]},"eos-finnrock":{"kat":"wyp","lead":"Luksusowy piec elektryczny niemieckiej marki EOS, stworzony z myślą o saunach premium. Minimalistyczny design, najwyższa jakość wykonania i pojemna komora na kamienie zapewniają stabilne","p":["Niemiecka jakość i precyzja wykonania","Nowoczesny, minimalistyczny design","Do 40 kg kamieni dla miękkiego i stabilnego ciepła"]},"eos-34-g":{"kat":"wyp","lead":"Profesjonalny piec elektryczny klasy Premium stworzony z myślą o dużych saunach prywatnych i komercyjnych. Niemiecka marka EOS od lat wyznacza standardy jakości w branży wellness","p":["Moc 27 kW przeznaczona do dużych saun i stref wellness","Dedykowany do saun o kubaturze 40 – 55 m³","Profesjonalna, wyjątkowo trwała konstrukcja klasy komercyjnej"]},"vitalsun-vitae-by-dr-fischer":{"kat":"wyp","lead":"Profesjonalne promienniki Full Spectrum emitujące pełne spektrum podczerwieni IR-A, IR-B oraz IR-C, zaprojektowane z myślą o nowoczesnych strefach regeneracji i saunach infrared premium","p":["Połączenie fal IR-A, IR-B i IR-C zapewnia zarówno głębokie dogrzanie tkanek, jak i komfortowe","Wspierają regenerację organizmu, poprawę krążenia oraz odprężenie mięśni po wysiłku i stresie","Montowane bez osłony Nextrema, emitują naturalne światło o ciepłej, bursztynowej barwie"]},"ffes-vitalsun-glass":{"kat":"wyp","lead":"Profesjonalne promienniki podczerwieni IR-A o pełnym spektrum, zaprojektowane z myślą o maksymalnej skuteczności terapeutycznej i nowoczesnej estetyce","p":["Emitują promieniowanie IR-A o pełnym spektrum – głęboko przenika tkanki","Szklany front (Glass) – nowoczesny wygląd i estetyczne, ciepłe światło o bursztynowej barwie","Skuteczne i szybkie działanie terapeutyczne"]},"ffes-c01-mini":{"kat":"wyp","lead":"Nowoczesny sterownik do sauny fińskiej polskiej produkcji, zaprojektowany z myślą o funkcjonalności i intuicyjnej obsłudze","p":["Kompaktowy panel z dotykowym ekranem– elegancki wygląd","Wybrane modele z opcją WiFi – umożliwiają zdalne sterowanie przez aplikację mobilną","Bezpieczna praca i precyzyjna kontrola temperatury, czasu – wszystko z jednego miejsca"]},"ffes-c03":{"kat":"wyp","lead":"Nowoczesny sterownik do sauny fińskiej polskiej produkcji, zaprojektowany z myślą o funkcjonalności i intuicyjnej obsłudze","p":["Kompaktowy panel z dotykowym ekranem lub pilotem – elegancki wygląd","Wybrane modele z opcją WiFi – umożliwiają zdalne sterowanie przez aplikację mobilną","Bezpieczna praca i precyzyjna kontrola temperatury, czasu – wszystko z jednego miejsca"]},"ffes-c10":{"kat":"wyp","lead":"Mózg nowoczesnej sauny Infrared. Polski sterownik klasy Premium, zaprojektowany do inteligentnego zarządzania kojącym ciepłem podczerwieni","p":["Płynne sterowanie mocą – sam decydujesz, jak mocno mają grzać promienniki (funkcja ściemniania)","Podział na strefy – możliwość ustawienia innej mocy na plecy, a innej na nogi","Szklany panel dotykowy – elegancki, minimalistyczny i banalnie prosty w obsłudze"]},"ffes-c11":{"kat":"wyp","lead":"Nowoczesny sterownik do sauny fińskiej i infrared polskiej produkcji, zaprojektowany z myślą o maksymalnej wygodzie użytkownika oraz pełnej kontroli nad parametrami sesji saunowej","p":["Elegancki panel sterujący z dotykowym wyświetlaczem – nowoczesny wygląd i intuicyjna obsługa","Zaawansowane funkcje sterowania – precyzyjna kontrola temperatury, czasu pracy oraz oświetlenia","Wysoki standard bezpieczeństwa – stabilna i niezawodna praca systemu"]}};
+
+// dopasowuje opis po nazwie produktu; przy niejednoznaczności woli nic nie pokazać niż pokazać zły opis
+function opisFor(kat, name){
+  if(!name) return null;
+  var cands = slugCandidates(name), i, k;
+  for(i=0;i<cands.length;i++){ var o = OPISY[cands[i]]; if(o && o.kat===kat) return o; }
+  for(i=0;i<cands.length;i++){
+    var c = cands[i], hits = [];
+    for(k in OPISY){
+      if(OPISY[k].kat!==kat) continue;
+      if(k.indexOf(c+"-")===0 || c.indexOf(k+"-")===0) hits.push(OPISY[k]);
+    }
+    if(hits.length===1) return hits[0];
+  }
+  return null;
+}
+// sterowniki FFES: C0x = fińska, Cx1 = combi, Cx0 = infrared; gdy brak modelu — opis serii
+function opisSter(ser, model){
+  model = String(model||"");
+  var mini = (ser==="Cmini"), pref = "ffes-c" + model;
+  var order = [];
+  if(mini) order.push(pref + "-mini");
+  order.push(pref);
+  if(/^0/.test(model))      order.push("ffes-c03","ffes-c01-mini");
+  else if(/1$/.test(model)) order.push("ffes-c11");
+  else if(/0$/.test(model)) order.push("ffes-c10");
+  for(var i=0;i<order.length;i++) if(OPISY[order[i]]) return OPISY[order[i]];
+  return null;
+}
+function opisBlok(o, fs){
+  if(!o) return '';
+  fs = fs || 11;
+  var p = (o.p||[]).slice(0,3).map(function(x){
+    return '<li style="margin:0 0 5px;padding-left:14px;position:relative;line-height:1.42">'+
+           '<span style="position:absolute;left:0;top:0;color:#A0724A">\u2713</span>'+esc(x)+'</li>';
+  }).join("");
+  return '<div style="font-size:'+(fs+0.5)+'px;line-height:1.5;color:#5A4436;margin-top:10px">'+esc(o.lead)+'</div>'+
+         (p ? '<ul style="list-style:none;margin:10px 0 0;padding:0;font-size:'+fs+'px;color:#6B5849">'+p+'</ul>' : '');
+}
+
 function pageWyposazenie(){
   var s = cur._v[0].s;
   var items = [];
-  if(s.piec && s.piec.cena>0) items.push({lbl:"Piec", nm:String(s.piec.name||"").split("--")[0].trim(), dir:"piece", key:s.piec.name});
+  if(s.piec && s.piec.cena>0){
+    var pn = String(s.piec.name||"").split("--")[0].trim();
+    items.push({lbl:"Piec", nm:pn, dir:"piece", key:s.piec.name, opis:opisFor("wyp", pn)});
+  }
   if(s.sterVal>0){
-    var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C " : "Z ");
-    items.push({lbl:"Sterownik · seria "+(s.sterSer==="Cmini"?"C mini":s.sterSer||"Z"), nm:"FFES "+ser+(s.sterModel||""), dir:"sterowniki", key:"FFES "+(s.sterSer==="Cmini"?"C mini":s.sterSer||"Z")});
+    var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C" : "Z");
+    items.push({lbl:"Sterownik · seria "+(s.sterSer==="Cmini"?"C mini":s.sterSer||"Z"), nm:"FFES "+ser+(s.sterModel||""), dir:"sterowniki", key:"FFES "+(s.sterSer==="Cmini"?"C mini":s.sterSer||"Z"), opis:opisSter(s.sterSer, s.sterModel)});
   }
   if(s.typ!=="F" && (s.pr3>0||s.pr5>0||s.pr7>0)){
-    items.push({lbl:"Promienniki", nm:s.pr5name||s.pr3name||"Promienniki IR", dir:"promienniki", key:s.pr5name||s.pr3name||"VitalSun"});
+    var prn = s.pr5name||s.pr3name||"Promienniki IR";
+    var prKey = /glass/i.test(prn) ? "VitalSun Glass" : "VitalSun";
+    items.push({lbl:"Promienniki", nm:prn, dir:"promienniki", key:prKey, opis:opisFor("wyp", prn) || opisFor("wyp", prKey) || opisFor("wyp", "VitalSun Vitae")});
   }
   if(!items.length) items.push({lbl:"Wyposażenie", nm:"Brak urządzeń w wycenie", dir:"piece", key:""});
   var cols = Math.min(items.length,3);
   var cards = items.map(function(it){
-    return '<div class="card" style="border-top:2px solid #594035;padding:20px 22px 18px;gap:14px">'+
-      imgOf(it.dir, it.key, 230, "zdjęcie: "+it.nm)+
-      '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:14px">'+esc(it.lbl)+'</div>'+
-      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;line-height:1.1;margin-top:6px">'+esc(it.nm)+'</div>'+
+    return '<div class="card" style="border-top:2px solid #594035;padding:18px 22px 16px;gap:0;align-items:stretch;text-align:left">'+
+      imgOf(it.dir, it.key, 248, "zdjęcie: "+it.nm)+
+      '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:13px">'+esc(it.lbl)+'</div>'+
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:23px;font-weight:500;line-height:1.12;margin-top:5px">'+esc(it.nm)+'</div>'+
+      opisBlok(it.opis, 10.5)+
       '</div>';
   }).join("");
   return '<div class="p">'+head("Wyposażenie sauny","serce sauny i sterowanie")+
@@ -631,10 +692,11 @@ function pageDrewno(){
   if(!woods.length) woods = ["—"];
   var cols = Math.min(woods.length,3);
   var cards = woods.map(function(w){
-    return '<div class="card" style="padding:22px;gap:14px;align-items:stretch">'+
-      imgOf("drewno", w, 300, "próbka: "+w)+
-      '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:16px">Drewno w saunie</div>'+
-      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:500;line-height:1.05;margin-top:6px">'+esc(w)+'</div>'+
+    return '<div class="card" style="padding:20px 22px 18px;gap:0;align-items:stretch;text-align:left">'+
+      imgOf("drewno", w, 268, "próbka: "+w)+
+      '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:14px">Drewno w saunie</div>'+
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;line-height:1.06;margin-top:5px">'+esc(w)+'</div>'+
+      opisBlok(opisFor("drewno", w), 10.5)+
       '</div>';
   }).join("");
   return '<div class="p">'+head("Drewno w saunie","gatunki z Twoich wariantów")+
@@ -668,7 +730,49 @@ function pageUklad(){
     pfoot("Drzwi sauny zawsze otwierają się na zewnątrz.")+'</div>';
 }
 
+function realPool(){
+  return ($("imgReal").value||"").split(",").map(function(v){return v.trim();}).filter(Boolean);
+}
+function realAt(fromEnd){
+  var p = realPool();
+  return p.length ? p[Math.max(0, p.length-1-fromEnd)] : "";
+}
+
 function pageWarunki(){
+  var steps = [
+    ["Akceptacja wyceny","Wybierasz wariant, który najlepiej odpowiada Twoim potrzebom. Odpowiadamy na pytania i wprowadzamy korekty do koncepcji."],
+    ["Podpisanie umowy","Formalizujemy ustalenia i rezerwujemy termin realizacji. Umowa określa zakres prac, cenę oraz harmonogram."],
+    ["Wpłata zaliczki","Zaliczka na zakup materiałów oraz zabezpieczenie miejsca w harmonogramie produkcji."],
+    ["Projekt szczegółowy","Dopracowujemy układ wnętrza, rodzaj drewna, oświetlenie, wyposażenie i rozwiązania techniczne."],
+    ["Produkcja i montaż","Produkujemy saunę na wymiar, dostarczamy ją na miejsce i montujemy zgodnie z harmonogramem."],
+    ["Odbiór i przekazanie","Odbiór, szkolenie z obsługi i rozliczenie pozostałej części płatności."]
+  ];
+  return '<div class="p">'+head("Etapy realizacji","od akceptacji wyceny do gotowej sauny")+
+    '<div style="display:flex;gap:34px;flex:1;min-height:0">'+
+      '<div style="flex:1;display:flex;flex-direction:column;min-width:0">'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:44px 30px;align-content:start">'+
+        steps.map(function(st,i){
+          return '<div>'+
+            '<div style="display:flex;gap:11px;align-items:baseline">'+
+              '<span style="font-family:\'Cormorant Garamond\',serif;font-size:26px;color:#C09468;line-height:1">'+(i+1)+'</span>'+
+              '<span style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:500">'+esc(st[0])+'</span>'+
+            '</div>'+
+            '<div style="font-size:11.5px;line-height:1.5;color:#6B5849;margin-top:6px;padding-left:37px">'+esc(st[1])+'</div>'+
+          '</div>';
+        }).join("")+
+        '</div>'+
+        '<div style="margin-top:auto;padding:14px 16px;background:#EDE2D6;border-left:2px solid #A0724A">'+
+          '<div style="font-size:11.5px;line-height:1.55;color:#5A4436">Na każdym etapie masz jedną osobę do kontaktu. Terminy potwierdzamy przy podpisaniu umowy i trzymamy się ich.</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="width:352px;flex:none;display:flex;flex-direction:column;gap:12px">'+
+        imgCover(realAt(0), 556, "zdjęcie realizacji")+
+        '<div style="font-size:11px;line-height:1.5;color:#8A6A55">Każdą saunę projektujemy od nowa — pod wymiar, układ i styl miejsca.</div>'+
+      '</div>'+
+    '</div>'+pfoot("")+'</div>';
+}
+
+function pageGwarancje(){
   var m = meta();
   var items = [
     ["Gwarancja na konstrukcję drewnianą", $("wGwar").value],
@@ -678,43 +782,65 @@ function pageWarunki(){
     ["Płatność", $("wPlat").value]
   ];
   if(m.wazna) items.push(["Oferta ważna do", dPL(m.wazna)]);
-  var steps = [
-    ["Akceptacja wyceny","Wybierasz wariant, odpowiadamy na pytania i nanosimy korekty do koncepcji."],
-    ["Podpisanie umowy","Formalizujemy ustalenia i rezerwujemy termin realizacji."],
-    ["Wpłata zaliczki","Zaliczka na zakup materiałów i zabezpieczenie miejsca w harmonogramie."],
-    ["Projekt szczegółowy","Dopracowujemy układ wnętrza, drewno, oświetlenie i rozwiązania techniczne."],
-    ["Produkcja i montaż","Produkujemy saunę na wymiar, dostarczamy i montujemy na miejscu."],
-    ["Odbiór i przekazanie","Odbiór, szkolenie z obsługi i rozliczenie pozostałej części płatności."]
+  var zyski = [
+    "Sauna wykonana na wymiar, dopasowana do Twojej przestrzeni i stylu.",
+    "Materiały i podzespoły od sprawdzonych producentów.",
+    "Pełna personalizacja: drewno, oświetlenie, wyposażenie, sterowanie.",
+    "Stały kontakt i wsparcie na każdym etapie realizacji."
   ];
-  return '<div class="p">'+head("Warunki i etapy","co obejmuje oferta i jak wygląda realizacja")+
-    '<div style="display:flex;gap:34px;flex:1;min-height:0">'+
-      '<div style="width:390px;flex:none">'+
-        items.map(function(i){
-          return '<div class="r" style="padding:9px 0"><span class="rk" style="font-size:12px">'+esc(i[0])+'</span>'+
-                 '<span class="rv" style="font-size:12px;white-space:normal;text-align:right;max-width:200px">'+esc(i[1])+'</span></div>';
-        }).join("")+
+  return '<div class="p">'+head("Co zyskujesz","zakres oferty, gwarancje i warunki")+
+    '<div style="display:flex;gap:32px;flex:1;min-height:0">'+
+      '<div style="width:330px;flex:none;display:flex;flex-direction:column;gap:14px">'+
+        imgCover(realAt(1), 402, "zdjęcie realizacji")+
+        '<div style="padding:14px 16px;background:#EDE2D6;border-left:2px solid #A0724A">'+
+          '<div style="font-family:\'Cormorant Garamond\',serif;font-size:19px;margin-bottom:6px">Dlaczego ABM?</div>'+
+          '<div style="font-size:11px;line-height:1.55;color:#5A4436">Przestrzeń do regeneracji powinna być zaprojektowana tak samo świadomie, jak przestrzeń do życia. Drewno, zapach i ciepło mają w tym ogromną moc.</div>'+
+        '</div>'+
       '</div>'+
-      '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:18px 26px;align-content:start">'+
-        steps.map(function(st,i){
-          return '<div><div style="display:flex;gap:9px;align-items:baseline">'+
-            '<span style="font-size:11px;color:#B5794C;font-weight:500">'+(i+1)+'</span>'+
-            '<span style="font-family:\'Cormorant Garamond\',serif;font-size:19px;font-weight:500">'+esc(st[0])+'</span></div>'+
-            '<div style="font-size:11.5px;line-height:1.5;color:#6B5849;margin-top:5px;padding-left:20px">'+esc(st[1])+'</div></div>';
-        }).join("")+
+      '<div style="flex:1;display:flex;flex-direction:column;gap:26px;min-width:0;justify-content:space-between">'+
+        '<div>'+
+          '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-bottom:12px">W cenie oferty</div>'+
+          '<ul style="list-style:none;margin:0;padding:0">'+
+            zyski.map(function(z){
+              return '<li style="position:relative;padding-left:22px;margin-bottom:14px;font-size:13.5px;line-height:1.5;color:#4A392F">'+
+                '<span style="position:absolute;left:0;top:0;color:#A0724A">\u2713</span>'+esc(z)+'</li>';
+            }).join("")+
+          '</ul>'+
+        '</div>'+
+        '<div class="manifest-abm" style="padding:18px 22px;border-top:1px solid #E3D9CE;border-bottom:1px solid #E3D9CE">'+
+          '<div style="font-family:\'Cormorant Garamond\',serif;font-size:19px;color:#4A392F;margin-bottom:10px">Chcemy tworzyć sauny, które:</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 24px;font-size:12px;line-height:1.45;color:#6B5849">'+
+            ["uspokajają, kiedy świat przyspiesza","przywracają energię, kiedy jej brakuje",
+             "regenerują ciało i głowę","stają się częścią domu lub ogrodu, a nie dodatkiem"].map(function(z){
+              return '<div style="position:relative;padding-left:16px"><span style="position:absolute;left:0;color:#A0724A">\u2013</span>'+esc(z)+'</div>';
+            }).join("")+
+          '</div>'+
+        '</div>'+
+        '<div>'+
+          '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-bottom:6px">Parametry i warunki</div>'+
+          items.map(function(i){
+            return '<div class="r" style="padding:9px 0"><span class="rk" style="font-size:12px">'+esc(i[0])+'</span>'+
+                   '<span class="rv" style="font-size:12px;white-space:normal;text-align:right;max-width:280px">'+esc(i[1])+'</span></div>';
+          }).join("")+
+        '</div>'+
       '</div>'+
     '</div>'+pfoot("")+'</div>';
 }
 
 function pageRealizacje(){
-  var names = ($("imgReal").value||"").split(",").map(function(v){return v.trim();}).filter(Boolean);
-  while(names.length < 4) names.push("");
-  var tiles = names.slice(0,4).map(function(n){
-    return '<div style="display:flex;flex-direction:column;gap:11px;min-width:0">'+
-      img(n, 470, "zdjęcie realizacji")+
-      '<div style="font-size:11.5px;color:#6B5849">'+esc(n ? n.split("/").pop().replace(/\.[a-z]+$/i,"").replace(/[-_]/g," ") : "—")+'</div></div>';
+  var names = realPool().slice(0,6);
+  if(!names.length) names = [""];
+  var n = names.length;
+  var kol = n <= 2 ? n : (n === 4 ? 2 : 3);
+  var rzedy = Math.ceil(n / kol);
+  var wys = rzedy === 1 ? 556 : (rzedy === 2 ? 262 : 168);
+  var tiles = names.map(function(nm){
+    return '<div style="display:flex;flex-direction:column;gap:7px;min-width:0">'+
+      imgCover(nm, wys, "zdjęcie realizacji")+
+      '<div style="font-size:11px;color:#6B5849">'+esc(nm ? nm.split("/").pop().replace(/\.[a-z]+$/i,"").replace(/[-_]/g," ") : "—")+'</div></div>';
   }).join("");
   return '<div class="p">'+head("Wybrane realizacje","kilka saun, które zbudowaliśmy")+
-    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;flex:1;min-height:0">'+tiles+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat('+kol+',minmax(0,1fr));gap:20px;flex:1;min-height:0;align-content:start">'+tiles+'</div>'+
     pfoot("Więcej realizacji na abmsauny.pl oraz na Instagramie @abm.sauny")+'</div>';
 }
 
@@ -918,7 +1044,8 @@ function drawPlanPrev(){
 
 /* ============ render ============ */
 var BUILD = {okladka:pageOkladka, propozycja:pagePropozycja, wyposazenie:pageWyposazenie,
-             drewno:pageDrewno, uklad:pageUklad, warunki:pageWarunki, realizacje:pageRealizacje};
+             drewno:pageDrewno, uklad:pageUklad, warunki:pageWarunki,
+             gwarancje:pageGwarancje, realizacje:pageRealizacje};
 
 function render(){
   drawPlanPrev();
