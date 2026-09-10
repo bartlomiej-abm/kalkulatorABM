@@ -72,27 +72,27 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .p{width:1123px;height:794px;background:#F6F1EA;padding:32px 44px 24px;display:flex;flex-direction:column;gap:16px}
 .phead{display:flex;align-items:baseline;justify-content:space-between;gap:24px}
 .ptitle{font-family:'Cormorant Garamond',Georgia,serif;font-size:32px;font-weight:300;line-height:1}
-.pkicker{font-size:12.5px;color:var(--soft)}
-.pmeta{text-align:right;font-size:11.5px;line-height:1.5;color:var(--mid);flex:none}
+.pkicker{font-size:13.5px;color:var(--soft)}
+.pmeta{text-align:right;font-size:12.5px;line-height:1.5;color:var(--mid);flex:none}
 .pmeta span{color:var(--soft)}
-.pfoot{margin-top:auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:26px;font-size:11px;color:var(--soft)}
+.pfoot{margin-top:auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:26px;font-size:12px;color:var(--soft)}
 .pfoot .pfr{justify-self:end}
 .logo{font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:.22em;color:var(--brand);opacity:.75;white-space:nowrap}
 
 .cards{display:grid;gap:22px;flex:1;min-height:0}
 .card{display:flex;flex-direction:column;background:#FFF;overflow:hidden}
 .chead{background:var(--brand);padding:10px 15px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.cname{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:500;color:#FFF;line-height:1}
+.cname{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:500;color:#FFF;line-height:1.08}
 .ctag{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#C9A88A;white-space:nowrap}
 .cbody{padding:0 15px;flex:1}
-.csec{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:#A6937F;padding:7px 0 3px}
+.csec{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#A6937F;padding:7px 0 3px}
 .r{display:flex;align-items:baseline;justify-content:space-between;gap:9px;padding:2.5px 5px 2.5px 0;border-bottom:1px solid #F0E9E0;min-height:13px}
 .r.x{background:#FAF2E7;padding-left:5px}
 .rk{font-size:10.5px;color:var(--mid);line-height:1.25}
 .rv{font-size:10.5px;font-weight:500;color:var(--ink);line-height:1.25;white-space:nowrap}
-.ry{font-size:9.5px;font-weight:500;color:#6F8A5E;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.ry{font-size:10.5px;font-weight:500;color:#6F8A5E;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
 .st{display:flex;align-items:baseline;justify-content:space-between;gap:8px;background:var(--tint);padding:4px 9px;margin:4px -15px 0}
-.stk{font-size:10px;font-weight:500;color:#5A4436}
+.stk{font-size:11px;font-weight:500;color:#5A4436}
 .stv{font-size:12.5px;font-weight:600;color:var(--ink)}
 .cfoot{background:var(--deep);padding:9px 15px 11px;display:flex;flex-direction:column;gap:1px;margin-top:7px}
 .fn{font-size:10.5px;color:#A98D77}
@@ -141,10 +141,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 
     <div class="sec">Oferta</div>
     <div class="g2">
-      <div class="fld"><label for="mNr">Numer</label><input id="mNr"></div>
+      <div class="fld"><label for="mTel">Telefon</label><input id="mTel" value="570 659 340"></div>
       <div class="fld"><label for="mData">Data</label><input id="mData" type="date"></div>
     </div>
-    <div class="fld"><label for="mOp">Opiekun</label><input id="mOp" value="Bartłomiej Gębala"></div>
+    <div class="g2">
+      <div class="fld"><label for="mOp">Opiekun</label><input id="mOp" value="Bartłomiej Gębala"></div>
+      <div class="fld"><label for="mStan">Stanowisko</label><input id="mStan" value="Właściciel"></div>
+    </div>
+    <div class="fld"><label for="mMail">E-mail</label><input id="mMail" value="kontakt@abmsauny.pl"></div>
     <div class="fld"><label for="mWaz">Oferta ważna do (puste = nie pokazuj)</label><input id="mWaz" type="date"></div>
 
     <div class="sec">Strony</div>
@@ -176,8 +180,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <div class="fld"><label for="pLower" id="lowLbl">Ława dolna</label><input type="number" id="pLower" value="280" step="10"></div>
     </div>
     <div class="g2" id="ramiePionowe">
-      <div class="fld"><label for="pUpperV">Górna · pionowa</label><input type="number" id="pUpperV" value="550" step="10"></div>
-      <div class="fld"><label for="pLowerV">Dolna · pionowa</label><input type="number" id="pLowerV" value="280" step="10"></div>
+      <div class="fld"><label for="pUpperV">Ława górna B</label><input type="number" id="pUpperV" value="550" step="10"></div>
+      <div class="fld"><label for="pLowerV">Ława dolna B</label><input type="number" id="pLowerV" value="280" step="10"></div>
     </div>
     <div class="fld"><label>Piec — kształt</label>
       <div class="chips" id="piecShape">
@@ -277,7 +281,8 @@ var PAGES = [
   {id:"uklad",    name:"Układ sauny",       on:true},
   {id:"warunki",  name:"Etapy realizacji",  on:true},
   {id:"gwarancje",name:"Gwarancje i zakres", on:true},
-  {id:"realizacje",name:"Wybrane realizacje",on:true}
+  {id:"realizacje",name:"Wybrane realizacje",on:true},
+  {id:"kontakt",  name:"Kontakt",            on:true}
 ];
 
 var P = {   // rzut
@@ -381,7 +386,6 @@ async function pick(q){
   P.modules = (cur._s.isZ) ? [{type:"taras",width:2600},{type:"przedsionek",width:1200},{type:"sauna",width:2100}]
                            : [{type:"sauna",width:2100}];
   P.entrance = P.modules.length>1 ? 1 : 0;
-  if(!$("mNr").value) $("mNr").value = suggestNr();
   if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
   syncPlan(); drawQuotes(); render();
 }
@@ -492,7 +496,9 @@ function meta(){
   var typ = s.typ==="I" ? "Infrared" : (s.typ==="C" ? "Combi" : "Fińska");
   return {
     klient: cur.klient || "Klient",
-    nr: $("mNr").value || "",
+    tel: $("mTel").value || "",
+    stan: $("mStan").value || "",
+    mail: $("mMail").value || "",
     data: $("mData").value || "",
     opiekun: $("mOp").value || "",
     wazna: $("mWaz").value || "",
@@ -508,7 +514,7 @@ function dPL(iso){
 }
 function pmeta(){
   var m = meta();
-  return '<div class="pmeta">'+esc(m.klient)+(m.nr?" · "+esc(m.nr):"")+'<br><span>'+esc(m.opis)+' · VAT '+m.vat+'%</span></div>';
+  return '<div class="pmeta">'+esc(m.klient)+'<br><span>'+esc(m.opis)+' · VAT '+m.vat+'%</span></div>';
 }
 function pfoot(txt){
   return '<div class="pfoot"><span>'+txt+'</span>'+
@@ -570,7 +576,8 @@ function pageOkladka(){
     '<img src="'+MARK_W+'" alt="" style="position:absolute;right:-120px;bottom:-80px;width:560px;opacity:.07;pointer-events:none">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative">'+
       '<img src="'+LOGO_W+'" alt="ABM Sauny" style="height:46px;width:auto">'+
-      '<span style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#A98D77;line-height:2;text-align:right">Tworzymy sauny,<br>które pasują do Ciebie</span>'+
+      '<span style="font-family:\'Cormorant Garamond\',serif;font-size:27px;font-weight:300;'+
+             'line-height:1.32;color:#D6BFA8;text-align:right;letter-spacing:.01em">Tworzymy sauny,<br>które pasują do Ciebie</span>'+
     '</div>'+
     '<div style="display:flex;flex-direction:column;gap:22px;max-width:720px;position:relative">'+
       '<div style="font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#B79E8B">Oferta indywidualna</div>'+
@@ -580,10 +587,10 @@ function pageOkladka(){
     '</div>'+
     '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;position:relative">'+
       '<div style="display:flex;gap:50px">'+
-        metaCell("Numer oferty", m.nr)+metaCell("Data", dPL(m.data))+metaCell("Opiekun", m.opiekun)+
+        metaCell("Data", dPL(m.data))+metaCell("Opiekun", m.opiekun)+metaCell("Telefon", m.tel)+
         (m.wazna ? metaCell("Ważna do", dPL(m.wazna)) : "")+
       '</div>'+
-      '<div style="text-align:right;font-size:13px;line-height:1.7;color:#B79E8B">+48 797 913 615<br>kontakt@abmsauny.pl · abmsauny.pl</div>'+
+      '<div style="text-align:right;font-size:13px;line-height:1.7;color:#B79E8B">'+esc(m.mail)+'<br>abmsauny.pl</div>'+
     '</div></div>';
 }
 function metaCell(k,v){
@@ -685,7 +692,7 @@ function pageWyposazenie(){
       imgOf(it.dir, it.key, 248, "zdjęcie: "+it.nm)+
       '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:13px">'+esc(it.lbl)+'</div>'+
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:23px;font-weight:500;line-height:1.12;margin-top:5px">'+esc(it.nm)+'</div>'+
-      opisBlok(it.opis, 10.5)+
+      opisBlok(it.opis, 12)+
       '</div>';
   }).join("");
   return '<div class="p">'+head("Wyposażenie sauny","serce sauny i sterowanie")+
@@ -727,7 +734,7 @@ function pageDrewno(){
       imgOf("drewno", w, 268, "próbka: "+w)+
       '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371;margin-top:14px">Drewno w saunie</div>'+
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;line-height:1.06;margin-top:5px">'+esc(w)+'</div>'+
-      opisBlok(opisFor("drewno", w), 10.5)+
+      opisBlok(opisFor("drewno", w), 12)+
       '</div>';
   }).join("");
   return '<div class="p">'+head("Drewno w saunie","gatunki z Twoich wariantów")+
@@ -738,28 +745,23 @@ function pageDrewno(){
 function pageUklad(){
   var b = buildPlan();
   var rows = [
-    ["Bryła zewnętrzna", fmt(b.extW)+" × "+fmt(b.extH)+" mm"],
-    ["Głębokość wewnętrzna", fmt(P.depth)+" mm"]
+    ["Wymiar zewnętrzny", fmt(b.extW)+" × "+fmt(b.extH)+" mm"],
+    ["Wymiar wewnętrzny", fmt(b.innerW)+" × "+fmt(P.depth)+" mm"],
+    ["Grubość ścianki", fmt(P.wall)+" mm"]
   ];
   P.modules.forEach(function(m){ rows.push([TYPES[m.type].label, fmt(m.width)+" mm"]); });
-  rows.push(["Ławy", P.benchMode==="L" ? "L — "+P.benchWalls.replace("-"," i ") : "proste, dwa poziomy"]);
-  rows.push([P.benchMode==="L"?"Ława górna (pozioma)":"Ława górna", fmt(P.upper)+" mm"]);
-  rows.push([P.benchMode==="L"?"Ława dolna (pozioma)":"Ława dolna", fmt(P.lower)+" mm"]);
-  if(P.benchMode==="L"){
-    rows.push(["Ława górna (pionowa)", fmt(P.upperV)+" mm"]);
-    if(P.lowerV>0) rows.push(["Ława dolna (pionowa)", fmt(P.lowerV)+" mm"]);
-  }
+  rows.push(["Ławy", P.benchMode==="L" ? "w literę L" : "proste, dwa poziomy"]);
   rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
-  rows.push(["Drzwi sauny", fmt(P.doorW)+" mm, "+({przod:"ściana frontowa",lewa:"ściana lewa",prawa:"ściana prawa"}[P.saunaDoorWall])]);
+  rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
   var list = rows.map(function(r){
-    return '<div class="r"><span class="rk" style="font-size:12px">'+esc(r[0])+'</span><span class="rv" style="font-size:12px">'+esc(r[1])+'</span></div>';
+    return '<div class="r" style="padding:5px 0"><span class="rk" style="font-size:13px">'+esc(r[0])+'</span><span class="rv" style="font-size:13px">'+esc(r[1])+'</span></div>';
   }).join("");
   return '<div class="p">'+head("Układ sauny","rzut z góry, wygenerowany z konfiguracji")+
     '<div style="display:flex;gap:30px;flex:1;min-height:0">'+
       '<div style="width:272px;flex:none;display:flex;flex-direction:column">'+list+
         '<div style="margin-top:auto;padding:11px 13px;background:#EDE2D6;border-left:2px solid #A0724A">'+
         '<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A6A55;margin-bottom:4px">Rysunek poglądowy</div>'+
-        '<div style="font-size:11.5px;line-height:1.45;color:#5A4436">Ostateczny układ potwierdzamy na etapie projektu szczegółowego.</div></div>'+
+        '<div style="font-size:12.5px;line-height:1.5;color:#5A4436">Ostateczny układ potwierdzamy na etapie projektu szczegółowego.</div></div>'+
       '</div>'+
       '<div style="flex:1;background:#FFF;padding:14px;display:flex;align-items:center;justify-content:center;min-width:0">'+b.svg+'</div>'+
     '</div>'+
@@ -786,24 +788,24 @@ function pageWarunki(){
   return '<div class="p">'+head("Etapy realizacji","od akceptacji wyceny do gotowej sauny")+
     '<div style="display:flex;gap:34px;flex:1;min-height:0">'+
       '<div style="flex:1;display:flex;flex-direction:column;min-width:0">'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:44px 30px;align-content:start">'+
+        '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:42px 34px;align-content:center">'+
         steps.map(function(st,i){
           return '<div>'+
             '<div style="display:flex;gap:11px;align-items:baseline">'+
-              '<span style="font-family:\'Cormorant Garamond\',serif;font-size:26px;color:#C09468;line-height:1">'+(i+1)+'</span>'+
-              '<span style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:500">'+esc(st[0])+'</span>'+
+              '<span style="font-family:\'Cormorant Garamond\',serif;font-size:30px;color:#C09468;line-height:1">'+(i+1)+'</span>'+
+              '<span style="font-family:\'Cormorant Garamond\',serif;font-size:23px;font-weight:500">'+esc(st[0])+'</span>'+
             '</div>'+
-            '<div style="font-size:11.5px;line-height:1.5;color:#6B5849;margin-top:6px;padding-left:37px">'+esc(st[1])+'</div>'+
+            '<div style="font-size:13px;line-height:1.55;color:#6B5849;margin-top:7px;padding-left:42px">'+esc(st[1])+'</div>'+
           '</div>';
         }).join("")+
         '</div>'+
         '<div style="margin-top:auto;padding:14px 16px;background:#EDE2D6;border-left:2px solid #A0724A">'+
-          '<div style="font-size:11.5px;line-height:1.55;color:#5A4436">Na każdym etapie masz jedną osobę do kontaktu. Terminy potwierdzamy przy podpisaniu umowy i trzymamy się ich.</div>'+
+          '<div style="font-size:12.5px;line-height:1.55;color:#5A4436">Na każdym etapie masz jedną osobę do kontaktu. Terminy potwierdzamy przy podpisaniu umowy i trzymamy się ich.</div>'+
         '</div>'+
       '</div>'+
       '<div style="width:352px;flex:none;display:flex;flex-direction:column;gap:12px">'+
         imgCover(realAt(0), 580, "zdjęcie realizacji")+
-        '<div style="font-size:11px;line-height:1.5;color:#8A6A55">Każdą saunę projektujemy od nowa — pod wymiar, układ i styl miejsca.</div>'+
+        '<div style="font-size:12px;line-height:1.5;color:#8A6A55">Każdą saunę projektujemy od nowa — pod wymiar, układ i styl miejsca.</div>'+
       '</div>'+
     '</div>'+pfoot("")+'</div>';
 }
@@ -839,7 +841,7 @@ function pageGwarancje(){
         '<span style="font-family:\'Cormorant Garamond\',serif;font-size:66px;font-weight:300;line-height:1;color:#8A5A33">'+esc(f.n)+'</span>'+
         '<span style="font-family:\'Cormorant Garamond\',serif;font-size:17px;color:#A0724A">'+esc(f.u)+'</span>'+
       '</div>'+
-      '<div style="font-size:11px;line-height:1.45;color:#6B5849;margin-top:11px">'+esc(f.o)+'</div>'+
+      '<div style="font-size:12px;line-height:1.5;color:#6B5849;margin-top:11px">'+esc(f.o)+'</div>'+
     '</div>';
   }).join("");
 
@@ -855,14 +857,14 @@ function pageGwarancje(){
       zyski.map(function(z){
         return '<div style="flex:1;border-top:2px solid #594035;padding-top:13px">'+
           '<div style="font-family:\'Cormorant Garamond\',serif;font-size:21px;line-height:1.1">'+esc(z[0])+'</div>'+
-          '<div style="font-size:11px;line-height:1.55;color:#6B5849;margin-top:8px">'+esc(z[1])+'</div></div>';
+          '<div style="font-size:12px;line-height:1.6;color:#6B5849;margin-top:8px">'+esc(z[1])+'</div></div>';
       }).join("")+
     '</div>'+
     '<div style="background:#594035;color:#F3EDE7;margin:14px -44px 0;padding:24px 44px;display:flex;align-items:center;gap:34px">'+
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;line-height:1.25;flex:none;width:280px;color:#FFF">'+
         'Chcemy tworzyć sauny,<br>które&nbsp;znaczą&nbsp;więcej</div>'+
       '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:9px 30px">'+
-        manifest.map(function(m){ return '<span style="font-size:12.5px;color:#E0D2C6">'+esc(m)+'</span>'; }).join("")+
+        manifest.map(function(m){ return '<span style="font-size:13.5px;color:#E0D2C6">'+esc(m)+'</span>'; }).join("")+
       '</div>'+
     '</div>'+
     '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:34px">'+
@@ -879,6 +881,44 @@ function pageGwarancje(){
       '</div>'+
     '</div>'+
     pfoot("")+'</div>';
+}
+
+function pageKontakt(){
+  var m = meta();
+  function wiersz(k, v){
+    if(!v) return "";
+    return '<div style="display:flex;gap:18px;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(217,196,176,.22)">'+
+      '<span style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#A98D77;width:96px;flex:none">'+esc(k)+'</span>'+
+      '<span style="font-size:16px;color:#F3EDE7">'+esc(v)+'</span></div>';
+  }
+  return '<div class="p" style="background:#594035;color:#F3EDE7;padding:52px 66px 44px;position:relative;overflow:hidden">'+
+    '<img src="'+MARK_W+'" alt="" style="position:absolute;left:-140px;top:-90px;width:520px;opacity:.06;pointer-events:none">'+
+    '<div style="display:flex;gap:56px;flex:1;min-height:0;position:relative">'+
+      '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0">'+
+        '<div style="font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#B79E8B">Kolejny krok</div>'+
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:54px;line-height:1.06;font-weight:300;color:#FFF;margin-top:20px">'+
+          'Porozmawiajmy<br>o Twojej saunie</div>'+
+        '<div style="width:80px;height:1px;background:#A98D77;margin:26px 0"></div>'+
+        '<div style="font-size:15px;line-height:1.65;color:#E0D2C6;max-width:430px">'+
+          'Masz pytania do oferty albo chcesz zobaczyć ją w innym gatunku drewna? '+
+          'Napisz lub zadzwoń — dopracujemy szczegóły i przygotujemy poprawioną wersję.</div>'+
+        (m.wazna ? '<div style="font-size:12.5px;color:#B79E8B;margin-top:22px">Oferta ważna do '+esc(dPL(m.wazna))+'</div>' : '')+
+      '</div>'+
+      '<div style="width:390px;flex:none;display:flex;flex-direction:column;justify-content:center">'+
+        '<img src="'+LOGO_W+'" alt="ABM Sauny" style="height:52px;width:auto;margin-bottom:30px">'+
+        wiersz("Opiekun", m.opiekun)+
+        wiersz("Stanowisko", m.stan)+
+        wiersz("Telefon", m.tel)+
+        wiersz("E-mail", m.mail)+
+        wiersz("Strona", "abmsauny.pl")+
+        '<div style="font-size:12.5px;line-height:1.6;color:#B79E8B;margin-top:26px">'+
+          'ABM Sauny · Kraków<br>Działamy na terenie całej Polski</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:#A98D77;position:relative">'+
+      '<span>Dziękujemy za czas poświęcony naszej ofercie.</span>'+
+      '<span>@abm.sauny</span>'+
+    '</div></div>';
 }
 
 function pageRealizacje(){
@@ -947,8 +987,8 @@ function benches(x0,w){
     var d2=low>0?low:420;
     strip(x0,iy,w,up,"#F3EDE7","#B9A797",130,true);
     strip(x0,iy+up,w,d2,"#FAF6F1","#C8B9AB",130,true);
-    o.push(T(x0+w/2, iy+up/2+36, "ŁAWA GÓRNA · "+fmt(up)+" mm", 100, "#6B5849"));
-    o.push(T(x0+w/2, iy+up+d2/2+34, "ŁAWA DOLNA · "+fmt(d2)+" mm", 95, "#6B5849"));
+    o.push(T(x0+w/2, iy+up/2+36, "ŁAWA GÓRNA · "+fmt(up)+" mm", 105, "#6B5849"));
+    o.push(T(x0+w/2, iy+up+d2/2+34, "ŁAWA DOLNA · "+fmt(d2)+" mm", 100, "#6B5849"));
     return o.join("");
   }
   var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
@@ -960,10 +1000,17 @@ function benches(x0,w){
   if(low>0){
     var fy = top?iy+up:iy2-up-low;
     strip(right?x0:x0+upV+lowV, fy, hw-lowV, low, "#FAF6F1","#C8B9AB",100,true);
-    o.push(T(hx0+hw/2, fy+low/2+32, "ŁAWA DOLNA · "+fmt(low)+" mm", 92, "#6B5849"));
+    o.push(T(hx0+hw/2, fy+low/2+32, "ŁAWA DOLNA A · "+fmt(low)+" mm", 97, "#6B5849"));
   }
-  o.push(T(hx0+hw/2, hy+up/2+34, "ŁAWA GÓRNA · "+fmt(up)+" mm", 100, "#6B5849"));
-  o.push(T(vx+upV/2, top?iy2-140:iy+160, fmt(upV)+" mm", 88, "#8A7360"));
+  o.push(T(hx0+hw/2, hy+up/2+34, "ŁAWA GÓRNA A · "+fmt(up)+" mm", 105, "#6B5849"));
+  var cy = iy + P.depth/2, bx = vx + upV/2;
+  o.push(T(bx, cy+34, "ŁAWA GÓRNA B · "+fmt(upV)+" mm", 105, "#6B5849",
+           ' transform="rotate(-90 '+bx+' '+cy+')"'));
+  if(lowV>0){
+    var lx = (right ? vx-lowV/2 : vx+upV+lowV/2);
+    o.push(T(lx, cy+30, "ŁAWA DOLNA B · "+fmt(lowV)+" mm", 92, "#6B5849",
+             ' transform="rotate(-90 '+lx+' '+cy+')"'));
+  }
   return o.join("");
 }
 function piecBox(x0,w){
@@ -1103,7 +1150,7 @@ function drawPlanPrev(){
 /* ============ render ============ */
 var BUILD = {okladka:pageOkladka, propozycja:pagePropozycja, wyposazenie:pageWyposazenie,
              drewno:pageDrewno, uklad:pageUklad, warunki:pageWarunki,
-             gwarancje:pageGwarancje, realizacje:pageRealizacje};
+             gwarancje:pageGwarancje, realizacje:pageRealizacje, kontakt:pageKontakt};
 
 var EDIT = false;
 // Tryb edycji: strony stają się edytowalne, a przebudowa jest wstrzymana,
@@ -1222,8 +1269,8 @@ function syncPlan(){
   P.piecD=+$("piecD").value||500; P.piecW=+$("piecW").value||420; P.piecH=+$("piecH").value||470;
   $("doorPosV").textContent = P.doorPos===50 ? "środek" : (P.doorPos<50 ? "bliżej początku" : "bliżej końca");
   $("wallsFld").style.display = P.benchMode==="L" ? "" : "none";
-  $("upLbl").textContent  = P.benchMode==="L" ? "Górna · pozioma" : "Ława górna";
-  $("lowLbl").textContent = P.benchMode==="L" ? "Dolna · pozioma"  : "Ława dolna";
+  $("upLbl").textContent  = P.benchMode==="L" ? "Ława górna A" : "Ława górna";
+  $("lowLbl").textContent = P.benchMode==="L" ? "Ława dolna A"  : "Ława dolna";
   $("ramiePionowe").style.display = P.benchMode==="L" ? "" : "none";
   $("piecRound").style.display = P.piecShape==="okragly" ? "" : "none";
   $("piecRect").style.display = P.piecShape==="okragly" ? "none" : "";
@@ -1248,7 +1295,7 @@ var ETYKIETY = ["", "Premium", "Standard", "Klasyka", "Basic", "Ciepły odcień"
   $(id).addEventListener("input", function(){ syncPlan(); render(); });
 });
 $("editMode").onclick = function(){ setEdit(!EDIT); };
-["mNr","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","imgBase","imgReal"].forEach(function(id){
+["mTel","mStan","mMail","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","imgBase","imgReal"].forEach(function(id){
   $(id).addEventListener("input", render);
 });
 $("pEntr").addEventListener("change", function(){ P.entrance=+$("pEntr").value; render(); });
@@ -1259,9 +1306,6 @@ $("zoomIn").onclick = function(){ zoom=Math.min(1,zoom+0.1); applyZoom(); };
 $("zoomOut").onclick = function(){ zoom=Math.max(0.3,zoom-0.1); applyZoom(); };
 $("print").onclick = function(){
   if(!cur){ msg("err","Najpierw wybierz wycenę."); return; }
-  var m=meta(), y=new Date().getFullYear();
-  var n=parseInt(String(m.nr).split("/").pop(),10);
-  if(n) try{ localStorage.setItem("abm_of_nr_"+y, String(n)); }catch(e){}
   window.print();
 };
 window.addEventListener("resize", applyZoom);
