@@ -324,13 +324,16 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
   </div>
 </div>
 
+<!-- ====== KLUCZ SUPABASE ====== wstawiany przy wgrywaniu pliku, patrz uwaga na dole -->
+<script>window.ABM_SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc";</script>
+
 <script>
 (function(){
 "use strict";
 
 /* ============ konfiguracja ============ */
 var SUPA_URL = "https://uuxnxvzwhvjlcxegtozk.supabase.co";
-var SUPA_KEY = window.ABM_SUPA_KEY || "";   // patrz uwaga w komentarzu na dole pliku
+var SUPA_KEY = window.ABM_SUPA_KEY || "";   // ustawiany w <script> tuż nad tym blokiem
 var supa = null;
 
 var $ = function(id){return document.getElementById(id);};
@@ -1560,7 +1563,10 @@ function wmontujBaze(){
 }
 
 async function ladujBaze(){
-  if(!supa && !(await connect())) return;
+  if(!supa && !(await connect())){
+    bazaBlad = "Brak połączenia z bazą, więc baza produktów nie działa. Najpierw napraw komunikat na liście wycen po lewej.";
+    return;
+  }
   try{
     // bez kolumny foto: zdjęcia potrafią ważyć więcej niż cała reszta razem
     var r = await supa.from("produkty").select("slug,kat,nazwa,lead,punkty");
@@ -1805,7 +1811,8 @@ async function usunProdukt(){
 function otworzBaze(){
   $("bazaMod").classList.add("on");
   if(!bazaSlug) nowyProdukt(); else rysujListeBazy();
-  bazaKomunikat(bazaBlad ? "err" : "", bazaBlad);   // po nowyProdukt(), bo ono czyści pasek
+  bazaKomunikat(bazaBlad ? "err" : "ok",
+    bazaBlad || ("Baza produktów odpowiada, wpisów: " + Object.keys(BAZA).length + "."));
   // nazwa urządzenia z otwartej wyceny jako podpowiedź
   if(!bazaSlug && cur && cur._v && cur._v.length){
     var d = urzadzeniaWariantu(cur._v[0].s)[0];
@@ -1864,7 +1871,7 @@ ladujBaze().then(function(){ render(); return loadQuotes(); });
   Ten plik czyta wyceny z tej samej bazy co kalkulator. Klucz anon wklej jedną linijką
   PRZED znacznikiem <script> z logiką (albo wprost w zmiennej SUPA_KEY na początku skryptu):
 
-      <script>window.ABM_SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc";</script>
+      <script>window.ABM_SUPA_KEY = "eyJhbGciOi...";</script>
 
   To ten sam ciąg, który masz w kalkulatorze w stałej SUPA_KEY.
   Celowo go tu nie wpisałem, żeby nie kopiować Waszego klucza do pliku, który przechodzi przez czat.
