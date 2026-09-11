@@ -122,6 +122,28 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
   .sheet{box-shadow:none;transform:none!important;margin:0;break-after:page;page-break-after:always}
   .sheet:last-child{break-after:auto;page-break-after:auto}
 }
+/* ---------- baza produktów ---------- */
+.mod{position:fixed;inset:0;background:rgba(40,30,24,.55);display:none;align-items:center;
+  justify-content:center;padding:26px;z-index:60}
+.mod.on{display:flex}
+.modbox{background:#FFF;width:min(980px,100%);max-height:100%;overflow:auto;border-radius:12px;
+  padding:22px 24px 24px;box-shadow:0 24px 60px rgba(40,30,24,.3)}
+.modtop{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px}
+.modtop h2{margin:0;font-size:17px;font-weight:600}
+.bazaSiatka{display:grid;grid-template-columns:230px 1fr;gap:22px}
+.bazaLista{border:1px solid #E6DED4;border-radius:9px;max-height:430px;overflow:auto}
+.bazaLista .poz{display:flex;gap:9px;align-items:center;padding:7px 9px;cursor:pointer;
+  border-bottom:1px solid #F1EBE3;font-size:12px}
+.bazaLista .poz:hover{background:#FAF6F1}
+.bazaLista .poz.on{background:#F3E9DE}
+.bazaLista .poz img{width:30px;height:30px;object-fit:contain;flex:none}
+.bazaLista .poz .bz{width:30px;height:30px;flex:none;border:1px dashed #D7C8B8;border-radius:4px}
+.zrzutnia{border:2px dashed #D7C8B8;border-radius:9px;min-height:132px;display:flex;
+  align-items:center;justify-content:center;text-align:center;font-size:12px;color:#96826F;
+  padding:10px;cursor:pointer;background:#FCFAF7}
+.zrzutnia.naj{border-color:var(--brand);background:#F7EFE6}
+.zrzutnia img{max-height:150px;max-width:100%;object-fit:contain}
+.pkty .fld{margin-bottom:5px}
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
 .tinfo{font-size:12px;color:var(--mid)}
 </style>
@@ -242,6 +264,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="toolbar">
       <div class="tinfo" id="tinfo">Wybierz wycenę z listy po lewej.</div>
       <div style="display:flex;gap:8px">
+        <button class="btn ghost" id="bazaBtn" type="button">Baza produktów</button>
         <button class="btn ghost" id="editMode" type="button">✎ Edytuj teksty</button>
         <button class="btn ghost" id="zoomOut" type="button">−</button>
         <button class="btn ghost" id="zoomIn" type="button">+</button>
@@ -251,6 +274,54 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="scaler" id="scaler"></div>
   </div>
 
+</div>
+
+<div class="mod" id="bazaMod">
+  <div class="modbox">
+    <div class="modtop">
+      <h2>Baza produktów</h2>
+      <button class="btn ghost" id="bazaZamknij" type="button">Zamknij</button>
+    </div>
+    <div id="bazaMsg"></div>
+    <div class="bazaSiatka">
+      <div>
+        <button class="btn ghost wide" id="bazaNowy" type="button" style="margin-bottom:9px">+ nowy produkt</button>
+        <div class="bazaLista" id="bazaLista"></div>
+      </div>
+      <div>
+        <div class="g2">
+          <div class="fld"><label for="bKat">Rodzaj</label><select id="bKat">
+            <option value="piec">Piec</option>
+            <option value="sterownik">Sterownik</option>
+            <option value="promiennik">Promiennik</option>
+            <option value="drewno">Drewno</option>
+          </select></div>
+          <div class="fld"><label for="bNazwa">Nazwa z cennika</label><input id="bNazwa" placeholder="np. HUUM DROP 6 (6 kW)"></div>
+        </div>
+        <div class="note" id="bSlug" style="margin:-4px 0 10px">Nazwa zamienia się na klucz, po którym generator dobiera zdjęcie i opis.</div>
+
+        <div class="fld"><label>Zdjęcie produktu</label>
+          <div class="zrzutnia" id="bZrzut">Przeciągnij zdjęcie tutaj albo kliknij, żeby wybrać plik.<br>Najlepiej na białym albo przezroczystym tle.</div>
+          <input type="file" id="bPlik" accept="image/*" style="display:none">
+          <div class="note" id="bFotoInfo" style="margin-top:5px"></div>
+        </div>
+
+        <div class="fld"><label for="bSurowy">Tekst producenta, do uporządkowania</label>
+          <textarea id="bSurowy" rows="3" placeholder="Wklej opis ze strony producenta i kliknij „Uporządkuj”."></textarea>
+        </div>
+        <button class="btn ghost wide" id="bUporzadkuj" type="button" style="margin-bottom:12px">Uporządkuj wklejony tekst</button>
+
+        <div class="fld"><label for="bLead">Zdanie wprowadzające</label><textarea id="bLead" rows="2"></textarea></div>
+        <div class="fld"><label>Odhaczenia, do sześciu</label></div>
+        <div class="pkty" id="bPkty"></div>
+
+        <div style="display:flex;gap:9px;margin-top:14px">
+          <button class="btn" id="bZapisz" type="button">Zapisz produkt</button>
+          <button class="btn ghost" id="bUsun" type="button">Usuń z bazy</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -388,6 +459,8 @@ async function pick(q){
   P.entrance = P.modules.length>1 ? 1 : 0;
   if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
   syncPlan(); drawQuotes(); render();
+  // zdjęcia z bazy tylko dla urządzeń z tej wyceny — reszta zostaje nietknięta
+  ladujFoto(slugiWyceny()).then(function(bylo){ if(bylo && cur === q) render(); });
 }
 
 function variantsOf(q){
@@ -554,6 +627,7 @@ function imgCover(src, h, alt){
 function imgOf(dir, name, h, alt){
   var list = [];
   slugCandidates(name).forEach(function(sl){
+    if(FOTO[sl]) list.push(FOTO[sl]);          // zdjęcie wgrane w „Bazie produktów”
     list.push(abs(dir+"/"+sl+".png"));
     list.push(abs(dir+"/"+sl+".jpg"));
   });
@@ -1466,9 +1540,321 @@ $("print").onclick = function(){
 };
 window.addEventListener("resize", applyZoom);
 
+/* ============ baza produktów ============ */
+// opisy i zdjęcia dogrywane z Supabase: nadpisują to, co wbudowane w plik
+var BAZA = {};       // slug -> {kat, nazwa, lead, punkty}
+var FOTO = {};       // slug -> data:image/...
+var bazaSlug = null; // aktualnie edytowany wpis
+var bazaBlad = "";   // co poszło nie tak przy ładowaniu tabeli
+
+var KATDIR = {piec:"piece", sterownik:"sterowniki", promiennik:"promienniki", drewno:"drewno"};
+
+function bazaKat(k){ return k === "drewno" ? "drewno" : "wyp"; }
+
+// wpisy z bazy wchodzą do OPISY, więc opisFor() działa bez zmian
+function wmontujBaze(){
+  for(var sl in BAZA){
+    var b = BAZA[sl], pk = b.punkty || [];
+    OPISY[sl] = {kat: bazaKat(b.kat), lead: b.lead || "", p: pk.slice(0,3), pa: pk.slice(0,6), w: ""};
+  }
+}
+
+async function ladujBaze(){
+  if(!supa && !(await connect())) return;
+  try{
+    // bez kolumny foto: zdjęcia potrafią ważyć więcej niż cała reszta razem
+    var r = await supa.from("produkty").select("slug,kat,nazwa,lead,punkty");
+    if(r.error) throw r.error;
+    BAZA = {}; bazaBlad = "";
+    (r.data || []).forEach(function(x){
+      BAZA[x.slug] = {kat:x.kat, nazwa:x.nazwa, lead:x.lead, punkty:x.punkty || []};
+    });
+    wmontujBaze();
+  }catch(e){
+    // brak tabeli nie może blokować generowania ofert, ale trzeba o tym powiedzieć
+    bazaBlad = /produkty/i.test(e.message || "")
+      ? "Nie widzę tabeli „produkty” w bazie. Wklej plik produkty.sql w Supabase, SQL Editor, i odśwież stronę."
+      : "Nie udało się połączyć z bazą produktów: " + (e.message || e);
+    if(window.console) console.warn("baza produktów:", e.message || e);
+  }
+}
+
+// zdjęcia tylko dla produktów z otwartej wyceny
+async function ladujFoto(slugi){
+  var brak = slugi.filter(function(sl){ return BAZA[sl] && !(sl in FOTO); });
+  if(!brak.length || (!supa && !(await connect()))) return false;
+  try{
+    var r = await supa.from("produkty").select("slug,foto").in("slug", brak);
+    if(r.error) throw r.error;
+    (r.data || []).forEach(function(x){ FOTO[x.slug] = x.foto || ""; });
+    brak.forEach(function(sl){ if(!(sl in FOTO)) FOTO[sl] = ""; });
+    return true;
+  }catch(e){ return false; }
+}
+
+// slugi wszystkich urządzeń z otwartej wyceny
+function slugiWyceny(){
+  var out = [];
+  (cur && cur._v || []).forEach(function(v){
+    urzadzeniaWariantu(v.s).forEach(function(d){
+      slugCandidates(d.nm).concat(slugCandidates(d.key)).forEach(function(sl){
+        if(out.indexOf(sl) < 0) out.push(sl);
+      });
+    });
+    [v.s.b1, v.s.l1].forEach(function(b){
+      var g = b && (b.g || b.name);
+      if(g) slugCandidates(g).forEach(function(sl){ if(out.indexOf(sl) < 0) out.push(sl); });
+    });
+  });
+  return out;
+}
+
+/* ---------- okno ---------- */
+function bazaKomunikat(kind, text){
+  $("bazaMsg").innerHTML = text ? '<div class="msg '+kind+'">'+esc(text)+'</div>' : "";
+}
+
+function rysujListeBazy(){
+  var klucze = Object.keys(BAZA).sort();
+  $("bazaLista").innerHTML = klucze.length ? klucze.map(function(sl){
+    var b = BAZA[sl], f = FOTO[sl];
+    return '<div class="poz'+(sl === bazaSlug ? ' on' : '')+'" data-s="'+esc(sl)+'">'+
+      (f ? '<img src="'+esc(f)+'" alt="">' : '<div class="bz"></div>')+
+      '<span style="min-width:0"><span style="display:block">'+esc(b.nazwa || sl)+'</span>'+
+      '<span style="color:#A2907E;font-size:10.5px">'+esc(sl)+'</span></span></div>';
+  }).join("") : '<div class="sub" style="padding:10px">Baza jest jeszcze pusta.</div>';
+  Array.prototype.forEach.call($("bazaLista").querySelectorAll(".poz"), function(el){
+    el.onclick = function(){ wczytajDoFormularza(el.getAttribute("data-s")); };
+  });
+}
+
+function polaPunktow(lista){
+  lista = lista || [];
+  var h = "";
+  for(var i = 0; i < 6; i++){
+    h += '<div class="fld"><input id="bP'+i+'" value="'+esc(lista[i] || "")+'" placeholder="odhaczenie '+(i+1)+'"></div>';
+  }
+  $("bPkty").innerHTML = h;
+}
+
+function zebranePunkty(){
+  var out = [];
+  for(var i = 0; i < 6; i++){
+    var v = ($("bP"+i).value || "").trim();
+    if(v) out.push(v);
+  }
+  return out;
+}
+
+function pokazFoto(dane){
+  $("bZrzut").innerHTML = dane
+    ? '<img src="'+esc(dane)+'" alt="">'
+    : 'Przeciągnij zdjęcie tutaj albo kliknij, żeby wybrać plik.<br>Najlepiej na białym albo przezroczystym tle.';
+  $("bFotoInfo").textContent = dane ? "Zdjęcie gotowe, " + Math.round(dane.length * 0.75 / 1024) + " kB." : "";
+  $("bZrzut").setAttribute("data-foto", dane || "");
+}
+
+function odswiezSlug(){
+  var sl = slugify($("bNazwa").value || "");
+  $("bSlug").textContent = sl
+    ? "Klucz: " + sl + ". Wpisz samą serię (np. HUUM DROP), a wpis obsłuży wszystkie moce; pełna nazwa dotyczy tylko tego jednego modelu."
+    : "Nazwa zamienia się na klucz, po którym generator dobiera zdjęcie i opis.";
+}
+
+async function wczytajDoFormularza(sl){
+  bazaSlug = sl;
+  var b = BAZA[sl] || {};
+  $("bKat").value = b.kat || "piec";
+  $("bNazwa").value = b.nazwa || "";
+  $("bLead").value = b.lead || "";
+  polaPunktow(b.punkty);
+  $("bSurowy").value = "";
+  odswiezSlug();
+  pokazFoto(FOTO[sl] || "");
+  rysujListeBazy();
+  if(sl && !(sl in FOTO)){
+    await ladujFoto([sl]);
+    if(bazaSlug === sl) pokazFoto(FOTO[sl] || "");
+    rysujListeBazy();
+  }
+}
+
+function nowyProdukt(){
+  bazaSlug = null;
+  $("bKat").value = "piec"; $("bNazwa").value = ""; $("bLead").value = "";
+  $("bSurowy").value = ""; polaPunktow([]); pokazFoto(""); odswiezSlug();
+  bazaKomunikat("", ""); rysujListeBazy();
+}
+
+/* ---------- zdjęcie: zmniejszamy w przeglądarce ---------- */
+function przygotujFoto(file){
+  return new Promise(function(done, fail){
+    var fr = new FileReader();
+    fr.onerror = function(){ fail(new Error("Nie udało się odczytać pliku.")); };
+    fr.onload = function(){
+      var im = new Image();
+      im.onerror = function(){ fail(new Error("To chyba nie jest zdjęcie.")); };
+      im.onload = function(){
+        var MAX = 900, sk = Math.min(1, MAX / Math.max(im.width, im.height));
+        var c = document.createElement("canvas");
+        c.width = Math.round(im.width * sk); c.height = Math.round(im.height * sk);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        var out = c.toDataURL("image/webp", 0.82);
+        if(out.indexOf("data:image/webp") !== 0) out = c.toDataURL("image/png");
+        done(out);
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- porządkowanie tekstu producenta ---------- */
+function uporzadkujTekst(txt){
+  var linie = String(txt || "").split(/[\r\n]+/).map(function(l){ return l.trim(); }).filter(Boolean);
+  // pierwsza linijka to zwykle nagłówek („Piec HUUM DROP 6”), nie opis
+  if(linie.length > 1 && linie[0].length < 80 && !/[.!?]$/.test(linie[0])) linie.shift();
+  var lead = [], punkty = [];
+  var ZNACZNIK = /^[\u2705\u2714\u2713\u25CF\u2022\u00B7*+-]\s*/;
+  linie.forEach(function(l){
+    if(ZNACZNIK.test(l)) punkty.push(l.replace(ZNACZNIK, ""));
+    else if(/^[\uD83C-\uDBFF\uDC00-\uDFFF\u2600-\u27BF\uFE0F\u2699]/.test(l)) punkty.push(l);
+    else (punkty.length ? punkty : lead).push(l);
+  });
+
+  function czysc(t){
+    t = String(t)
+      .replace(/^[\uD83C-\uDBFF\uDC00-\uDFFF\u2600-\u27BF\uFE0F\u2699\s]+/, "")
+      .replace(/(\d)\s*[\u2014\u2013-]\s*(\d)/g, "$1 do $2")   // 3–7 m3 -> 3 do 7 m3
+      .replace(/\s*[\u2014\u2013]\s*/g, ", ")                    // myślniki na przecinki
+      .replace(/\s*[\u2014\u2013,-]?\s*(idealn\w+|dedykowan\w+|przeznaczon\w+)?\s*(do|dla)?\s*(saun\w*)?\s*o\s+kubaturze[^.;]*/gi, "")
+      .replace(/\s*o\s+kubaturze[^.;]*/gi, "")
+      .replace(/\s+([,.;:])/g, "$1")
+      .replace(/[\s,\u2013\u2014-]+\./g, ".")
+      .replace(/,\s*,/g, ",")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    return t.replace(/^[,\s]+|[,\s]+$/g, "");
+  }
+
+  // lead: pełne zdania, ale nie więcej niż trzy linijki tekstu
+  var l = czysc(lead.join(" "));
+  var zd = l.split(/(?<=[.!?])\s+/), wynik = "";
+  for(var i = 0; i < zd.length; i++){
+    if(wynik && (wynik + " " + zd[i]).length > 300) break;
+    wynik = (wynik + " " + zd[i]).trim();
+  }
+  return {
+    lead: (wynik || l).replace(/\.$/, ""),
+    punkty: punkty.map(czysc).filter(function(p){ return p.length > 7; }).slice(0, 6)
+  };
+}
+
+async function zapiszProdukt(){
+  var nazwa = ($("bNazwa").value || "").trim();
+  if(!nazwa){ bazaKomunikat("err", "Wpisz nazwę produktu, dokładnie taką jak w cenniku."); return; }
+  var sl = slugify(nazwa);
+  if(!sl){ bazaKomunikat("err", "Z tej nazwy nie da się zrobić klucza."); return; }
+  if(!supa && !(await connect())) return;
+
+  var foto = $("bZrzut").getAttribute("data-foto") || "";
+  if(!foto && bazaSlug && !(bazaSlug in FOTO)){
+    bazaKomunikat("err", "Zdjęcie tego produktu jeszcze się wczytuje, spróbuj za chwilę.");
+    return;
+  }
+  var wiersz = {
+    slug: sl, kat: $("bKat").value, nazwa: nazwa,
+    lead: ($("bLead").value || "").trim().replace(/\.$/, ""),
+    punkty: zebranePunkty(),
+    foto: foto,
+    updated_at: new Date().toISOString()
+  };
+  bazaKomunikat("", "Zapisuję…");
+  try{
+    var r = await supa.from("produkty").upsert(wiersz);
+    if(r.error) throw r.error;
+    // wpis pod starym kluczem zostaje sierotą, gdy nazwa się zmieniła
+    if(bazaSlug && bazaSlug !== sl){
+      await supa.from("produkty").delete().eq("slug", bazaSlug);
+      delete BAZA[bazaSlug]; delete FOTO[bazaSlug];
+    }
+    BAZA[sl] = {kat:wiersz.kat, nazwa:nazwa, lead:wiersz.lead, punkty:wiersz.punkty};
+    FOTO[sl] = wiersz.foto;
+    bazaSlug = sl; bazaBlad = "";
+    wmontujBaze(); rysujListeBazy(); render();
+    bazaKomunikat("ok", "Zapisane. Oferta korzysta z tego opisu od zaraz.");
+  }catch(e){
+    bazaKomunikat("err", "Nie udało się zapisać: " + (e.message || e));
+  }
+}
+
+async function usunProdukt(){
+  if(!bazaSlug){ bazaKomunikat("err", "Najpierw wybierz produkt z listy."); return; }
+  if(!supa && !(await connect())) return;
+  try{
+    var r = await supa.from("produkty").delete().eq("slug", bazaSlug);
+    if(r.error) throw r.error;
+    delete BAZA[bazaSlug]; delete FOTO[bazaSlug]; delete OPISY[bazaSlug];
+    nowyProdukt(); render();
+    bazaKomunikat("ok", "Usunięte z bazy.");
+  }catch(e){
+    bazaKomunikat("err", "Nie udało się usunąć: " + (e.message || e));
+  }
+}
+
+function otworzBaze(){
+  $("bazaMod").classList.add("on");
+  if(!bazaSlug) nowyProdukt(); else rysujListeBazy();
+  bazaKomunikat(bazaBlad ? "err" : "", bazaBlad);   // po nowyProdukt(), bo ono czyści pasek
+  // nazwa urządzenia z otwartej wyceny jako podpowiedź
+  if(!bazaSlug && cur && cur._v && cur._v.length){
+    var d = urzadzeniaWariantu(cur._v[0].s)[0];
+    if(d){ $("bNazwa").value = d.nm; odswiezSlug(); }
+  }
+}
+
+$("bazaBtn").onclick = otworzBaze;
+$("bazaZamknij").onclick = function(){ $("bazaMod").classList.remove("on"); };
+$("bazaMod").onclick = function(e){ if(e.target === $("bazaMod")) $("bazaMod").classList.remove("on"); };
+$("bazaNowy").onclick = nowyProdukt;
+$("bNazwa").addEventListener("input", odswiezSlug);
+$("bZapisz").onclick = zapiszProdukt;
+$("bUsun").onclick = usunProdukt;
+$("bUporzadkuj").onclick = function(){
+  var zrodlo = ($("bSurowy").value || "").trim();
+  if(!zrodlo){ bazaKomunikat("err", "Najpierw wklej tekst producenta."); return; }
+  var w = uporzadkujTekst(zrodlo);
+  $("bLead").value = w.lead;
+  polaPunktow(w.punkty);
+  bazaKomunikat("ok", "Gotowe, " + w.punkty.length + " odhaczeń. Przejrzyj i popraw, co trzeba.");
+};
+
+$("bZrzut").onclick = function(){ $("bPlik").click(); };
+$("bPlik").onchange = function(){ if(this.files && this.files[0]) wczytajFoto(this.files[0]); };
+["dragenter","dragover"].forEach(function(ev){
+  $("bZrzut").addEventListener(ev, function(e){ e.preventDefault(); this.classList.add("naj"); });
+});
+["dragleave","drop"].forEach(function(ev){
+  $("bZrzut").addEventListener(ev, function(e){ e.preventDefault(); this.classList.remove("naj"); });
+});
+$("bZrzut").addEventListener("drop", function(e){
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) wczytajFoto(f);
+});
+async function wczytajFoto(f){
+  try{
+    bazaKomunikat("", "Przygotowuję zdjęcie…");
+    var d = await przygotujFoto(f);
+    pokazFoto(d);
+    bazaKomunikat("", "");
+  }catch(e){ bazaKomunikat("err", e.message || String(e)); }
+}
+polaPunktow([]);
+
 /* ============ start ============ */
 $("mData").value = new Date().toISOString().slice(0,10);
-drawPages(); syncPlan(); render(); loadQuotes();
+drawPages(); syncPlan(); render();
+ladujBaze().then(function(){ render(); return loadQuotes(); });
 
 })();
 </script>
