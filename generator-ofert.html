@@ -805,15 +805,50 @@ function kartaUrzadzenia(it, wys, punktow, fs, dodatek){
   '</div>';
 }
 
-// jeden wiersz pasa „wspólne dla wszystkich wariantów”
-function wspolneUrzadzenie(it){
-  var lead = it.opis && it.opis.lead ? it.opis.lead : "";
-  return '<div style="flex:1;min-width:0;display:flex;gap:16px;align-items:flex-start">'+
-    '<div style="width:74px;flex:none">'+imgOf(it.dir, it.key, 74, it.nm)+'</div>'+
+// skraca zdanie do budżetu znaków, ucinając na przecinku albo granicy słowa
+function przytnij(t, max){
+  t = String(t || "");
+  if(t.length <= max) return t;
+  var kawalek = t.slice(0, max);
+  var i = kawalek.lastIndexOf(",");
+  if(i < max * 0.5) i = kawalek.lastIndexOf(" ");
+  return (i > 0 ? kawalek.slice(0, i) : kawalek).replace(/[\s,]+$/, "");
+}
+
+// urządzenie, które wyróżnia wariant obok pieca (np. promienniki)
+function dodatkowaPozycja(d, fw, fs, limit){
+  var o = krotkiOpis(d.opis), lead = przytnij(o && o.lead ? o.lead : "", limit || 150);
+  var wys = Math.round(fw * 1.45);   // promienniki są wąskie i wysokie
+  return '<div style="border-top:1px solid #EDE5DB;padding-top:12px;margin-top:12px;'+
+              'display:flex;gap:16px;align-items:flex-start">'+
+    '<div style="width:'+fw+'px;flex:none">'+imgOf(d.dir, d.key, wys, d.nm)+'</div>'+
     '<div style="min-width:0">'+
-      '<div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#9A8371">'+esc(it.lbl)+'</div>'+
-      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;line-height:1.1;margin-top:3px">'+esc(it.nm)+'</div>'+
-      (lead ? '<div style="font-size:11px;line-height:1.5;color:#6B5849;margin-top:6px">'+esc(lead)+'.</div>' : '')+
+      '<div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#9A8371">'+
+        esc(d.lbl.split(" · ")[0])+'</div>'+
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:19px;line-height:1.12;margin-top:3px">'+
+        esc(d.nm)+'</div>'+
+      (lead ? '<div style="font-size:'+fs+'px;line-height:1.5;color:#6B5849;margin-top:6px">'+esc(lead)+'.</div>' : '')+
+    '</div></div>';
+}
+
+// jeden wiersz pasa „wspólne dla wszystkich wariantów”
+function wspolneUrzadzenie(it, samo){
+  var o = it.opis || {}, lead = o.lead || "";
+  var fw = samo ? 104 : 82;
+  var pkt = samo ? (o.pa || o.p || []).slice(0,3) : [];
+  return '<div style="flex:1;min-width:0;display:flex;gap:'+(samo?24:18)+'px;align-items:flex-start">'+
+    '<div style="width:'+fw+'px;flex:none">'+imgOf(it.dir, it.key, fw, it.nm)+'</div>'+
+    '<div style="min-width:0;flex:1;display:flex;gap:26px;align-items:flex-start">'+
+      '<div style="min-width:0;flex:1">'+
+        '<div style="font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:#9A8371">'+esc(it.lbl)+'</div>'+
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:'+(samo?24:21)+'px;line-height:1.1;margin-top:4px">'+esc(it.nm)+'</div>'+
+        (lead ? '<div style="font-size:'+(samo?12:11)+'px;line-height:1.55;color:#6B5849;margin-top:7px">'+esc(lead)+'.</div>' : '')+
+      '</div>'+
+      (pkt.length ? '<ul style="list-style:none;margin:0;padding:0;width:340px;flex:none;font-size:11px;color:#6B5849">'+
+        pkt.map(function(x){
+          return '<li style="margin:0 0 6px;padding-left:14px;position:relative;line-height:1.45">'+
+            '<span style="position:absolute;left:0;top:0;color:#A0724A">\u2713</span>'+esc(x)+'</li>';
+        }).join("")+'</ul>' : '')+
     '</div></div>';
 }
 
@@ -856,28 +891,29 @@ function pageWyposazenie(){
 
   // karty porównawcze: jedna na wariant, z tym co go wyróżnia
   var glowny = rozne[0];
+  var szer = vs.length <= 2;   // przy dwóch wariantach jest miejsce na więcej
   var karty = vs.map(function(v, i){
     var it = znajdz(listy[i], glowny);
     if(!it) return '<div class="card" style="border-top:2px solid #594035"></div>';
     var gat = (v.s.b1 && (v.s.b1.g || v.s.b1.name)) || v.name || "";
     var pod = rozne.slice(1).map(function(t){
       var d = znajdz(listy[i], t);
-      return d ? '<div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid #EDE5DB;padding-top:8px;margin-top:8px">'+
-        '<span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9A8371">'+esc(d.lbl.split(" · ")[0])+'</span>'+
-        '<span style="font-size:12px;color:#4A392F">'+esc(d.nm)+'</span></div>' : '';
+      return d ? dodatkowaPozycja(d, szer ? 74 : 56, szer ? 11 : 10, szer ? 150 : 88) : '';
     }).join("");
     var kopia = {lbl: it.lbl + (gat ? " · " + gat : ""), nm: it.nm, dir: it.dir, key: it.key, opis: krotkiOpis(it.opis)};
-    return kartaUrzadzenia(kopia, 150, 2, 11, pod);
+    var wysZdj = pod ? (szer ? 124 : 96) : (szer ? 190 : 140);
+    return kartaUrzadzenia(kopia, wysZdj, 2, szer ? 11.5 : 11, pod);
   }).join("");
 
   var pas = wspolne.map(function(t){
     var d = znajdz(listy[0], t) || listy.map(function(L){ return znajdz(L, t); }).filter(Boolean)[0];
     if(!d) return "";
-    return wspolneUrzadzenie({lbl: d.lbl + ", wspólny dla wariantów", nm: d.nm, dir: d.dir, key: d.key, opis: krotkiOpis(d.opis)});
+    return {lbl: d.lbl + ", wspólny dla wariantów", nm: d.nm, dir: d.dir, key: d.key, opis: krotkiOpis(d.opis)};
   }).filter(Boolean);
+  pas = pas.map(function(it){ return wspolneUrzadzenie(it, pas.length === 1); });
 
   var pasHTML = pas.length
-    ? '<div style="margin-top:16px;background:#FFF;padding:18px 22px;display:flex;gap:28px;align-items:flex-start">'+
+    ? '<div style="margin-top:16px;background:#FFF;padding:20px 24px;display:flex;gap:28px;align-items:flex-start">'+
         pas.join('<div style="width:1px;align-self:stretch;background:#E3D9CE"></div>')+
       '</div>'
     : '';
