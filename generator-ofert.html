@@ -238,6 +238,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="fld"><label for="doorPos">Położenie drzwi</label>
       <div class="range"><input type="range" id="doorPos" min="0" max="100" value="70"><span class="rv" id="doorPosV">środek</span></div>
     </div>
+    <div class="fld"><label>Przeszklenia ścian sauny</label>
+      <div id="szklPanel"></div>
+      <div class="note" id="szklUwaga" style="margin-top:6px"></div>
+    </div>
     <div class="planprev" id="planPrev"></div>
     <div class="sub" id="planInfo" style="margin-top:6px"></div>
 
@@ -364,8 +368,21 @@ var P = {   // rzut
   modules:[{type:"sauna",width:2100}],
   benchMode:"L", benchWalls:"gora-prawa", upper:550, lower:280, upperV:550, lowerV:280,
   piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
-  doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70
+  doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
+  // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
+  szkl:{ przod:{tryb:"drewno", mm:1200, od:"start"},
+         tyl:  {tryb:"drewno", mm:1200, od:"start"},
+         lewa: {tryb:"drewno", mm:1200, od:"start"},
+         prawa:{tryb:"drewno", mm:1200, od:"start"} }
 };
+
+// nazwy ścian tak, jak o nich mówicie, plus podpisy narożnika dla każdej z nich
+var SCIANY = [
+  {k:"przod", n:"Przednia",  od:[["start","od lewej"],["koniec","od prawej"],["srodek","na środku"]]},
+  {k:"tyl",   n:"Tylna",     od:[["start","od lewej"],["koniec","od prawej"],["srodek","na środku"]]},
+  {k:"lewa",  n:"Lewa",      od:[["start","od tyłu"], ["koniec","od przodu"],["srodek","na środku"]]},
+  {k:"prawa", n:"Prawa",     od:[["start","od tyłu"], ["koniec","od przodu"],["srodek","na środku"]]}
+];
 
 var TYPES = {sauna:{label:"Sauna",def:2100},przedsionek:{label:"Przedsionek",def:1200},
              prysznic:{label:"Prysznic",def:1200},taras:{label:"Taras / balia",def:2600}};
@@ -1022,7 +1039,13 @@ function pageUklad(){
   rows.push(["Ławy", P.benchMode==="L" ? "w literę L" : "proste, dwa poziomy"]);
   rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
   rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
+  if(b.szklo && b.szklo.length) rows.push(["Przeszklenia", b.szklo.join(", ")]);
   var list = rows.map(function(r){
+    // dłuższe wartości (np. lista przeszkleń) nie mieszczą się w jednej linijce obok etykiety
+    if(String(r[1]).length > 26)
+      return '<div class="r" style="padding:5px 0;display:block">'+
+        '<div class="rk" style="font-size:13px">'+esc(r[0])+'</div>'+
+        '<div class="rv" style="font-size:13px;white-space:normal;text-align:left;margin-top:2px">'+esc(r[1])+'</div></div>';
     return '<div class="r" style="padding:5px 0"><span class="rk" style="font-size:13px">'+esc(r[0])+'</span><span class="rv" style="font-size:13px">'+esc(r[1])+'</span></div>';
   }).join("");
   return '<div class="p">'+head("Układ sauny","rzut z góry, wygenerowany z konfiguracji")+
@@ -1310,6 +1333,54 @@ function piec(x0,w){
   return o.join("");
 }
 
+// odcinek przeszklenia na ścianie o długości L: [początek, koniec] albo null
+function odcinekSzkla(cfg, L){
+  if(!cfg || cfg.tryb === "drewno") return null;
+  if(cfg.tryb === "cale") return [0, L];
+  var mm = Math.max(200, Math.min(L, +cfg.mm || 0));
+  if(cfg.od === "koniec") return [L - mm, L];
+  if(cfg.od === "srodek") return [(L - mm) / 2, (L + mm) / 2];
+  return [0, mm];
+}
+
+// szkło w płaszczyźnie ściany: biały prześwit i podwójna kreska, czytelne także w druku mono
+function pasSzkla(x, y, dl, gr, poziom){
+  var w = poziom ? dl : gr, h = poziom ? gr : dl;
+  var o = ['<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="#FFF"></rect>'];
+  [0.3, 0.7].forEach(function(u){
+    var p = poziom ? (y + gr * u) : (x + gr * u);
+    o.push(poziom
+      ? '<path d="M '+x+' '+p+' L '+(x+dl)+' '+p+'" stroke="#2A211C" stroke-width="12" fill="none"></path>'
+      : '<path d="M '+p+' '+y+' L '+p+' '+(y+dl)+'" stroke="#2A211C" stroke-width="12" fill="none"></path>');
+  });
+  // krótkie zamknięcia na końcach, żeby było widać gdzie szkło się kończy
+  o.push(poziom
+    ? '<path d="M '+x+' '+y+' L '+x+' '+(y+gr)+' M '+(x+dl)+' '+y+' L '+(x+dl)+' '+(y+gr)+'" stroke="#2A211C" stroke-width="12"></path>'
+    : '<path d="M '+x+' '+y+' L '+(x+gr)+' '+y+' M '+x+' '+(y+dl)+' L '+(x+gr)+' '+(y+dl)+'" stroke="#2A211C" stroke-width="12"></path>');
+  return o.join("");
+}
+
+// wszystkie przeszklone odcinki sauny, zwraca SVG i opis do tabeli
+function szklenieScian(x0, w, iy, iy2, wall){
+  var svg = [], opis = [];
+  SCIANY.forEach(function(sc){
+    var cfg = P.szkl[sc.k], poziom = (sc.k === "przod" || sc.k === "tyl");
+    var L = poziom ? w : (iy2 - iy);
+    var od = odcinekSzkla(cfg, L);
+    if(!od) return;
+    var dl = od[1] - od[0];
+    if(poziom){
+      var y = (sc.k === "przod") ? iy2 : (iy - wall);
+      svg.push(pasSzkla(x0 + od[0], y, dl, wall, true));
+    }else{
+      var x = (sc.k === "lewa") ? (x0 - wall) : (x0 + w);
+      svg.push(pasSzkla(x, iy + od[0], dl, wall, false));
+    }
+    opis.push(sc.n.toLowerCase() + (cfg.tryb === "cale" ? ", cała" : ", " + fmt(Math.round(dl)) + " mm"));
+  });
+  return {svg: svg.join(""), opis: opis};
+}
+
 function buildPlan(){
   var wall=P.wall, depth=P.depth, dw=P.doorW, n=P.modules.length;
   var innerW=0; P.modules.forEach(function(m){ innerW+=m.width; }); innerW += wall*(n-1);
@@ -1380,27 +1451,39 @@ function buildPlan(){
   if(si!==-1 && sdw==="lewa" && si>0) saunaPart = si;
   if(si!==-1 && sdw==="prawa" && si<n-1) saunaPart = si+1;
 
+  var drzwi = [];   // drzwi rysujemy na końcu, żeby nie zniknęły pod szkłem
   for(var i=1;i<n;i++){
     var px = xs[i]-wall;
     s.push('<rect x="'+px+'" y="'+iy+'" width="'+wall+'" height="'+depth+'" fill="#2A211C"></rect>');
-    if(i===saunaPart) s.push(doorV(px, sdY(), dw, sdw==="lewa"?-1:1, "top"));
+    if(i===saunaPart) drzwi.push(doorV(px, sdY(), dw, sdw==="lewa"?-1:1, "top"));
     else if(i===si || i===si+1){ /* ściana przy saunie bez drzwi */ }
-    else s.push(doorV(px, Math.max(iy+80,Math.min(iy2-dw-80,doorY)), dw, 1, "top"));
-  }
-  if(si!==-1 && sdw==="przod"){
-    var sm=P.modules[si], sw2=Math.min(dw, sm.width-200);
-    s.push(doorH(sdX(), iy2, sw2, 1, "left"));
-    s.push(T(sdX()+sw2/2, iy2+sw2+330, "DRZWI SAUNY "+fmt(sw2)+" mm", 110, "#2A211C"));
-  }
-  if(si!==-1 && leftExt)  s.push(doorV(MX, sdY(), dw, -1, "top"));
-  if(si!==-1 && rightExt) s.push(doorV(ix+innerW, sdY(), dw, 1, "top"));
-  if(hasEntr){
-    var em=P.modules[P.entrance], ew=Math.min(dw, em.width-200), edx=xs[P.entrance]+(em.width-ew)/2;
-    s.push(doorH(edx, iy2, ew, 1, "right"));
-    s.push(T(edx+ew/2, iy2+ew+330, "WEJŚCIE "+fmt(ew)+" mm", 110, "#2A211C"));
+    else drzwi.push(doorV(px, Math.max(iy+80,Math.min(iy2-dw-80,doorY)), dw, 1, "top"));
   }
 
-  return {extW:extW, extH:extH, innerW:innerW,
+  var szkl = {svg:"", opis:[]};
+  if(si !== -1){ szkl = szklenieScian(xs[si], P.modules[si].width, iy, iy2, wall); s.push(szkl.svg); }
+  if(si!==-1 && sdw==="przod"){
+    var sm=P.modules[si], sw2=Math.min(dw, sm.width-200);
+    drzwi.push(doorH(sdX(), iy2, sw2, 1, "left"));
+    drzwi.push(T(sdX()+sw2/2, iy2+sw2+330, "DRZWI SAUNY "+fmt(sw2)+" mm", 110, "#2A211C"));
+  }
+  if(si!==-1 && leftExt)  drzwi.push(doorV(MX, sdY(), dw, -1, "top"));
+  if(si!==-1 && rightExt) drzwi.push(doorV(ix+innerW, sdY(), dw, 1, "top"));
+  if(hasEntr){
+    var em=P.modules[P.entrance], ew=Math.min(dw, em.width-200), edx=xs[P.entrance]+(em.width-ew)/2;
+    drzwi.push(doorH(edx, iy2, ew, 1, "right"));
+    drzwi.push(T(edx+ew/2, iy2+ew+330, "WEJŚCIE "+fmt(ew)+" mm", 110, "#2A211C"));
+  }
+  s.push(drzwi.join(""));
+
+  if(szkl.opis.length){
+    var ly2 = MY + extH + 150;
+    s.push(pasSzkla(MX, ly2, 220, wall, true));
+    s.push('<text x="'+(MX+260)+'" y="'+(ly2+wall*0.5+38)+'" text-anchor="start" font-family="Jost, sans-serif" '+
+           'font-size="100" fill="#6B5849">przeszklenie</text>');
+  }
+
+  return {extW:extW, extH:extH, innerW:innerW, szklo:szkl.opis,
     svg:'<svg viewBox="0 0 '+vbW+' '+vbH+'" style="width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">'+
         '<rect x="0" y="0" width="'+vbW+'" height="'+vbH+'" fill="#FFF"></rect>'+s.join("")+'</svg>'};
 }
@@ -1530,6 +1613,68 @@ function chips(id,key,after){
     b.onclick=function(){ P[key]=b.dataset.v; syncPlan(); render(); if(after)after(); };
   });
 }
+// panel przeszkleń: wiersz na każdą ścianę sauny
+function drawSzkl(){
+  var host = $("szklPanel");
+  if(!host) return;
+  host.innerHTML = SCIANY.map(function(sc){
+    var c = P.szkl[sc.k], fr = c.tryb === "fragment";
+    return '<div style="border-top:1px solid var(--line);padding:8px 0 4px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+        '<span style="font-size:12px;color:var(--mid)">'+esc(sc.n)+'</span>'+
+        '<div class="chips" style="margin:0">'+
+          [["drewno","Drewno"],["cale","Szkło"],["fragment","Fragment"]].map(function(t){
+            return '<button class="chip" type="button" aria-pressed="'+(c.tryb===t[0])+'" '+
+                   'data-sc="'+sc.k+'" data-tryb="'+t[0]+'">'+t[1]+'</button>';
+          }).join("")+
+        '</div>'+
+      '</div>'+
+      (fr ? '<div class="g2" style="margin-top:6px">'+
+        '<div class="fld" style="margin:0"><label>Szerokość (mm)</label>'+
+          '<input type="number" step="50" min="200" value="'+(+c.mm||1200)+'" data-sc="'+sc.k+'" data-pole="mm"></div>'+
+        '<div class="fld" style="margin:0"><label>Liczone</label><select data-sc="'+sc.k+'" data-pole="od">'+
+          sc.od.map(function(o){
+            return '<option value="'+o[0]+'"'+(c.od===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';
+          }).join("")+'</select></div>'+
+      '</div>' : '')+
+    '</div>';
+  }).join("");
+
+  Array.prototype.forEach.call(host.querySelectorAll("button[data-tryb]"), function(b){
+    b.onclick = function(){
+      P.szkl[b.getAttribute("data-sc")].tryb = b.getAttribute("data-tryb");
+      drawSzkl(); syncPlan(); render();
+    };
+  });
+  Array.prototype.forEach.call(host.querySelectorAll("[data-pole]"), function(el){
+    el.addEventListener(el.tagName === "SELECT" ? "change" : "input", function(){
+      var c = P.szkl[el.getAttribute("data-sc")], pole = el.getAttribute("data-pole");
+      c[pole] = pole === "mm" ? (+el.value || 0) : el.value;
+      syncPlan(); render();
+    });
+  });
+  sprawdzSzkl();
+}
+
+// ostrzeżenia: fragment szerszy niż ściana, albo szkło na odcinku drzwi sauny
+function sprawdzSzkl(){
+  var pole = $("szklUwaga");
+  if(!pole) return;
+  var si = saunaIdx();
+  if(si === -1){ pole.textContent = ""; return; }
+  var szerS = P.modules[si].width, uwagi = [];
+  SCIANY.forEach(function(sc){
+    var c = P.szkl[sc.k];
+    if(c.tryb !== "fragment") return;
+    var L = (sc.k === "przod" || sc.k === "tyl") ? szerS : P.depth;
+    if(+c.mm > L) uwagi.push(sc.n.toLowerCase()+" ściana ma "+fmt(L)+" mm, przeszklenie zostanie do niej przycięte");
+  });
+  var zeSzklem = SCIANY.filter(function(sc){ return P.szkl[sc.k].tryb !== "drewno"; }).map(function(sc){ return sc.k; });
+  if(zeSzklem.indexOf(P.saunaDoorWall === "przod" ? "przod" : P.saunaDoorWall) >= 0)
+    uwagi.push("na ścianie z drzwiami sauny, rysunek pokaże drzwi w przeszkleniu");
+  pole.textContent = uwagi.length ? uwagi.join(". ") + "." : "";
+}
+
 function syncPlan(){
   P.depth=+$("pDepth").value||2300; P.wall=+$("pWall").value||100;
   P.upper=+$("pUpper").value||550; P.lower=+$("pLower").value||0;
@@ -1896,7 +2041,7 @@ polaPunktow([]);
 
 /* ============ start ============ */
 $("mData").value = new Date().toISOString().slice(0,10);
-drawPages(); syncPlan(); render();
+drawPages(); drawSzkl(); syncPlan(); render();
 ladujBaze().then(function(){ render(); return loadQuotes(); });
 
 })();
