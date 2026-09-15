@@ -1055,7 +1055,13 @@ function pageUklad(){
         '<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A6A55;margin-bottom:4px">Rysunek poglądowy</div>'+
         '<div style="font-size:12.5px;line-height:1.5;color:#5A4436">Ostateczny układ potwierdzamy na etapie projektu szczegółowego.</div></div>'+
       '</div>'+
-      '<div style="flex:1;background:#FFF;padding:14px;display:flex;align-items:center;justify-content:center;min-width:0">'+b.svg+'</div>'+
+      '<div style="flex:1;background:#FFF;padding:14px;display:flex;flex-direction:column;min-width:0">'+
+        '<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">'+b.svg+'</div>'+
+        (b.szklo && b.szklo.length
+          ? '<div style="display:flex;align-items:center;gap:8px;padding-top:6px;font-size:11px;color:#8A6A55">'+
+              legendaSzkla()+'<span>przeszklenie</span></div>'
+          : '')+
+      '</div>'+
     '</div>'+
     pfoot("Drzwi sauny zawsze otwierają się na zewnątrz.")+'</div>';
 }
@@ -1381,6 +1387,12 @@ function szklenieScian(x0, w, iy, iy2, wall){
   return {svg: svg.join(""), opis: opis};
 }
 
+// legenda rysowana osobno, żeby nigdy nie wpadła na drzwi ani na wymiary
+function legendaSzkla(){
+  return '<svg viewBox="0 0 340 90" width="52" height="14" xmlns="http://www.w3.org/2000/svg" style="flex:none">'+
+    pasSzkla(10, 20, 320, 50, true)+'</svg>';
+}
+
 function buildPlan(){
   var wall=P.wall, depth=P.depth, dw=P.doorW, n=P.modules.length;
   var innerW=0; P.modules.forEach(function(m){ innerW+=m.width; }); innerW += wall*(n-1);
@@ -1475,13 +1487,6 @@ function buildPlan(){
     drzwi.push(T(edx+ew/2, iy2+ew+330, "WEJŚCIE "+fmt(ew)+" mm", 110, "#2A211C"));
   }
   s.push(drzwi.join(""));
-
-  if(szkl.opis.length){
-    var ly2 = MY + extH + 150;
-    s.push(pasSzkla(MX, ly2, 220, wall, true));
-    s.push('<text x="'+(MX+260)+'" y="'+(ly2+wall*0.5+38)+'" text-anchor="start" font-family="Jost, sans-serif" '+
-           'font-size="100" fill="#6B5849">przeszklenie</text>');
-  }
 
   return {extW:extW, extH:extH, innerW:innerW, szklo:szkl.opis,
     svg:'<svg viewBox="0 0 '+vbW+' '+vbH+'" style="width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">'+
