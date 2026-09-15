@@ -250,6 +250,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="fld"><label for="wGwarU">Gwarancja · urządzenia</label><input id="wGwarU" value="24 miesiące"></div>
     <div class="fld"><label for="wTermin">Termin realizacji</label><input id="wTermin" value="6 tygodni od podpisania umowy"></div>
     <div class="fld"><label for="wPlat">Płatność</label><input id="wPlat" value="60% po rozpoczęciu realizacji, 40% po odbiorze"></div>
+    <div class="fld"><label for="wTransp">Transport i montaż (puste = nie pokazuj)</label><input id="wTransp" value="0 zł" placeholder="np. 0 zł, 3 500 zł, wycena indywidualna"></div>
 
     <div class="sec">Etykiety wariantów</div>
     <div class="g2">
@@ -1110,11 +1111,24 @@ function pageWarunki(){
 
 // rozbija pole typu "6 tygodni od podpisania umowy" na liczbę, jednostkę i opis
 function liczbaZ(txt, opis){
-  var m = String(txt == null ? "" : txt).trim().match(/^(\d+[.,]?\d*)\s*(.*)$/);
+  // liczba może mieć spację jako separator tysięcy ("3 500 zł"), ale "6 tygodni" to już tylko 6
+  var m = String(txt == null ? "" : txt).trim()
+    .match(/^(\d{1,3}(?:[ \u00A0]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)\s*(.*)$/);
   if(!m) return {n:"", u:"", o:(String(txt||"").trim() || opis)};
   var slowa = m[2].trim().split(/\s+/);
   var u = slowa.shift() || "";
   return {n:m[1], u:u, o:(slowa.join(" ") || opis)};
+}
+
+// kafel z dużą liczbą, a gdy wartość jest słowna — z samą frazą dopasowaną rozmiarem
+function kafelFaktu(wartosc, opisLiczby, opisTekstu){
+  var f = liczbaZ(wartosc, opisLiczby);
+  if(f.n) return {typ:"liczba", n:f.n, u:f.u, o:f.o};
+  var t = String(wartosc == null ? "" : wartosc).trim();
+  if(!t) return null;
+  // dłuższa fraza musi zejść z rozmiarem, żeby zmieścić się w kolumnie
+  var fs = t.length <= 14 ? 34 : (t.length <= 24 ? 28 : (t.length <= 36 ? 23 : 20));
+  return {typ:"tekst", t:t, fs:fs, o:opisTekstu || opisLiczby};
 }
 
 function pageGwarancje(){
@@ -1128,17 +1142,23 @@ function pageGwarancje(){
                   "regenerują ciało i głowę","stają się częścią domu lub ogrodu, a nie dodatkiem"];
 
   var fakty = [
-    liczbaZ($("wGwar").value,  "gwarancji na konstrukcję drewnianą"),
-    liczbaZ($("wGwarU").value, "gwarancji na urządzenia i osprzęt"),
-    liczbaZ($("wTermin").value,"od podpisania umowy do montażu"),
-    {n:"0", u:"zł", o:"za transport i kompleksowy montaż"}
-  ];
+    kafelFaktu($("wGwar").value,   "gwarancji na konstrukcję drewnianą", "gwarancja na konstrukcję"),
+    kafelFaktu($("wGwarU").value,  "gwarancji na urządzenia i osprzęt",  "gwarancja na urządzenia"),
+    kafelFaktu($("wTermin").value, "od podpisania umowy do montażu",     "termin realizacji"),
+    kafelFaktu($("wTransp").value, "za transport i kompleksowy montaż",  "transport i montaż")
+  ].filter(Boolean);
+
   var liczby = fakty.map(function(f, i){
+    var srodek = f.typ === "liczba"
+      ? '<div style="display:flex;align-items:baseline;justify-content:center;gap:6px;min-height:66px">'+
+          '<span style="font-family:\'Cormorant Garamond\',serif;font-size:66px;font-weight:300;line-height:1;color:#8A5A33">'+esc(f.n)+'</span>'+
+          '<span style="font-family:\'Cormorant Garamond\',serif;font-size:17px;color:#A0724A">'+esc(f.u)+'</span>'+
+        '</div>'
+      : '<div style="min-height:66px;display:flex;align-items:center;justify-content:center">'+
+          '<span style="font-family:\'Cormorant Garamond\',serif;font-size:'+f.fs+'px;font-weight:400;line-height:1.14;color:#8A5A33">'+esc(f.t)+'</span>'+
+        '</div>';
     return '<div style="flex:1;text-align:center;padding:0 16px;'+(i ? 'border-left:1px solid #E3D9CE;' : '')+'">'+
-      '<div style="display:flex;align-items:baseline;justify-content:center;gap:6px">'+
-        '<span style="font-family:\'Cormorant Garamond\',serif;font-size:66px;font-weight:300;line-height:1;color:#8A5A33">'+esc(f.n)+'</span>'+
-        '<span style="font-family:\'Cormorant Garamond\',serif;font-size:17px;color:#A0724A">'+esc(f.u)+'</span>'+
-      '</div>'+
+      srodek+
       '<div style="font-size:12px;line-height:1.5;color:#6B5849;margin-top:11px">'+esc(f.o)+'</div>'+
     '</div>';
   }).join("");
@@ -1714,7 +1734,7 @@ var ETYKIETY = ["", "Premium", "Standard", "Klasyka", "Basic", "Ciepły odcień"
   $(id).addEventListener("input", function(){ syncPlan(); render(); });
 });
 $("editMode").onclick = function(){ setEdit(!EDIT); };
-["mTel","mStan","mMail","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","imgBase","imgReal"].forEach(function(id){
+["mTel","mStan","mMail","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","wTransp","imgBase","imgReal"].forEach(function(id){
   $(id).addEventListener("input", render);
 });
 $("pEntr").addEventListener("change", function(){ P.entrance=+$("pEntr").value; render(); });
