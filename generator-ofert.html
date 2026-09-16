@@ -80,6 +80,31 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .logo{font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:.22em;color:var(--brand);opacity:.75;white-space:nowrap}
 
 .cards{display:grid;gap:22px;flex:1;min-height:0}
+/* przy długich zestawieniach wierszy karty zaciskają się, żeby stopka z ceną została na stronie */
+.cards.gesto1 .r{padding-top:1.5px;padding-bottom:1.5px}
+.cards.gesto1 .csec{padding:5px 0 2px}
+.cards.gesto1 .st{padding:3px 9px;margin-top:3px}
+.cards.gesto2 .r{padding-top:0.5px;padding-bottom:0.5px;min-height:11px}
+.cards.gesto2 .csec{padding:3px 0 1px;letter-spacing:.16em}
+.cards.gesto2 .st{padding:2px 9px;margin-top:2px}
+.cards.gesto2 .cbody{padding:0 12px}
+.cards.gesto2 .cfoot{padding:7px 12px 8px;margin-top:5px}
+.cards.gesto3 .r{padding-top:0;padding-bottom:0;min-height:10px}
+.cards.gesto3 .rk,.cards.gesto3 .rv{font-size:9.5px}
+.cards.gesto3 .csec{padding:2px 0 1px;font-size:8.5px;letter-spacing:.14em}
+.cards.gesto3 .st{padding:2px 9px;margin-top:2px}
+.cards.gesto3 .stk,.cards.gesto3 .stv{font-size:10.5px}
+.cards.gesto3 .cbody{padding:0 12px}
+.cards.gesto3 .cfoot{padding:6px 12px 7px;margin-top:4px}
+/* ostatni stopień, używany tylko przy naprawdę długich zestawieniach */
+.cards.gesto4 .r{padding:0;min-height:9px}
+.cards.gesto4 .rk,.cards.gesto4 .rv{font-size:9px;line-height:1.2}
+.cards.gesto4 .csec{padding:2px 0 0;font-size:8px;letter-spacing:.12em}
+.cards.gesto4 .st{padding:1.5px 9px;margin-top:2px}
+.cards.gesto4 .stk,.cards.gesto4 .stv{font-size:10px}
+.cards.gesto4 .cbody{padding:0 11px}
+.cards.gesto4 .cfoot{padding:6px 11px 7px;margin-top:4px}
+.cards.gesto4 .fb{font-size:22px}
 .card{display:flex;flex-direction:column;background:#FFF;overflow:hidden}
 .chead{background:var(--brand);padding:10px 15px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .cname{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:500;color:#FFF;line-height:1.08}
@@ -189,6 +214,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
         <button class="chip" type="button" data-v="L">W literę L</button>
       </div>
     </div>
+    <div class="fld"><label>Poziomy ław</label>
+      <div class="chips" id="benchLevels">
+        <button class="chip" type="button" data-v="2">Dwa poziomy</button>
+        <button class="chip" type="button" data-v="1">Jeden poziom</button>
+      </div>
+    </div>
     <div class="fld" id="wallsFld"><label>Ściany ław</label>
       <div class="chips" id="benchWalls">
         <button class="chip" type="button" data-v="gora-prawa">Góra + prawa</button>
@@ -202,13 +233,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <div class="fld"><label for="pLower" id="lowLbl">Ława dolna</label><input type="number" id="pLower" value="280" step="10"></div>
     </div>
     <div class="g2" id="ramiePionowe">
-      <div class="fld"><label for="pUpperV">Ława górna B</label><input type="number" id="pUpperV" value="550" step="10"></div>
+      <div class="fld"><label for="pUpperV" id="upLblV">Ława górna B</label><input type="number" id="pUpperV" value="550" step="10"></div>
       <div class="fld"><label for="pLowerV">Ława dolna B</label><input type="number" id="pLowerV" value="280" step="10"></div>
     </div>
     <div class="fld"><label>Piec · kształt</label>
       <div class="chips" id="piecShape">
         <button class="chip" type="button" data-v="prostokatny">Prostokątny</button>
         <button class="chip" type="button" data-v="okragly">Okrągły</button>
+        <button class="chip" type="button" data-v="brak">Bez pieca (infrared)</button>
       </div>
     </div>
     <div class="fld" id="piecRound"><label for="piecD">Średnica (mm)</label><input type="number" id="piecD" value="500" step="10"></div>
@@ -216,7 +248,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <div class="fld"><label for="piecW">Szer. pieca</label><input type="number" id="piecW" value="420" step="10"></div>
       <div class="fld"><label for="piecH">Głęb. pieca</label><input type="number" id="piecH" value="470" step="10"></div>
     </div>
-    <div class="fld"><label>Narożnik pieca</label>
+    <div class="fld" id="piecCornerFld"><label>Narożnik pieca</label>
       <div class="chips" id="piecCorner">
         <button class="chip" type="button" data-v="ld">Lewy dolny</button>
         <button class="chip" type="button" data-v="pd">Prawy dolny</button>
@@ -367,7 +399,8 @@ var PAGES = [
 var P = {   // rzut
   depth:2300, wall:100,
   modules:[{type:"sauna",width:2100}],
-  benchMode:"L", benchWalls:"gora-prawa", upper:550, lower:280, upperV:550, lowerV:280,
+  benchMode:"L", benchWalls:"gora-prawa", benchLevels:"2",
+  upper:550, lower:280, upperV:550, lowerV:280,
   piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
   doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
   // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
@@ -478,6 +511,9 @@ async function pick(q){
   P.modules = (cur._s.isZ) ? [{type:"taras",width:2600},{type:"przedsionek",width:1200},{type:"sauna",width:2100}]
                            : [{type:"sauna",width:2100}];
   P.entrance = P.modules.length>1 ? 1 : 0;
+  // wycena infrared nie ma pieca, więc rzut też nie powinien go pokazywać
+  if(cur._s.typ === "I") P.piecShape = "brak";
+  else if(P.piecShape === "brak") P.piecShape = "prostokatny";
   if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
   syncPlan(); drawQuotes(); render();
   // zdjęcia z bazy tylko dla urządzeń z tej wyceny — reszta zostaje nietknięta
@@ -507,21 +543,22 @@ function suggestNr(){
 function rowsFor(s){
   var mG = s.mg||1.4, mL = s.ml||1.4, mP = s.mp||1.5, mD = s.md||1.5;
   var out = [];
-  function sec(t){ out.push({sec:t}); }
-  function mat(k,v){ out.push(v ? {k:k,v:v,t:"mat"} : {k:k,t:"no"}); }
-  function pri(k,v){ out.push({k:k,v:zl(v),t:"mat"}); }
-  function yn(k,ok,txt){ out.push(ok ? {k:k,v:txt||"Tak",t:"yes"} : {k:k,t:"no"}); }
-  function sub(k,v){ out.push({sub:k, v:zl(v)}); }
+  // id spina ten sam wiersz między wariantami, kb to etykieta gdy wariant pozycji nie ma
+  function sec(t){ out.push({id:"sec:"+t, sec:t}); }
+  function mat(k,v,id){ out.push(v ? {id:id||k, k:k, v:v, t:"mat"} : {id:id||k, k:k, t:"no"}); }
+  function pri(k,v,id,kb){ out.push({id:id||k, k:k, kb:kb||k, v:zl(v), t:"mat"}); }
+  function yn(k,ok,txt,id){ out.push(ok ? {id:id||k, k:k, v:txt||"Tak", t:"yes"} : {id:id||k, k:k, t:"no"}); }
+  function sub(k,v){ out.push({id:"sub:"+k, sub:k, v:zl(v)}); }
 
   sec("Wykończenie sauny");
   mat("Boazeria wewnętrzna", s.b1 && s.b1.q>0 ? (s.b1.g||s.b1.name) : null);
-  if(s.b2 && s.b2.q>0) mat("Boazeria (2)", s.b2.g||s.b2.name);
+  if(s.b2 && s.b2.q>0) mat("Boazeria (2)", s.b2.g||s.b2.name, "b2");
   if(!s.isZ) mat("Zabudowa nad sauną", s.zb1 && s.zb1.q>0 ? (s.zb1.g||s.zb1.name) : null);
   mat("Ławki i oparcia", s.l1 && s.l1.q>0 ? (s.l1.g||s.l1.name) : null);
-  if(s.l2 && s.l2.q>0) mat("Ławki (2)", s.l2.g||s.l2.name);
+  if(s.l2 && s.l2.q>0) mat("Ławki (2)", s.l2.g||s.l2.name, "l2");
   mat("Okno panoramiczne", (s.panoShow && s.panoq>0) ? (String(s.panoq).replace(".",",")+" m²") : null);
   var glass = String(s.szktTxt||s.szkt||"").replace(/\([^)]*\)/g,"").trim().split(" ")[0] || "";
-  yn("Szklenie"+(glass?" · "+glass:""), s.szkm>0);
+  yn("Szklenie"+(glass?" · "+glass:""), s.szkm>0, null, "szklenie");
 
   if(s.isZ){
     sec("Elewacja i konstrukcja");
@@ -537,40 +574,40 @@ function rowsFor(s){
   sub("Cena sauny", sauna);
 
   sec("Wyposażenie sauny");
-  if(s.typ!=="I" && s.piec && s.piec.cena>0) pri("Piec · "+bezM(String(s.piec.name||"").split("--")[0].trim()), s.piec.cena*mG);
-  else yn("Piec", false);
-  if(s.kamd>0) pri("Kamienie Diabez ("+(s.kamd*20)+" kg)", s.kamd*50*mG);
-  if(s.kams>0) pri("Kamienie szare ("+(s.kams*15)+" kg)", s.kams*130*mG);
-  if(s.osl>0)  pri("Osłona na piec", s.osl*mG);
+  if(s.typ!=="I" && s.piec && s.piec.cena>0) pri("Piec · "+bezM(String(s.piec.name||"").split("--")[0].trim()), s.piec.cena*mG, "piec", "Piec");
+  else yn("Piec", false, null, "piec");
+  if(s.kamd>0) pri("Kamienie Diabez ("+(s.kamd*20)+" kg)", s.kamd*50*mG, "kamd", "Kamienie Diabez");
+  if(s.kams>0) pri("Kamienie szare ("+(s.kams*15)+" kg)", s.kams*130*mG, "kams", "Kamienie szare");
+  if(s.osl>0)  pri("Osłona na piec", s.osl*mG, "osl");
   if(s.typ!=="F"){
     [["pr3",350,"pr3name","pr3m",660],["pr5",500,"pr5name","pr5m",710],["pr7",750,"pr7name","pr7m",765]].forEach(function(a){
       var n = s[a[0]]||0; if(!n) return;
       var nm = s[a[2]] && s[a[2]]!=="Bez" ? s[a[2]] : ("Promienniki "+a[1]+"W");
       var up = parseFloat(String(s[a[3]]||a[4]).split("|")[0]) || a[4];
-      pri(bezM(nm)+" × "+n, up*n*mG);
+      pri(bezM(nm)+" × "+n, up*n*mG, a[0], "Promienniki "+a[1]+"W");
     });
   }
   if(s.sterVal>0){
     var ser = s.sterSer==="Cmini" ? "C mini " : (s.sterSer==="C" ? "C" : "Z");
-    pri("Sterownik FFES "+ser+(s.sterModel||""), (s.sterVal + (s.sty?100:0) + (s.sty3?250:0))*mG);
-  } else yn("Sterownik FFES", false);
+    pri("Sterownik FFES "+ser+(s.sterModel||""), (s.sterVal + (s.sty?100:0) + (s.sty3?250:0))*mG, "ster", "Sterownik FFES");
+  } else yn("Sterownik FFES", false, null, "ster");
   if(s.wifi) pri("Zdalne sterowanie WiFi", 400*mG); else yn("Zdalne sterowanie WiFi", false);
-  if(s.bt) pri("Moduł Bluetooth", 300*mG);
-  if(s.pbez) pri("Przycisk bezpieczeństwa", 220*mG);
-  if(s.cpirG2) pri("Moduł CPiR G2", 350*mG);
-  if(s.cpirG4) pri("Moduł CPiR G4", 400*mG);
-  if(s.aw) pri("System awaryjnego wyłączania", 600*mG);
+  if(s.bt) pri("Moduł Bluetooth", 300*mG, "bt");
+  if(s.pbez) pri("Przycisk bezpieczeństwa", 220*mG, "pbez");
+  if(s.cpirG2) pri("Moduł CPiR G2", 350*mG, "cpir2");
+  if(s.cpirG4) pri("Moduł CPiR G4", 400*mG, "cpir4");
+  if(s.aw) pri("System awaryjnego wyłączania", 600*mG, "aw");
   if(s.ledtVal>0 && s.ledq>0){
     var ex = []; if(s.ledMiejsce) ex.push(s.ledMiejsce); if(s.ledBarwa) ex.push(s.ledBarwa);
-    pri("Oświetlenie LED"+(ex.length?" · "+ex.join(", "):""), s.ledP);
-  } else yn("Oświetlenie LED", false);
-  if(s.audtVal>0) pri("Nagłośnienie", s.audP); else yn("Nagłośnienie", false);
-  if(s.scd && s.scd!=="Bez") pri("Ściana dekoracyjna z kamienia", (parseFloat(s.scd)||0)*mP);
-  else yn("Ściana dekoracyjna z kamienia", false);
-  if(s.pryszC>0) yn("Prysznic", true);
-  if(s.solC>0) pri("Ściana solna", s.solC*mD); else yn("Ściana solna", false);
-  if(s.starC>0) pri("Sufit Starlight", s.starC*mD);
-  if(s.aromC>0) pri("Aromaterapia", s.aromC*mD); else yn("Aromaterapia", false);
+    pri("Oświetlenie LED"+(ex.length?" · "+ex.join(", "):""), s.ledP, "led", "Oświetlenie LED");
+  } else yn("Oświetlenie LED", false, null, "led");
+  if(s.audtVal>0) pri("Nagłośnienie", s.audP, "audio"); else yn("Nagłośnienie", false, null, "audio");
+  if(s.scd && s.scd!=="Bez") pri("Ściana dekoracyjna z kamienia", (parseFloat(s.scd)||0)*mP, "scd");
+  else yn("Ściana dekoracyjna z kamienia", false, null, "scd");
+  if(s.pryszC>0) yn("Prysznic", true, null, "prysznic");
+  if(s.solC>0) pri("Ściana solna", s.solC*mD, "sol"); else yn("Ściana solna", false, null, "sol");
+  if(s.starC>0) pri("Sufit Starlight", s.starC*mD, "star");
+  if(s.aromC>0) pri("Aromaterapia", s.aromC*mD, "arom"); else yn("Aromaterapia", false, null, "arom");
   sub("Cena wyposażenia", wypos);
 
   sec("Akcesoria");
@@ -694,11 +731,40 @@ function metaCell(k,v){
     '<span style="font-size:15px;color:#F3EDE7">'+esc(v||"")+'</span></div>';
 }
 
+// wspólna kolejność wierszy dla wszystkich wariantów; nowe id wchodzi tam,
+// gdzie pojawiło się w swoim wariancie, więc sekcje nie mieszają się między sobą
+function scalWiersze(listy){
+  var kolejnosc = [], wzorce = {};
+  listy.forEach(function(L){
+    var poz = 0;
+    L.forEach(function(r){
+      if(!wzorce[r.id]) wzorce[r.id] = r;
+      var i = kolejnosc.indexOf(r.id);
+      if(i >= 0){ poz = i + 1; }
+      else { kolejnosc.splice(poz, 0, r.id); poz++; }
+    });
+  });
+  return {kolejnosc: kolejnosc, wzorce: wzorce};
+}
+
 function pagePropozycja(){
   var vs = cur._v, m = meta();
   var tags = [($("tag0")||{}).value||"", ($("tag1")||{}).value||"", ($("tag2")||{}).value||""];
+  var listy = vs.map(function(v){ return rowsFor(v.s); });
+  var scal = scalWiersze(listy);
+
   var cards = vs.map(function(v,i){
-    var rows = rowsFor(v.s), body = "";
+    var wlasne = {};
+    listy[i].forEach(function(r){ wlasne[r.id] = r; });
+    // brakujące pozycje wchodzą jako ✕ z ogólną nazwą, nie z modelem innego wariantu
+    var rows = scal.kolejnosc.map(function(id){
+      if(wlasne[id]) return wlasne[id];
+      var w = scal.wzorce[id];
+      if(w.sec) return w;
+      if(w.sub) return {id:id, sub:w.sub, v:zl(0)};
+      return {id:id, k:(w.kb || w.k), t:"no"};
+    });
+    var body = "";
     rows.forEach(function(r){
       if(r.sec){ body += '<div class="csec">'+esc(r.sec)+'</div>'; return; }
       if(r.sub){ body += '<div class="st"><span class="stk">'+esc(r.sub)+'</span><span class="stv">'+esc(r.v)+'</span></div>'; return; }
@@ -1037,8 +1103,10 @@ function pageUklad(){
     ["Grubość ścianki", fmt(P.wall)+" mm"]
   ];
   P.modules.forEach(function(m){ rows.push([TYPES[m.type].label, fmt(m.width)+" mm"]); });
-  rows.push(["Ławy", P.benchMode==="L" ? "w literę L" : "proste, dwa poziomy"]);
-  rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
+  var poziomy = P.benchLevels==="1" ? "jeden poziom" : "dwa poziomy";
+  rows.push(["Ławy", (P.benchMode==="L" ? "w literę L, " : "proste, ")+poziomy]);
+  if(P.piecShape==="brak") rows.push(["Piec", "bez pieca, sauna infrared"]);
+  else rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
   rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
   if(b.szklo && b.szklo.length) rows.push(["Przeszklenia", b.szklo.join(", ")]);
   var list = rows.map(function(r){
@@ -1262,8 +1330,9 @@ var MYc = 600, lastPiec = null;
 function saunaIdx(){ for(var i=0;i<P.modules.length;i++) if(P.modules[i].type==="sauna") return i; return -1; }
 function freeRect(x0,w){
   var iy = MYc+P.wall, iy2 = iy+P.depth;
+  var jeden = P.benchLevels === "1";
   if(P.benchMode==="proste"){
-    var d2 = P.lower>0?P.lower:420, used = P.upper+d2;
+    var used = jeden ? P.upper : P.upper + (P.lower>0 ? P.lower : 420);
     return {x:x0,w:w,y:iy+used,h:Math.max(300,P.depth-used)};
   }
   var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
@@ -1301,9 +1370,14 @@ function benches(x0,w){
     o.push('<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" fill="'+fill+'" stroke="#2A211C" stroke-width="14"></rect>');
     o.push(slats(bx,bx+bw,by,by+bh,step,sc,vert));
   }
+  var jeden = P.benchLevels === "1";
   if(P.benchMode==="proste"){
-    var d2=low>0?low:420;
     strip(x0,iy,w,up,"#F3EDE7","#B9A797",130,true);
+    if(jeden){
+      o.push(T(x0+w/2, iy+up/2+36, "ŁAWA · "+fmt(up)+" mm", 105, "#6B5849"));
+      return o.join("");
+    }
+    var d2=low>0?low:420;
     strip(x0,iy+up,w,d2,"#FAF6F1","#C8B9AB",130,true);
     o.push(T(x0+w/2, iy+up/2+36, "ŁAWA GÓRNA · "+fmt(up)+" mm", 105, "#6B5849"));
     o.push(T(x0+w/2, iy+up+d2/2+34, "ŁAWA DOLNA · "+fmt(d2)+" mm", 100, "#6B5849"));
@@ -1320,9 +1394,9 @@ function benches(x0,w){
     strip(right?x0:x0+upV+lowV, fy, hw-lowV, low, "#FAF6F1","#C8B9AB",100,true);
     o.push(T(hx0+hw/2, fy+low/2+32, "ŁAWA DOLNA A · "+fmt(low)+" mm", 97, "#6B5849"));
   }
-  o.push(T(hx0+hw/2, hy+up/2+34, "ŁAWA GÓRNA A · "+fmt(up)+" mm", 105, "#6B5849"));
+  o.push(T(hx0+hw/2, hy+up/2+34, (jeden?"ŁAWA A · ":"ŁAWA GÓRNA A · ")+fmt(up)+" mm", 105, "#6B5849"));
   var cy = iy + P.depth/2, bx = vx + upV/2;
-  o.push(T(bx, cy+34, "ŁAWA GÓRNA B · "+fmt(upV)+" mm", 105, "#6B5849",
+  o.push(T(bx, cy+34, (jeden?"ŁAWA B · ":"ŁAWA GÓRNA B · ")+fmt(upV)+" mm", 105, "#6B5849",
            ' transform="rotate(-90 '+bx+' '+cy+')"'));
   if(lowV>0){
     var lx = (right ? vx-lowV/2 : vx+upV+lowV/2);
@@ -1468,7 +1542,7 @@ function buildPlan(){
       s.push(T(cx, iy+depth*0.44+130, fmt(w)+" mm", 104, "#9A8371"));
     }
     if(m.type==="sauna"){
-      s.push(benches(x0,w)); s.push(piec(x0,w));
+      s.push(benches(x0,w)); if(P.piecShape !== "brak") s.push(piec(x0,w));
       var fr=freeRect(x0,w), pl=P.piecCorner==="ld"||P.piecCorner==="lg";
       var lx=pl?fr.x+fr.w*0.62:fr.x+fr.w*0.38;
       var ly=(P.piecCorner==="ld"||P.piecCorner==="pd")?fr.y+fr.h*0.34:fr.y+fr.h*0.72;
@@ -1562,9 +1636,33 @@ function render(){
     catch(e){ html = '<div class="p"><div class="ptitle">Błąd strony „'+esc(p.name)+'”</div><div style="font-size:12px;color:#8A4A32">'+esc(e.message)+'</div></div>'; }
     return '<div class="sheet">'+html+'</div>';
   }).join("");
+  zmiescKarty();
   applyZoom();
   var m = meta();
-  $("tinfo").innerHTML = "<b>"+esc(m.klient)+"</b> · "+on.length+" stron · "+cur._v.length+" wariant"+(cur._v.length>1?"y":"");
+  $("tinfo").innerHTML = "<b>"+esc(m.klient)+"</b> · "+on.length+" stron · "+cur._v.length+" wariant"+(cur._v.length>1?"y":"")+
+    (zaGesto ? ' · <span style="color:#8A4A32">zestawienie wariantów nie mieści się na stronie, rozważ mniej wariantów</span>' : "");
+}
+
+// karty mierzymy dopiero w DOM, bo wysokość wiersza zależy od zawijania tekstu
+var zaGesto = false;
+function zmiescKarty(){
+  zaGesto = false;
+  Array.prototype.forEach.call($("scaler").querySelectorAll(".cards"), function(box){
+    box.className = "cards";
+    function zaDuzo(){
+      return Array.prototype.some.call(box.querySelectorAll(".card"), function(c){
+        return c.scrollHeight > c.clientHeight + 1;
+      });
+    }
+    if(!zaDuzo()) return;
+    var stopnie = ["gesto1", "gesto2", "gesto3", "gesto4"];
+    for(var i = 0; i < stopnie.length; i++){
+      box.className = "cards " + stopnie[i];
+      if(!zaDuzo()) return;
+    }
+    // nawet najciaśniej się nie mieści — lepiej powiedzieć, niż drukować uciętą cenę
+    zaGesto = true;
+  });
 }
 
 function applyZoom(){
@@ -1704,18 +1802,25 @@ function syncPlan(){
   P.depth=+$("pDepth").value||2300; P.wall=+$("pWall").value||100;
   P.upper=+$("pUpper").value||550; P.lower=+$("pLower").value||0;
   P.upperV=+$("pUpperV").value||P.upper; P.lowerV=+$("pLowerV").value||0;
+  if(P.benchLevels === "1"){ P.lower = 0; P.lowerV = 0; }
   P.doorW=+$("pDoorW").value||700; P.doorPos=+$("doorPos").value;
   P.piecD=+$("piecD").value||500; P.piecW=+$("piecW").value||420; P.piecH=+$("piecH").value||470;
   $("doorPosV").textContent = P.doorPos===50 ? "środek" : (P.doorPos<50 ? "bliżej początku" : "bliżej końca");
+  var jeden = P.benchLevels === "1";
   $("wallsFld").style.display = P.benchMode==="L" ? "" : "none";
-  $("upLbl").textContent  = P.benchMode==="L" ? "Ława górna A" : "Ława górna";
+  $("upLbl").textContent  = P.benchMode==="L" ? (jeden ? "Ława A" : "Ława górna A") : (jeden ? "Ława" : "Ława górna");
   $("lowLbl").textContent = P.benchMode==="L" ? "Ława dolna A"  : "Ława dolna";
+  $("lowLbl").parentNode.style.display = jeden ? "none" : "";
   $("ramiePionowe").style.display = P.benchMode==="L" ? "" : "none";
+  $("pLowerV").parentNode.style.display = jeden ? "none" : "";
+  $("upLblV").textContent = jeden ? "Ława B" : "Ława górna B";
   $("piecRound").style.display = P.piecShape==="okragly" ? "" : "none";
-  $("piecRect").style.display = P.piecShape==="okragly" ? "none" : "";
+  $("piecRect").style.display = (P.piecShape==="prostokatny") ? "" : "none";
+  $("piecCornerFld").style.display = P.piecShape==="brak" ? "none" : "";
   drawMods(); drawEntr();
   drawPlanPrev();
   chips("benchMode","benchMode"); chips("benchWalls","benchWalls");
+  chips("benchLevels","benchLevels");
   chips("piecShape","piecShape"); chips("piecCorner","piecCorner"); chips("saunaDoorWall","saunaDoorWall");
 }
 
