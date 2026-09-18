@@ -921,7 +921,7 @@ function showSyncStatus(mode,msg){
     <button onclick="clearCalc()" style="background:none;border:0.5px solid #c00;color:#c00;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px">🗑 Wyczyść kalkulator</button>
     <span style="flex:1"></span>
     <button class="btn grn" id="btn-save-new" onclick="saveQuote()">💾 Zapisz nową</button>
-    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button>
+    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button><button class="btn" id="btn-oferta" onclick="openOferta()" style="background:#fff;color:var(--mbm-primary,#7B4B27);border:1px solid var(--mbm-primary,#7B4B27)">📄 Zrób ofertę</button>
     <button class="btn act" onclick="showTab('client')">Widok klienta →</button>
     <button class="btn" onclick="openDimCalc()" style="background:var(--mbm-primary);color:#fff;border-color:var(--mbm-primary)">📐 Kalkulator wymiarów</button>
   </div>
@@ -1071,9 +1071,9 @@ function showSyncStatus(mode,msg){
     <div class="c4 row">
       <div><div class="sub">Typ szkła</div><select id="szkt" onchange="r()"><option value="160">Float (160 zł/m²)</option><option value="265">Grafitowe (265 zł/m²)</option><option value="265">Brązowe (265 zł/m²)</option><option value="700">Okno dwukomorowe (700 zł/m²)</option></select></div>
       <div><div class="sub">Powierzchnia (m²)</div><input type="number" id="szkm" value="3.6" step="0.1" min="0" onchange="r()"></div>
-      <div><div class="sub">Szlifowanie (mb × 10 zł)</div><input type="number" id="szlq" value="16" min="0" onchange="r()"></div>
-      <div><div class="sub">Otwory zawiasy (× 40 zł)</div><input type="number" id="otwq" value="4" min="0" onchange="r()"></div>
-      <div><div class="sub">Otwory (szt. × 10 zł)</div><input type="number" id="otwq2" value="0" min="0" onchange="r()"></div>
+      <div><div class="sub" id="lbl-szlq">Szlifowanie (mb × 10 zł)</div><input type="number" id="szlq" value="16" min="0" onchange="r()"></div>
+      <div><div class="sub" id="lbl-otwq">Otwory zawiasy (× 40 zł)</div><input type="number" id="otwq" value="4" min="0" onchange="r()"></div>
+      <div><div class="sub" id="lbl-otwq2">Otwory (szt. × 10 zł)</div><input type="number" id="otwq2" value="0" min="0" onchange="r()"></div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;margin-top:5px">
       <span class="lbl">Koszt:</span><span class="dv" id="szkk" style="min-width:75px">0 zł</span>
@@ -1380,7 +1380,7 @@ function showSyncStatus(mode,msg){
       <button id="lang-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleLang()">EN</button>
       <button id="curr-btn" class="btn" style="font-weight:600;min-width:60px;letter-spacing:.04em" onclick="toggleCurr()">€ EUR</button>
       <button class="btn grn" id="btn-save-new" onclick="saveQuote()">💾 Zapisz nową</button>
-    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button>
+    <button class="btn" id="btn-save-update" onclick="updateQuote()" style="display:none;background:var(--mbm-primary,#7B4B27);color:#fff">🔄 Aktualizuj wczytaną</button><button class="btn" id="btn-oferta" onclick="openOferta()" style="background:#fff;color:var(--mbm-primary,#7B4B27);border:1px solid var(--mbm-primary,#7B4B27)">📄 Zrób ofertę</button>
       <button class="btn" onclick="showTab('calc')">← Wróć</button>
       <span style="font-size:11px;color:#999;margin-left:8px">Aktywne warianty: <span id="active-variants-label">—</span></span>
     </div>
@@ -1557,7 +1557,12 @@ function showSyncStatus(mode,msg){
     <tr><td>Brązowe</td><td><input type="number" id="p-glass-brn" value="265" min="0" onchange="syncGlassPrice('brn',this.value)" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
     <tr><td>Okno dwukomorowe</td><td><input type="number" id="p-glass-okno" value="700" min="0" onchange="syncGlassPrice('okno',this.value)" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
     </tbody></table>
-    <p style="font-size:11px;color:var(--mbm-mid);margin-top:6px">Dostawca: <strong>Kurek</strong> | Szlifowanie = 10 zł/mb | Otwory zawiasy = 40 zł/szt. | Otwory = 10 zł/szt.</p>
+    <table class="price-table" style="margin-top:10px"><thead><tr><th>Obróbka szkła</th><th>Stawka (zł)</th></tr></thead><tbody>
+    <tr><td>Szlifowanie (za mb)</td><td><input type="number" id="p-glass-szlif" value="10" min="0" onchange="syncGlassPrice()" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td>Otwory zawiasy (za szt.)</td><td><input type="number" id="p-glass-otwzaw" value="40" min="0" onchange="syncGlassPrice()" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    <tr><td>Otwory pozostałe (za szt.)</td><td><input type="number" id="p-glass-otw" value="10" min="0" onchange="syncGlassPrice()" style="width:90px;text-align:right;font-size:12px;padding:2px 5px;height:24px;border:0.5px solid #ddd;border-radius:4px"></td></tr>
+    </tbody></table>
+    <p style="font-size:11px;color:var(--mbm-mid);margin-top:6px">Dostawca: <strong>Kurek</strong> | Stawki obróbki wchodzą do ceny szklenia i zapisują się w chmurze razem z cenami szkła.</p>
   </div></div></div>
 
   <div class="sec"><div class="sh" style="cursor:pointer" onclick="togglePriceSection('led')"><span class="st">Oświetlenie LED — taśmy i zasilacze</span><span style="font-size:11px;color:var(--mbm-mid)" id="toggle-led">▸ rozwiń</span></div>
@@ -1831,7 +1836,48 @@ var PIECE=[
   {g:'EOS Classic',n:'EOS BlackRock 12,0 kW',eur:1640},{g:'EOS Classic',n:'EOS BlackRock 15,0 kW',eur:1696.58},
   {g:'EOS Classic',n:'EOS Herkules S25 7,5 kW',eur:1102.58},{g:'EOS Classic',n:'EOS Herkules S60 9,0 kW',eur:1526.86},{g:'EOS Classic',n:'EOS Herkules S60 12,0 kW',eur:1583.43},
   {g:'EOS Classic',n:'EOS Invisio Mini 3,0 kW',eur:876.29},{g:'EOS Classic',n:'EOS Invisio Mini 6,0 kW',eur:989.44},
-  {g:'EOS Classic',n:'EOS Cubo 2 7,5 kW',eur:1074.29},{g:'EOS Classic',n:'EOS Cubo 2 9,0 kW',eur:1091.26}
+  {g:'EOS Classic',n:'EOS Cubo 2 7,5 kW',eur:1074.29},{g:'EOS Classic',n:'EOS Cubo 2 9,0 kW',eur:1091.26},
+  {g:'EOS Standard',n:'EOS Mini 3,0 kW (stal nierdzewna)',eur:366.48},
+  {g:'EOS Standard',n:'EOS Mini 3,0 kW (antracyt)',eur:373.68},
+  {g:'EOS Standard',n:'EOS Mini M3 3,0 kW (stal nierdzewna)',eur:539.28},
+  {g:'EOS Standard',n:'EOS Mini M3 3,0 kW (antracyt)',eur:575.28},
+  {g:'EOS Standard',n:'EOS Thermat W 4,5 kW',eur:308.88},
+  {g:'EOS Standard',n:'EOS Thermat W 6,0 kW',eur:330.48},
+  {g:'EOS Standard',n:'EOS Thermat W 7,5 kW',eur:352.08},
+  {g:'EOS Standard',n:'EOS Thermat W 9,0 kW',eur:373.68},
+  {g:'EOS Standard',n:'EOS Thermat 4,5 kW',eur:431.28},
+  {g:'EOS Standard',n:'EOS Thermat 6,0 kW',eur:438.48},
+  {g:'EOS Standard',n:'EOS Thermat 7,5 kW',eur:460.08},
+  {g:'EOS Standard',n:'EOS Thermat 9,0 kW',eur:510.48},
+  {g:'EOS Standard',n:'EOS Moment W black 6,0 kW',eur:568.08},
+  {g:'EOS Standard',n:'EOS Moment W black 7,5 kW',eur:589.68},
+  {g:'EOS Standard',n:'EOS Moment W black 9,0 kW',eur:611.28},
+  {g:'EOS Standard',n:'EOS Moment Control W black 6,0 kW',eur:604.08},
+  {g:'EOS Standard',n:'EOS Moment Control W black 7,5 kW',eur:625.68},
+  {g:'EOS Standard',n:'EOS Moment Control W black 9,0 kW',eur:647.28},
+  {g:'EOS Standard',n:'EOS Edge 7,5 kW',eur:661.68},
+  {g:'EOS Standard',n:'EOS Edge 9,0 kW',eur:683.28},
+  {g:'EOS Standard',n:'EOS Edge Control 7,5 kW',eur:877.68},
+  {g:'EOS Standard',n:'EOS Edge Control 9,0 kW',eur:899.28},
+  {g:'EOS Standard',n:'EOS EuroMax 9,0 kW',eur:1079.28},
+  {g:'EOS Standard',n:'EOS EuroMax 12,0 kW',eur:1151.28},
+  {g:'EOS Standard',n:'EOS EuroMax 15,0 kW',eur:1223.28},
+  {g:'EOS Standard',n:'EOS P1 10,5 kW',eur:719.28},
+  {g:'EOS Standard',n:'EOS P1 12,0 kW',eur:755.28},
+  {g:'EOS Standard',n:'EOS P1 15,0 kW',eur:791.28},
+  {g:'EOS Standard',n:'EOS P1 W 12,0 kW (stal nierdzewna)',eur:791.28},
+  {g:'EOS Standard',n:'EOS P1 W 15,0 kW (stal nierdzewna)',eur:827.28},
+  {g:'EOS Standard',n:'EOS P1 W 12,0 kW (antracyt)',eur:863.28},
+  {g:'EOS Standard',n:'EOS P1 W 15,0 kW (antracyt)',eur:899.28},
+  {g:'EOS Standard',n:'EOS Bi-O Thermat W 6,0 kW',eur:604.08},
+  {g:'EOS Standard',n:'EOS Bi-O Thermat W 7,5 kW',eur:625.68},
+  {g:'EOS Standard',n:'EOS Bi-O Thermat W 9,0 kW',eur:647.28},
+  {g:'EOS Standard',n:'EOS Bi-O Thermat 6,0 kW',eur:712.08},
+  {g:'EOS Standard',n:'EOS Bi-O Thermat 7,5 kW',eur:733.68},
+  {g:'EOS Standard',n:'EOS Bi-O Thermat 9,0 kW',eur:755.28},
+  {g:'EOS Standard',n:'EOS Bi-O Max 9,0 kW',eur:1583.28},
+  {g:'EOS Standard',n:'EOS Bi-O Max 12,0 kW',eur:1655.28},
+  {g:'EOS Standard',n:'EOS Bi-O Max 15,0 kW',eur:1727.28}
 ];
 
 // Aktywne cenniki (z localStorage lub domyślne)
@@ -2209,7 +2255,8 @@ function r(){
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
     dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK+dR;zewnLogist=0;}
   var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
-  var mS=gv('ms')||2.0;var szkK=gv('szkm')*gv('szkt')+gv('szlq')*10+gv('otwq')*40+gv('otwq2')*10,szkP=szkK*mS;
+  var mS=gv('ms')||2.0;var gR=glassRates();
+  var szkK=gv('szkm')*gv('szkt')+gv('szlq')*gR.szlif+gv('otwq')*gR.otwZaw+gv('otwq2')*gR.otw,szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
   var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('drzsauna')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
   se('prmk',f(prmK));se('prmp',f(prmP));se('sm4',f(prmP));
@@ -3226,6 +3273,13 @@ function updateSaveButtons(){
 }
 
 // Aktualizuje wczytaną wycenę (lokalnie + w chmurze) zamiast tworzyć nową
+// otwiera generator ofert dla wyceny wczytanej z chmury
+function openOferta(){
+  var id = (typeof _loadedQuote !== 'undefined' && _loadedQuote) ? _loadedQuote.cloudId : null;
+  if(!id){ alert('Najpierw zapisz wycenę w chmurze, generator czyta ją po numerze.'); return; }
+  window.open('generator-ofert.html?quote=' + encodeURIComponent(id), '_blank');
+}
+
 async function updateQuote(){
   var s=STATE;
   if(!s||!s.klient){alert('Wpisz imię i nazwisko klienta.');return;}
@@ -3937,16 +3991,51 @@ function loadSavedPiecePrices(){
   });
 }
 
+// pole moze byc puste albo zerowe i to jest poprawna stawka, wiec bez ||domyslna
+function glassNum(id, dom){
+  var el = document.getElementById(id);
+  if(!el || el.value === '') return dom;
+  var v = parseFloat(el.value);
+  return isNaN(v) ? dom : v;
+}
+
+// aktualne stawki obrobki szkla, z cennika albo domyslne
+function glassRates(){
+  var r = {szlif:10, otwZaw:40, otw:10};
+  try{
+    var sp = JSON.parse(localStorage.getItem('abm_glass_prices') || 'null');
+    if(sp){
+      if(sp.szlif  != null) r.szlif  = +sp.szlif;
+      if(sp.otwZaw != null) r.otwZaw = +sp.otwZaw;
+      if(sp.otw    != null) r.otw    = +sp.otw;
+    }
+  }catch(e){}
+  return r;
+}
+
+// podpisy pol w kalkulatorze musza pokazywac stawke, ktora naprawde liczy
+function glassLabels(){
+  var r = glassRates();
+  function set(id, txt){ var e = document.getElementById(id); if(e) e.textContent = txt; }
+  set('lbl-szlq', 'Szlifowanie (mb × ' + r.szlif + ' zł)');
+  set('lbl-otwq', 'Otwory zawiasy (× ' + r.otwZaw + ' zł)');
+  set('lbl-otwq2', 'Otwory (szt. × ' + r.otw + ' zł)');
+}
+
 function syncGlassPrice(type,val){
   // Zapisz ceny szklenia do localStorage i przebuduj dropdown w kalkulatorze
   var prices={
     float:parseFloat(document.getElementById('p-glass-float')?.value)||160,
     grf:parseFloat(document.getElementById('p-glass-grf')?.value)||265,
     brn:parseFloat(document.getElementById('p-glass-brn')?.value)||265,
-    okno:parseFloat(document.getElementById('p-glass-okno')?.value)||700
+    okno:parseFloat(document.getElementById('p-glass-okno')?.value)||700,
+    szlif:glassNum('p-glass-szlif',10),
+    otwZaw:glassNum('p-glass-otwzaw',40),
+    otw:glassNum('p-glass-otw',10)
   };
   try{localStorage.setItem('abm_glass_prices',JSON.stringify(prices));}catch(e){}
   mkSelGlass();
+  glassLabels();
   if(typeof syncSavePrices==='function')syncSavePrices();
   r();
 }
@@ -3973,12 +4062,14 @@ function loadGlassPrices(){
     var sp=localStorage.getItem('abm_glass_prices');
     if(!sp)return;
     var p=JSON.parse(sp);
-    var map={float:'p-glass-float',grf:'p-glass-grf',brn:'p-glass-brn',okno:'p-glass-okno'};
+    var map={float:'p-glass-float',grf:'p-glass-grf',brn:'p-glass-brn',okno:'p-glass-okno',
+             szlif:'p-glass-szlif',otwZaw:'p-glass-otwzaw',otw:'p-glass-otw'};
     Object.keys(map).forEach(function(k){
       var el=document.getElementById(map[k]);
       if(el&&p[k]!=null)el.value=p[k];
     });
   }catch(e){}
+  glassLabels();
 }
 
 function savePricesQuiet(){
