@@ -291,6 +291,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     </div>
     <div class="fld"><label for="tag2">Wariant 3</label><select id="tag2"></select></div>
 
+    <div class="sec">Przykładowa realizacja</div>
+    <div class="fld"><label for="przykladSel">Sauna do pokazania</label><select id="przykladSel"><option value="">bez przykładowej realizacji</option></select></div>
+    <button class="btn ghost wide" id="realBtn" type="button">Zarządzaj realizacjami</button>
+
     <div class="sec">Zdjęcia</div>
     <div class="fld"><label for="imgBase">Folder ze zdjęciami (ścieżka lub URL)</label><input id="imgBase" value="zdjecia/" placeholder="zdjecia/"></div>
     <div class="fld"><label for="imgReal">Realizacje · nazwy plików, po przecinku</label><textarea id="imgReal" placeholder="realizacje/zuber-1.jpg, ...">realizacje/zuber-1.jpg, realizacje/przychodzen-1.jpg, realizacje/sosnowiecka-6.jpg, realizacje/strona-1.jpg, realizacje/zieleniec-6.jpg, realizacje/stanko-1.jpg, realizacje/zieleniec-7.jpg</textarea></div>
@@ -311,6 +315,46 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="scaler" id="scaler"></div>
   </div>
 
+</div>
+
+<div class="mod" id="realMod">
+  <div class="modbox">
+    <div class="modtop">
+      <h2>Przykładowe realizacje</h2>
+      <button class="btn ghost" id="realZamknij" type="button">Zamknij</button>
+    </div>
+    <div id="realMsg"></div>
+    <div class="bazaSiatka">
+      <div>
+        <button class="btn ghost wide" id="realNowa" type="button" style="margin-bottom:9px">+ nowa realizacja</button>
+        <div class="bazaLista" id="realLista"></div>
+      </div>
+      <div>
+        <div class="fld"><label for="rTytul">Tytuł</label><input id="rTytul" placeholder="np. Sauna zewnętrzna z piecem na drewno"></div>
+        <div class="g2">
+          <div class="fld"><label for="rElew">Elewacja</label><input id="rElew" placeholder="np. Thermo sosna, lamele"></div>
+          <div class="fld"><label for="rWnetrze">Wnętrze</label><input id="rWnetrze" placeholder="np. Boazeria i ławki z osiki białej"></div>
+        </div>
+        <div class="g2">
+          <div class="fld"><label for="rPiec">Piec</label><input id="rPiec" placeholder="np. HUUM Flow Mini 8,5 kW LS"></div>
+          <div class="fld"><label for="rWymiar">Wymiar</label><input id="rWymiar" placeholder="np. 230 × 230 cm"></div>
+        </div>
+        <div class="fld"><label>Zdjęcia, od lewej do prawej</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div class="zrzutnia" data-nr="1">Zdjęcie 1<br>przeciągnij albo kliknij</div>
+            <div class="zrzutnia" data-nr="2">Zdjęcie 2<br>przeciągnij albo kliknij</div>
+            <div class="zrzutnia" data-nr="3">Zdjęcie 3<br>przeciągnij albo kliknij</div>
+          </div>
+          <input type="file" id="rPlik" accept="image/*" style="display:none">
+          <div class="note" style="margin-top:6px">Zdjęcia pokażą się w całości, bez przycinania. Możesz wrzucić pełne pliki z aparatu, przeglądarka sama je zmniejszy.</div>
+        </div>
+        <div style="display:flex;gap:9px;margin-top:14px">
+          <button class="btn" id="rZapisz" type="button">Zapisz realizację</button>
+          <button class="btn ghost" id="rUsun" type="button">Usuń</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="mod" id="bazaMod">
@@ -387,6 +431,7 @@ var zoom = 0.62;
 var PAGES = [
   {id:"okladka",  name:"Okładka",           on:true},
   {id:"propozycja",name:"Propozycja",       on:true},
+  {id:"przyklad", name:"Przykładowa realizacja", on:false},
   {id:"wyposazenie",name:"Wyposażenie",     on:true},
   {id:"drewno",   name:"Drewno w saunie",   on:true},
   {id:"uklad",    name:"Układ sauny",       on:true},
@@ -1601,7 +1646,8 @@ function drawPlanPrev(){
 /* ============ render ============ */
 var BUILD = {okladka:pageOkladka, propozycja:pagePropozycja, wyposazenie:pageWyposazenie,
              drewno:pageDrewno, uklad:pageUklad, warunki:pageWarunki,
-             gwarancje:pageGwarancje, realizacje:pageRealizacje, kontakt:pageKontakt};
+             gwarancje:pageGwarancje, realizacje:pageRealizacje, kontakt:pageKontakt,
+             przyklad:pagePrzyklad};
 
 var EDIT = false;
 // Tryb edycji: strony stają się edytowalne, a przebudowa jest wstrzymana,
@@ -2169,10 +2215,248 @@ async function wczytajFoto(f){
 }
 polaPunktow([]);
 
+/* ============ przykładowe realizacje ============ */
+var REAL = {};         // id -> {tytul, elewacja, wnetrze, piec, wymiar, proporcje}
+var REAL_FOTO = {};    // id -> [foto1, foto2, foto3]
+var realId = null;     // edytowana w oknie
+var realBlad = "";
+
+async function ladujRealizacje(){
+  if(!supa && !(await connect())){ realBlad = "Brak połączenia z bazą."; return; }
+  try{
+    var r = await supa.from("realizacje").select("id,tytul,elewacja,wnetrze,piec,wymiar,proporcje").order("tytul");
+    if(r.error) throw r.error;
+    REAL = {}; realBlad = "";
+    (r.data || []).forEach(function(x){ REAL[x.id] = x; });
+  }catch(e){
+    realBlad = /realizacje/i.test(e.message || "")
+      ? "Nie widzę tabeli „realizacje” w bazie. Wklej plik realizacje.sql w Supabase, SQL Editor, i odśwież stronę."
+      : "Nie udało się połączyć z bazą realizacji: " + (e.message || e);
+  }
+  rysujWyborRealizacji();
+}
+
+// zdjęcia ciągniemy tylko dla wybranej realizacji
+async function ladujZdjeciaRealizacji(id){
+  if(!id || REAL_FOTO[id] || !REAL[id]) return false;
+  try{
+    var r = await supa.from("realizacje").select("id,foto1,foto2,foto3").eq("id", id);
+    if(r.error) throw r.error;
+    var x = (r.data || [])[0] || {};
+    REAL_FOTO[id] = [x.foto1 || "", x.foto2 || "", x.foto3 || ""];
+    return true;
+  }catch(e){ return false; }
+}
+
+function rysujWyborRealizacji(){
+  var sel = $("przykladSel"), obecna = sel.value;
+  sel.innerHTML = '<option value="">bez przykładowej realizacji</option>' +
+    Object.keys(REAL).sort(function(a,b){ return String(REAL[a].tytul).localeCompare(String(REAL[b].tytul), "pl"); })
+      .map(function(id){ return '<option value="'+esc(id)+'">'+esc(REAL[id].tytul)+'</option>'; }).join("");
+  if(obecna && REAL[obecna]) sel.value = obecna;
+}
+
+// wybór sauny włącza stronę; „bez realizacji” ją wyłącza
+$("przykladSel").addEventListener("change", async function(){
+  var id = this.value;
+  PAGES.forEach(function(p){ if(p.id === "przyklad") p.on = !!id; });
+  drawPages();
+  render();
+  if(id && await ladujZdjeciaRealizacji(id)) render();
+});
+
+function pagePrzyklad(){
+  var id = $("przykladSel").value, R = REAL[id];
+  if(!R){
+    return '<div class="p">'+head("Przykładowa realizacja","sauna zbliżona do Twojej konfiguracji")+
+      '<div class="slot" style="flex:1">Wybierz realizację w panelu po lewej, w sekcji „Przykładowa realizacja”.</div>'+
+      pfoot("")+'</div>';
+  }
+  var fot = REAL_FOTO[id] || ["","",""];
+  var prop = (R.proporcje && R.proporcje.length ? R.proporcje : [0.667,0.667,0.667]).map(function(a){ return +a || 0.667; });
+
+  // wszystkie zdjęcia w jednym rzędzie, na wspólnej wysokości, żadne nie jest przycinane
+  var dost = 1123 - 88 - 36, H = Math.min(468, Math.floor(dost / (prop[0] + prop[1] + prop[2])));
+  var zdjecia = [0,1,2].map(function(i){
+    var w = Math.round(H * prop[i]);
+    return '<div style="width:'+w+'px;height:'+H+'px;flex:none;background:#EDE5DB;overflow:hidden">'+
+      (fot[i] ? '<img src="'+esc(fot[i])+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block">'
+              : '<div class="slot" style="height:100%">zdjęcie '+(i+1)+'</div>')+
+    '</div>';
+  }).join("");
+
+  var fakty = [["Elewacja",R.elewacja],["Wnętrze",R.wnetrze],["Piec",R.piec],["Wymiar",R.wymiar]]
+    .filter(function(f){ return f[1] && String(f[1]).trim(); });
+  var pasek = fakty.length
+    ? '<div style="display:grid;grid-template-columns:repeat('+fakty.length+',1fr)">'+
+        fakty.map(function(f, i){
+          return '<div style="padding:0 18px;'+(i ? 'border-left:1px solid #E3D9CE;' : 'padding-left:0;')+'">'+
+            '<div style="font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#9A8371">'+esc(f[0])+'</div>'+
+            '<div style="font-size:13.5px;line-height:1.45;color:#3F3129;margin-top:5px">'+esc(f[1])+'</div></div>';
+        }).join("")+'</div>'
+    : '';
+
+  return '<div class="p">'+head("Przykładowa realizacja","sauna zbliżona do Twojej konfiguracji")+
+    '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:20px">'+
+      '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:20px">'+
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:400;line-height:1.1">'+esc(R.tytul)+'</div>'+
+        '<div style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#A0724A;flex:none">Z naszych realizacji</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:18px;justify-content:space-between">'+zdjecia+'</div>'+
+      pasek+
+    '</div>'+
+    pfoot("")+'</div>';
+}
+
+/* ---------- okno zarządzania ---------- */
+function realKomunikat(kind, text){ $("realMsg").innerHTML = text ? '<div class="msg '+kind+'">'+esc(text)+'</div>' : ""; }
+
+function rysujListeRealizacji(){
+  var klucze = Object.keys(REAL).sort(function(a,b){ return String(REAL[a].tytul).localeCompare(String(REAL[b].tytul), "pl"); });
+  $("realLista").innerHTML = klucze.length ? klucze.map(function(id){
+    var f = (REAL_FOTO[id] || [])[0];
+    return '<div class="poz'+(id === realId ? ' on' : '')+'" data-id="'+esc(id)+'">'+
+      (f ? '<img src="'+esc(f)+'" alt="" style="object-fit:cover">' : '<div class="bz"></div>')+
+      '<span>'+esc(REAL[id].tytul)+'</span></div>';
+  }).join("") : '<div class="sub" style="padding:10px">Nie ma jeszcze żadnej realizacji.</div>';
+  Array.prototype.forEach.call($("realLista").querySelectorAll(".poz"), function(el){
+    el.onclick = function(){ wczytajRealizacje(el.getAttribute("data-id")); };
+  });
+}
+
+// zrzutnie trzymają zdjęcie i jego proporcję w atrybutach
+function pokazZdjecieReal(nr, dane, proporcja){
+  var z = document.querySelector('#realMod .zrzutnia[data-nr="'+nr+'"]');
+  z.setAttribute("data-foto", dane || "");
+  z.setAttribute("data-prop", proporcja || "");
+  z.innerHTML = dane ? '<img src="'+esc(dane)+'" alt="">' : 'Zdjęcie '+nr+'<br>przeciągnij albo kliknij';
+}
+
+function formularzReal(R){
+  R = R || {};
+  $("rTytul").value = R.tytul || ""; $("rElew").value = R.elewacja || "";
+  $("rWnetrze").value = R.wnetrze || ""; $("rPiec").value = R.piec || ""; $("rWymiar").value = R.wymiar || "";
+}
+
+async function wczytajRealizacje(id){
+  realId = id;
+  formularzReal(REAL[id]);
+  [1,2,3].forEach(function(n){ pokazZdjecieReal(n, "", ""); });
+  rysujListeRealizacji();
+  await ladujZdjeciaRealizacji(id);
+  if(realId !== id) return;
+  var prop = REAL[id].proporcje || [];
+  (REAL_FOTO[id] || []).forEach(function(f, i){ pokazZdjecieReal(i+1, f, prop[i]); });
+  rysujListeRealizacji();
+}
+
+function nowaRealizacja(){
+  realId = null; formularzReal({});
+  [1,2,3].forEach(function(n){ pokazZdjecieReal(n, "", ""); });
+  realKomunikat("", ""); rysujListeRealizacji();
+}
+
+// zdjęcie realizacji: JPEG, dłuższy bok 1400 px, do tego jego proporcja
+function przygotujZdjecieReal(file){
+  return new Promise(function(done, fail){
+    var fr = new FileReader();
+    fr.onerror = function(){ fail(new Error("Nie udało się odczytać pliku.")); };
+    fr.onload = function(){
+      var im = new Image();
+      im.onerror = function(){ fail(new Error("To chyba nie jest zdjęcie.")); };
+      im.onload = function(){
+        var MAX = 1400, sk = Math.min(1, MAX / Math.max(im.width, im.height));
+        var c = document.createElement("canvas");
+        c.width = Math.round(im.width * sk); c.height = Math.round(im.height * sk);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        done({dane: c.toDataURL("image/jpeg", 0.84), prop: +(c.width / c.height).toFixed(4)});
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+var realCel = 1;
+async function wgrajZdjecieReal(nr, file){
+  try{
+    realKomunikat("", "Przygotowuję zdjęcie "+nr+"…");
+    var z = await przygotujZdjecieReal(file);
+    pokazZdjecieReal(nr, z.dane, z.prop);
+    realKomunikat("", "");
+  }catch(e){ realKomunikat("err", e.message || String(e)); }
+}
+
+async function zapiszRealizacje(){
+  var tytul = ($("rTytul").value || "").trim();
+  if(!tytul){ realKomunikat("err", "Wpisz tytuł realizacji."); return; }
+  var id = slugify(tytul);
+  var zrzuty = [1,2,3].map(function(n){ return document.querySelector('#realMod .zrzutnia[data-nr="'+n+'"]'); });
+  var foto = zrzuty.map(function(z){ return z.getAttribute("data-foto") || ""; });
+  var prop = zrzuty.map(function(z){ return +z.getAttribute("data-prop") || 0.667; });
+  if(realId && !REAL_FOTO[realId] && !foto[0]){ realKomunikat("err", "Zdjęcia jeszcze się wczytują, spróbuj za chwilę."); return; }
+  if(!supa && !(await connect())) return;
+  var wiersz = {id:id, tytul:tytul, elewacja:$("rElew").value.trim(), wnetrze:$("rWnetrze").value.trim(),
+                piec:$("rPiec").value.trim(), wymiar:$("rWymiar").value.trim(),
+                foto1:foto[0], foto2:foto[1], foto3:foto[2], proporcje:prop, updated_at:new Date().toISOString()};
+  realKomunikat("", "Zapisuję…");
+  try{
+    var r = await supa.from("realizacje").upsert(wiersz);
+    if(r.error) throw r.error;
+    if(realId && realId !== id){
+      await supa.from("realizacje").delete().eq("id", realId);
+      delete REAL[realId]; delete REAL_FOTO[realId];
+    }
+    REAL[id] = {id:id, tytul:tytul, elewacja:wiersz.elewacja, wnetrze:wiersz.wnetrze, piec:wiersz.piec, wymiar:wiersz.wymiar, proporcje:prop};
+    REAL_FOTO[id] = foto; realId = id; realBlad = "";
+    rysujListeRealizacji(); rysujWyborRealizacji(); render();
+    realKomunikat("ok", "Zapisane. Realizacja jest do wybrania w panelu po lewej.");
+  }catch(e){ realKomunikat("err", "Nie udało się zapisać: " + (e.message || e)); }
+}
+
+async function usunRealizacje(){
+  if(!realId){ realKomunikat("err", "Najpierw wybierz realizację z listy."); return; }
+  if(!supa && !(await connect())) return;
+  try{
+    var r = await supa.from("realizacje").delete().eq("id", realId);
+    if(r.error) throw r.error;
+    if($("przykladSel").value === realId){
+      $("przykladSel").value = "";
+      PAGES.forEach(function(p){ if(p.id === "przyklad") p.on = false; });
+      drawPages();
+    }
+    delete REAL[realId]; delete REAL_FOTO[realId];
+    nowaRealizacja(); rysujWyborRealizacji(); render();
+    realKomunikat("ok", "Usunięte.");
+  }catch(e){ realKomunikat("err", "Nie udało się usunąć: " + (e.message || e)); }
+}
+
+$("realBtn").onclick = function(){
+  $("realMod").classList.add("on");
+  if(!realId) nowaRealizacja(); else rysujListeRealizacji();
+  realKomunikat(realBlad ? "err" : "ok", realBlad || ("Baza realizacji odpowiada, zapisanych: " + Object.keys(REAL).length + "."));
+};
+$("realZamknij").onclick = function(){ $("realMod").classList.remove("on"); };
+$("realMod").onclick = function(e){ if(e.target === $("realMod")) $("realMod").classList.remove("on"); };
+$("realNowa").onclick = nowaRealizacja;
+$("rZapisz").onclick = zapiszRealizacje;
+$("rUsun").onclick = usunRealizacje;
+Array.prototype.forEach.call(document.querySelectorAll("#realMod .zrzutnia"), function(z){
+  var nr = +z.getAttribute("data-nr");
+  z.onclick = function(){ realCel = nr; $("rPlik").value = ""; $("rPlik").click(); };
+  ["dragenter","dragover"].forEach(function(ev){ z.addEventListener(ev, function(e){ e.preventDefault(); z.classList.add("naj"); }); });
+  ["dragleave","drop"].forEach(function(ev){ z.addEventListener(ev, function(e){ e.preventDefault(); z.classList.remove("naj"); }); });
+  z.addEventListener("drop", function(e){
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) wgrajZdjecieReal(nr, f);
+  });
+});
+$("rPlik").onchange = function(){ if(this.files && this.files[0]) wgrajZdjecieReal(realCel, this.files[0]); };
+
 /* ============ start ============ */
 $("mData").value = new Date().toISOString().slice(0,10);
 drawPages(); drawSzkl(); syncPlan(); render();
-ladujBaze().then(function(){ render(); return loadQuotes(); });
+ladujBaze().then(function(){ ladujRealizacje(); render(); return loadQuotes(); });
 
 })();
 </script>
