@@ -228,6 +228,20 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
         <button class="chip" type="button" data-v="dol-lewa">Dół + lewa</button>
       </div>
     </div>
+    <div class="fld" id="armsUpFld"><label id="armsUpLbl">Ława górna · ściany</label>
+      <div class="chips" id="benchUpArms">
+        <button class="chip" type="button" data-v="AB">Obie ściany</button>
+        <button class="chip" type="button" data-v="A">Tylko A</button>
+        <button class="chip" type="button" data-v="B">Tylko B</button>
+      </div>
+    </div>
+    <div class="fld" id="armsLowFld"><label id="armsLowLbl">Ława dolna · ściany</label>
+      <div class="chips" id="benchLowArms">
+        <button class="chip" type="button" data-v="AB">Obie ściany</button>
+        <button class="chip" type="button" data-v="A">Tylko A</button>
+        <button class="chip" type="button" data-v="B">Tylko B</button>
+      </div>
+    </div>
     <div class="g2">
       <div class="fld"><label for="pUpper" id="upLbl">Ława górna</label><input type="number" id="pUpper" value="550" step="10"></div>
       <div class="fld"><label for="pLower" id="lowLbl">Ława dolna</label><input type="number" id="pLower" value="280" step="10"></div>
@@ -453,6 +467,7 @@ var P = {   // rzut
   modules:[{type:"sauna",width:2100}],
   benchMode:"L", benchWalls:"gora-prawa", benchLevels:"2",
   upper:550, lower:280, upperV:550, lowerV:280, benchSpan:100,
+  upArms:"AB", lowArms:"AB",   // ktore ramiona ma dany poziom: obie sciany, tylko A albo tylko B
   piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
   doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
   // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
@@ -1177,7 +1192,13 @@ function pageUklad(){
   ];
   P.modules.forEach(function(m){ rows.push([TYPES[m.type].label, fmt(m.width)+" mm"]); });
   var poziomy = P.benchLevels==="1" ? "jeden poziom" : "dwa poziomy";
+  var jednoRamie = [];
+  if(P.benchMode === "L"){
+    if(P.upArms  !== "AB") jednoRamie.push((P.benchLevels==="1"?"ława":"górna")+" tylko wzdłuż jednej ściany");
+    if(P.benchLevels !== "1" && P.lowArms !== "AB") jednoRamie.push("dolna tylko wzdłuż jednej ściany");
+  }
   rows.push(["Ławy", (P.benchMode==="L" ? "w literę L, " : "proste, ")+poziomy+
+             (jednoRamie.length ? ", "+jednoRamie.join(", ") : "")+
              (+P.benchSpan < 100 ? ", na "+P.benchSpan+"% długości ściany" : "")]);
   if(P.piecShape==="brak") rows.push(["Piec", "bez pieca, sauna infrared"]);
   else rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
@@ -1405,6 +1426,13 @@ function saunaIdx(){ for(var i=0;i<P.modules.length;i++) if(P.modules[i].type===
 // ile sciany zajmuja lawy: 1.0 = cala sciana
 function spanLaw(){ var v = +P.benchSpan; return (v > 0 && v < 100) ? v/100 : 1; }
 
+// czy dany poziom law ma ramie A (sciana gorna/dolna) albo B (sciana boczna)
+function maRamie(poziom, ramie){
+  if(P.benchMode !== "L") return ramie === "A";
+  var v = (poziom === "up" ? P.upArms : P.lowArms) || "AB";
+  return v === "AB" || v === ramie;
+}
+
 function freeRect(x0,w){
   var iy = MYc+P.wall, iy2 = iy+P.depth;
   var jeden = P.benchLevels === "1";
@@ -1413,8 +1441,8 @@ function freeRect(x0,w){
     return {x:x0,w:w,y:iy+used,h:Math.max(300,P.depth-used)};
   }
   var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
-  var bandV = P.upperV + (P.lowerV>0?P.lowerV:0);   // pas przy ścianie lewej/prawej
-  var bandH = P.upper  + (P.lower>0 ?P.lower :0);   // pas przy ścianie górnej/dolnej
+  var bandV = (maRamie("up","B")?P.upperV:0) + (P.lowerV>0 && maRamie("low","B")?P.lowerV:0);
+  var bandH = (maRamie("up","A")?P.upper:0)  + (P.lower>0 && maRamie("low","A")?P.lower:0);
   return {x: right?x0:x0+bandV, w:Math.max(300,w-bandV), y: top?iy+bandH:iy, h:Math.max(300,P.depth-bandH)};
 }
 function slats(x0,x1,y0,y1,step,color,vert){
@@ -1470,25 +1498,34 @@ function benches(x0,w){
   }
   var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
   var upV = P.upperV || up, lowV = P.lowerV || 0;
-  var hy = top?iy:iy2-up, vx = right?x0+w-upV:x0, hwPelne = w-upV;
-  // oba ramiona skracamy od strony wolnej, naroznik w ktorym sie stykaja zostaje na miejscu
+  var upA = maRamie("up","A"), upB = maRamie("up","B");
+  var lowA = low>0  && maRamie("low","A"), lowB = lowV>0 && maRamie("low","B");
+  var pasV = (upB?upV:0) + (lowB?lowV:0);            // ile zabiera sciana boczna
+  var hwPelne = w - (upB?upV:0);
+  // ramiona skracamy od strony wolnej, naroznik w ktorym sie stykaja zostaje na miejscu
   var hw = Math.round(hwPelne*k), vh = Math.round(P.depth*k);
-  var hx0 = right ? x0+hwPelne-hw : x0+upV;
+  var hx0 = right ? x0+hwPelne-hw : x0+(upB?upV:0);
   var vy  = top ? iy : iy2-vh;
-  strip(vx,vy,upV,vh,"#F3EDE7","#B9A797",130,false);             // ramię przy ścianie bocznej
-  strip(hx0,hy,hw,up,"#F3EDE7","#B9A797",130,true);              // ramię przy ścianie górnej/dolnej
-  if(lowV>0) strip(right?vx-lowV:vx+upV, top?iy+up:vy, lowV, vh-up, "#FAF6F1","#C8B9AB",100,false);
-  if(low>0){
-    var fy = top?iy+up:iy2-up-low;
-    strip(right?hx0:hx0+lowV, fy, hw-lowV, low, "#FAF6F1","#C8B9AB",100,true);
-    podpis((right?hx0:hx0+lowV)+(hw-lowV)/2, fy+low/2, "ŁAWA DOLNA A · "+fmt(low)+" mm", hw-lowV, 97);
+  var sciana = right ? x0+w : x0;                    // krawedz sciany bocznej
+  var vx = right ? sciana-upV : sciana;
+  var hy = top ? iy : iy2-up;
+  var pasGornaA = upA ? up : 0;                      // pas zajety przez gorna lawe A
+  if(upB) strip(vx,vy,upV,vh,"#F3EDE7","#B9A797",130,false);       // ramię przy ścianie bocznej
+  if(upA) strip(hx0,hy,hw,up,"#F3EDE7","#B9A797",130,true);        // ramię przy ścianie górnej/dolnej
+  var lowVx = right ? sciana-(upB?upV:0)-lowV : sciana+(upB?upV:0);
+  if(lowB) strip(lowVx, top?iy+pasGornaA:vy, lowV, vh-pasGornaA, "#FAF6F1","#C8B9AB",100,false);
+  if(lowA){
+    var lowHx = right ? hx0 : hx0+(lowB?lowV:0), lowHw = hw-(lowB?lowV:0);
+    var fy = top ? iy+pasGornaA : iy2-pasGornaA-low;
+    strip(lowHx, fy, lowHw, low, "#FAF6F1","#C8B9AB",100,true);
+    podpis(lowHx+lowHw/2, fy+low/2, (upA?"ŁAWA DOLNA A · ":"ŁAWA A · ")+fmt(low)+" mm", lowHw, 97);
   }
-  podpis(hx0+hw/2, hy+up/2, (jeden?"ŁAWA A · ":"ŁAWA GÓRNA A · ")+fmt(up)+" mm", hw, 105);
+  if(upA) podpis(hx0+hw/2, hy+up/2, (jeden||!lowA?"ŁAWA A · ":"ŁAWA GÓRNA A · ")+fmt(up)+" mm", hw, 105);
   var cy = vy + vh/2, bx = vx + upV/2;
-  podpis(bx, cy, (jeden?"ŁAWA B · ":"ŁAWA GÓRNA B · ")+fmt(upV)+" mm", vh, 105, true);
-  if(lowV>0){
-    var lx = (right ? vx-lowV/2 : vx+upV+lowV/2), ly = (top?iy+up:vy)+(vh-up)/2;
-    podpis(lx, ly, "ŁAWA DOLNA B · "+fmt(lowV)+" mm", vh-up, 92, true);
+  if(upB) podpis(bx, cy, (jeden||!lowB?"ŁAWA B · ":"ŁAWA GÓRNA B · ")+fmt(upV)+" mm", vh, 105, true);
+  if(lowB){
+    var lx = lowVx + lowV/2, ly = (top?iy+pasGornaA:vy)+(vh-pasGornaA)/2;
+    podpis(lx, ly, (upB?"ŁAWA DOLNA B · ":"ŁAWA B · ")+fmt(lowV)+" mm", vh-pasGornaA, 92, true);
   }
   return o.join("");
 }
@@ -1904,6 +1941,16 @@ function syncPlan(){
                        : "Ława odsunięta od ściany z drzwiami.");
   var jeden = P.benchLevels === "1";
   $("wallsFld").style.display = P.benchMode==="L" ? "" : "none";
+  var wL = P.benchMode==="L";
+  $("armsUpFld").style.display = wL ? "" : "none";
+  $("armsLowFld").style.display = (wL && !jeden) ? "" : "none";
+  if(wL){
+    var nazwaA = P.benchWalls.indexOf("gora")===0 ? "górna" : "dolna";
+    var nazwaB = P.benchWalls.indexOf("prawa")>-1 ? "prawa" : "lewa";
+    var opisAB = " (A = ściana "+nazwaA+", B = "+nazwaB+")";
+    $("armsUpLbl").textContent  = (jeden ? "Ława · ściany" : "Ława górna · ściany") + opisAB;
+    $("armsLowLbl").textContent = "Ława dolna · ściany" + opisAB;
+  }
   $("upLbl").textContent  = P.benchMode==="L" ? (jeden ? "Ława A" : "Ława górna A") : (jeden ? "Ława" : "Ława górna");
   $("lowLbl").textContent = P.benchMode==="L" ? "Ława dolna A"  : "Ława dolna";
   $("lowLbl").parentNode.style.display = jeden ? "none" : "";
@@ -1917,6 +1964,7 @@ function syncPlan(){
   drawPlanPrev();
   chips("benchMode","benchMode"); chips("benchWalls","benchWalls");
   chips("benchLevels","benchLevels");
+  chips("benchUpArms","upArms"); chips("benchLowArms","lowArms");
   chips("piecShape","piecShape"); chips("piecCorner","piecCorner"); chips("saunaDoorWall","saunaDoorWall");
 }
 
