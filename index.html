@@ -2193,6 +2193,135 @@ function selVal(id){var el=document.getElementById(id);return el&&el.selectedOpt
 function selTxt(id){var el=document.getElementById(id);return el&&el.selectedOptions[0]?el.selectedOptions[0].textContent:'';}
 function getG(id){var el=document.getElementById(id);return el&&el.selectedOptions[0]?el.selectedOptions[0].dataset.g||'':'';}
 
+// Nazwa pozycji bez dostawcy w nawiasie kwadratowym i bez ceny na koncu.
+function nazwaBezCeny(t){
+  return String(t||'').replace(/\[[^\]]*\]/g,'').replace(/[—–-]\s*[\d.,]+\s*z[lł].*$/i,'').replace(/\s+/g,' ').trim();
+}
+
+// Gdy cennik zmienil sie od zapisania wyceny, dopinamy do listy pozycje z cena
+// z wyceny i ja wybieramy. Dzieki temu wczytana wycena liczy sie tak jak wtedy.
+function rdzenNazwy(t){
+  return String(t||'')
+    .replace(/\[[^\]]*\]/g,'')
+    .replace(/[—–-]\s*[\d.,]+\s*z[lł]?.*$/i,'')
+    .replace(/\([^)]*\)/g,'')
+    .replace(/\|.*$/,'')
+    .replace(/▸.*$/,'')
+    .replace(/\s+/g,' ').trim().toLowerCase();
+}
+
+// Wybiera z listy pozycje o tej samej nazwie (dzis moze miec inna cene).
+function wybierzPoNazwie(el, nazwa){
+  var cel = rdzenNazwy(nazwa);
+  if(!el || !cel) return false;
+  for(var i=0;i<el.options.length;i++){
+    if(rdzenNazwy(el.options[i].textContent) === cel){ el.selectedIndex = i; return true; }
+  }
+  for(var j=0;j<el.options.length;j++){
+    var t = rdzenNazwy(el.options[j].textContent);
+    if(t && (t.indexOf(cel) >= 0 || cel.indexOf(t) >= 0)){ el.selectedIndex = j; return true; }
+  }
+  return false;
+}
+
+function przypnijCene(id, cena, nazwa, grupa){
+  var el = document.getElementById(id);
+  if(!el || !(cena > 0)) return false;
+  var teraz = parseFloat(el.value) || 0;
+  if(Math.abs(teraz - cena) < 0.005) return false;      // cena sie zgadza, nic nie robimy
+  var stara = el.querySelector('option[data-zwyceny="1"]');
+  if(stara) stara.remove();
+  var o = document.createElement('option');
+  o.value = String(cena);
+  o.dataset.zwyceny = '1';
+  o.dataset.s = 'M';
+  if(grupa) o.dataset.g = grupa;
+  o.dataset.nazwa = nazwaBezCeny(nazwa) || '';
+  o.textContent = '   [z wyceny] ' + (o.dataset.nazwa || 'pozycja z wyceny') + ' — ' + cena + ' zl';
+  el.appendChild(o);
+  el.value = String(cena);
+  return true;
+}
+
+// Materialy trzymaja w wycenie koszt i ilosc, wiec cene jednostkowa liczymy z nich.
+function przypnijMaterial(id, zap){
+  if(!zap || !(zap.q > 0) || !(zap.k > 0)) return false;
+  return przypnijCene(id, Math.round((zap.k / zap.q) * 100) / 100, zap.name, zap.g);
+}
+
+// Po wczytaniu wyceny: pilnujemy, zeby kazda pozycja miala swoja cene z dnia zapisu.
+function przypnijCenyWyceny(s){
+  if(!s) return [];
+  var zmiany = [];
+  function licz(ok, etykieta){ if(ok) zmiany.push(etykieta); }
+  [['b1m','b1','Boazeria'],['b2m','b2','Boazeria 2'],['zb1m','zb1','Zabudowa'],
+   ['l1m','l1','Ławki'],['l2m','l2','Ławki 2'],['k1m','k1','Konstrukcja'],
+   ['k2m','k2','Konstrukcja 2'],['podlm','podl','Podłoga']].forEach(function(a){
+    licz(przypnijMaterial(a[0], s[a[1]]), a[2]);
+  });
+  licz(przypnijCene('szkt', s.szkt, s.szktTxt, ''), 'Szklenie');
+  licz(przypnijCene('ledt', s.ledtVal, s.ledt, ''), 'Taśma LED');
+  licz(przypnijCene('lstt', s.lsttVal, s.lstt, ''), 'Sterownik LED');
+  licz(przypnijCene('zast', s.zasilVal, s.zast, ''), 'Zasilacz LED');
+  licz(przypnijCene('audt', s.audtVal, s.audio, ''), 'Nagłośnienie');
+  licz(przypnijCene('klm', s.klamkaVal, s.klamka, ''), 'Klamka');
+  licz(przypnijCene('drz', s.drzwiVal, s.drzwi, ''), 'Drzwi');
+  licz(przypnijCene('drzsauna', s.drzsauna, s.drzsaunaTxt, ''), 'Drzwi sauny');
+  // piec: cena z wyceny, nie z dzisiejszej listy
+  var pi = document.getElementById('piec');
+  if(pi && s.piec && s.piec.cena > 0 && Math.abs((parseFloat(pi.value)||0) - s.piec.cena) > 0.005){
+    pi.value = String(s.piec.cena); zmiany.push('Piec');
+  }
+  return zmiany;
+}
+
+// Pasek nad kalkulatorem: informuje, ze liczymy po cenach z dnia zapisu.
+function pokazPasekZamrozenia(s, zmiany){
+  var host = document.getElementById('pasek-zamrozenia');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'pasek-zamrozenia';
+    host.style.cssText = 'margin:8px 0;padding:9px 13px;border-radius:7px;font-size:12.5px;line-height:1.5;'+
+      'background:#F3E9DE;border:1px solid #D9C4B0;color:#5A4436;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
+    var tab = document.getElementById('tab-calc') || document.body;
+    tab.insertBefore(host, tab.firstChild);
+  }
+  var opis = zmiany.length
+    ? 'Cennik zmienił się od zapisania wyceny. Liczę po cenach z dnia zapisu, żeby kwota zgadzała się z wysłaną. Pozycje po starej cenie: ' + zmiany.join(', ') + '.'
+    : 'Wycena wczytana z historii, liczona po cenach z dnia zapisu.';
+  host.innerHTML = '<span id="pasek-zamrozenia-txt" style="flex:1;min-width:240px">' + opis + '</span>';
+  var b = document.createElement('button');
+  b.type = 'button'; b.className = 'btn';
+  b.style.cssText = 'background:#fff;color:#7B4B27;border:1px solid #7B4B27';
+  b.textContent = 'Przelicz po dzisiejszych cenach';
+  b.onclick = odmrozWycene;
+  host.appendChild(b);
+  host.style.display = '';
+}
+
+function ukryjPasekZamrozenia(){
+  var h = document.getElementById('pasek-zamrozenia');
+  if(h) h.style.display = 'none';
+}
+
+// Swiadome przejscie na dzisiejszy cennik: zdejmujemy przypiete ceny i liczymy od nowa.
+function odmrozWycene(){
+  ZAMROZONA = null; RUSZONE = false;
+  Array.prototype.forEach.call(document.querySelectorAll('option[data-zwyceny="1"]'), function(o){
+    var el = o.parentNode, nazwa = o.dataset.nazwa || '';
+    o.remove();
+    if(!el || el.tagName !== 'SELECT') return;
+    if(!wybierzPoNazwie(el, nazwa) && !el.selectedOptions.length) el.selectedIndex = 0;
+    if(el.id && typeof uM === 'function' && /^(b1|b2|zb1|l1|l2|k1|k2|podl)m$/.test(el.id)) uM(el.id.slice(0,-1));
+  });
+  // piec: wracamy do ceny z dzisiejszej listy
+  var pselOd = document.getElementById('psel');
+  if(pselOd && (parseFloat(pselOd.value)||0) > 0 && typeof onPS === 'function') onPS();
+  var ht2 = document.getElementById('pasek-zamrozenia-txt');
+  if(ht2) ht2.textContent = 'Przeliczone po dzisiejszym cenniku. Zapisz wycenę na nowo, jeśli ta kwota ma iść do klienta.';
+  if(typeof r === 'function') r();
+}
+
 function onSterSer(){onSterModel();}
 
 function onSterModel(){
@@ -2236,15 +2365,16 @@ function r(){
   var l1=mr('l1',mK),l2=mr('l2',mK),podl=mr('podl',mK),k1=mr('k1',mK),k2=mr('k2',mK);
   var bzK=isZ?(gv('bzq')*gv('bzp')):0,bzP=bzK*mK;
   if(isZ){se('bzk',f(bzK));se('bzpp',f(bzP));}
-  var katC=gv('kat-cena')||30;var katK=gv('katq')*katC,katP=katK*mK;se('katk',f(katK));se('katp',f(katP));
-  var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+podl.sp+katP;se('sm1',f(s1));
+  var katC=gv('kat-cena')||stw('kat');var katK=gv('katq')*katC,katP=katK*mK;se('katk',f(katK));se('katp',f(katP));
+  var s1=b1.sp+b2.sp+zb1.sp+bzP+l1.sp+l2.sp+podl.sp+katP;
+  s1=sumaZWyceny('s1',s1);se('sm1',f(s1));
   var epdmK=gv('epdmq')*(gv('epdmc')||55),epdmP=epdmK*mK;se('epdmk',f(epdmK));se('epdmp',f(epdmP));
-  var folK=gv('folq')*4,folP=folK*mK,tasK=gv('tasq')*20,tasP=tasK*mK;
-  var welC=isZ?38.59:8.5,welK=gv('welq')*welC,welP=welK*mK;
+  var folK=gv('folq')*stw('fol'),folP=folK*mK,tasK=gv('tasq')*stw('tas'),tasP=tasK*mK;
+  var welC=isZ?stw('welZ'):stw('welW'),welK=gv('welq')*welC,welP=welK*mK;
   se('folk',f(folK));se('folp',f(folP));se('task',f(tasK));se('tasp',f(tasP));se('welk',f(welK));se('welp',f(welP));
-  var anoK=gv('anoq')*gv('anop'),anoP=anoK*mK,kabK=gv('kabq')*20,kabP=kabK*mK;
+  var anoK=gv('anoq')*gv('anop'),anoP=anoK*mK,kabK=gv('kabq')*stw('kab'),kabP=kabK*mK;
   se('anok',f(anoK));se('anop2',f(anoP));se('kabk',f(kabK));se('kabp',f(kabP));
-  var bshK=isZ?gv('bshq')*36.25:0,bshP=bshK*mK,cncK=isZ?gv('cncq')*700:0,cncP=cncK*mK;
+  var bshK=isZ?gv('bshq')*stw('bsh'):0,bshP=bshK*mK,cncK=isZ?gv('cncq')*stw('cnc'):0,cncP=cncK*mK;
   se('bshk',f(bshK));se('bshp',f(bshP));se('cnck',f(cncK));se('cncp',f(cncP));
   var dachSp=0,zewnLogist=0;
   if(isZ){var dM=gv('dachq')*(gv('dachc')||60),dR=gv('dacrq')*(gv('dacrc')||110),ryK=gv('rynq')*(gv('rync')||320),poK=gv('podq')*(gv('podc')||140),plK=gv('plyq')*(gv('plyc')||221.65),stK=gv('styq')*(gv('styc')||49.4);
@@ -2254,13 +2384,14 @@ function r(){
     se('dachk',f(dM));se('dachp',f(dM*mK));se('dacrk',f(dR));se('rynk',f(ryK));se('rynp',f(ryK*mK));
     se('podk',f(poK));se('podp',f(poK*mK));se('plyk',f(plK));se('plyp',f(plK*mK));se('styk',f(stK));se('styp',f(stK*mK));
     dachSp=(dM+obrbK+ryK+poK+plK+stK+osbK+skrzeK)*mK+dR;zewnLogist=0;}
-  var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;se('sm2',f(s2));
-  var mS=gv('ms')||2.0;var gR=glassRates();
-  var szkK=gv('szkm')*gv('szkt')+gv('szlq')*gR.szlif+gv('otwq')*gR.otwZaw+gv('otwq2')*gR.otw,szkP=szkK*mS;
+  var s2=k1.sp+k2.sp+bshP+cncP+epdmP+folP+tasP+welP+anoP+kabP+dachSp;
+  s2=sumaZWyceny('s2',s2);se('sm2',f(s2));
+  var mS=gv('ms')||2.0;
+  var szkK=kosztSzklenia(mS),szkP=szkK*mS;
   se('szkk',f(szkK));se('szkp',f(szkP));se('sm3',f(szkP));
-  var prmK=gv('zawq')*240+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('drzsauna')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
+  var prmK=gv('zawq')*stw('zaw')+gv('klm')*(gv('klmq')||1)+gv('drz')+gv('drzsauna')+gv('scd')+(isZ?gv('drzwz'):0),prmP=prmK*mP;
   se('prmk',f(prmK));se('prmp',f(prmP));se('sm4',f(prmP));
-  var piecK=(typ!=='I')?(gv('piec')+gv('kamd')*50+gv('kams')*130+gv('osl')):0;
+  var piecK=(typ!=='I')?(gv('piec')+gv('kamd')*stw('kamd')+gv('kams')*stw('kams')+gv('osl')):0;
   var p3cena=parseFloat((document.getElementById('pr3m')?.value||'660|350').split('|')[0])||660;
   var p5cena=parseFloat((document.getElementById('pr5m')?.value||'710|500').split('|')[0])||710;
   var p7cena=parseFloat((document.getElementById('pr7m')?.value||'765|750').split('|')[0])||765;
@@ -2270,15 +2401,16 @@ function r(){
   var p7moc=parseFloat((document.getElementById('pr7m')?.value||'0|750').split('|')[1])||750;
   var moc=(typ!=='F')?(gv('pr3')*p3moc+gv('pr5')*p5moc+gv('pr7')*p7moc):0;se('mocsum',moc+' W');
   var sterBase=gv('ster-val');
-  var sterModuly=(ck('awifi')?400:0)+(ck('abt')?300:0)+(ck('asty')?100:0)+(ck('asty3')?250:0)+(ck('aaw')?600:0)+(ck('apbez')?220:0)+(ck('acpir-g2')?350:0)+(ck('acpir-g4')?400:0);
+  var sterModuly=(ck('awifi')?stw('wifi'):0)+(ck('abt')?stw('bt'):0)+(ck('asty')?stw('sty'):0)+(ck('asty3')?stw('sty3'):0)+
+                 (ck('aaw')?stw('aw'):0)+(ck('apbez')?stw('pbez'):0)+(ck('acpir-g2')?stw('cpirG2'):0)+(ck('acpir-g4')?stw('cpirG4'):0);
   var sterK=sterBase+sterModuly;
   se('ster-total',f(sterK));
   var grzK=piecK+promK+sterK,grzP=grzK*mG;se('grzk',f(grzK));se('grzp',f(grzP));se('sm5',f(grzP));
   var ledQ=gv('ledq');
   if(ck('profauto')){var pi=document.getElementById('profq');if(pi)pi.value=ledQ;}
-  var profQ=gv('profq'),profK=profQ*12.45,profP=profK*mL;
+  var profQ=gv('profq'),profK=profQ*cenaProfiluLED(),profP=profK*mL;
   se('profk',f(profK));se('profp',f(profP));
-  var kabLedK=gv('kabq-led')*7.9,kabLedP=kabLedK*mL;
+  var kabLedK=gv('kabq-led')*stw('kabLed'),kabLedP=kabLedK*mL;
   se('ledc-k',f(kabLedK));se('ledc-p',f(kabLedP));
   var ledMat=ledQ*gv('ledt')+gv('zast')*(gv('zastq')||1)+gv('lstt')*(gv('lsttq')||1)+gv('ledpilot')*(gv('ledpilotq')||1),ledK=ledMat+profK+kabLedK,ledP=ledMat*mL+profP+kabLedP;
   se('ledk',f(ledK));se('ledp',f(ledP));se('sm6',f(ledP));
@@ -2331,6 +2463,10 @@ function r(){
     skrzq:gv('skrzq')||0,skrzcena:gv('skrzcena')||0,
     // Section 3 - szklenie
     szkt:parseFloat(document.getElementById('szkt')?.value)||160,szktTxt:selTxt('szkt'),szkm:gv('szkm'),szlq:gv('szlq'),otwq:gv('otwq'),otwq2:gv('otwq2'),
+    // stawki obrobki szkla i kurs, po ktorych ta wycena zostala policzona
+    stawkiSzkla:glassRates(),kursEur:parseFloat(document.getElementById('eur')?.value)||4.4,
+    // stawki zaszyte w kodzie, po ktorych ta wycena zostala policzona
+    stawki:(function(){var o={};for(var k in STAWKI_DZIS)o[k]=stw(k);return o;})(),
     // Section 3 [Z] - szklenie zewnętrzne
     szkzm:gv('szkzm')||0,drzz:gv('drzz')||0,drzzq:gv('drzzq')||1,klmz:gv('klmz')||0,
     // Panoramic
@@ -2357,14 +2493,16 @@ function r(){
     aw:ck('aaw'),pbez:ck('apbez'),cpirG2:ck('acpir-g2'),cpirG4:ck('acpir-g4'),
     // Section 6 - LED
     ledt:selTxt('ledt'),ledtVal:gv('ledt'),ledq:ledQ,
-    profq:profQ,
+    profq:profQ,profc:cenaProfiluLED(),profAuto:ck('profauto'),
+    ledpilot:gv('ledpilot'),ledpilotq:gv('ledpilotq')||1,
     zast:selTxt('zast'),zasilVal:gv('zast'),zastq:gv('zastq')||1,
     lstt:selTxt('lstt'),lsttVal:gv('lstt'),lsttq:gv('lsttq')||1,
     kabLed:gv('kabq-led'),
     ledMiejsce:(function(){var m=[];['led-m1','led-m2','led-m3','led-m4','led-m5','led-m6'].forEach(function(id){var el=document.getElementById(id);if(el&&el.checked)m.push(el.value);});return m.join(', ');})(),
     ledBarwa:gs('led-barwa'),
     // Section 7 - audio
-    audio:selTxt('audt'),audtVal:gv('audt'),audtq:gv('audtq')||2,btkt:gv('btkt'),
+    audio:selTxt('audt'),audtVal:gv('audt'),audtq:gv('audtq')||2,btkt:gv('btkt'),btktq:gv('btktq')||0,
+    btktTxt:selTxt('btkt'),
     // Section 8 - dodatkowe
     pryszC:gv('prysz-c'),solC:gv('sol-c'),starC:gv('star-c'),aromC:gv('arom-c'),akcC:gv('akc-c'),klepC:gv('klep-c'),
     // Section 9 - logistyka
@@ -2373,7 +2511,7 @@ function r(){
     // Header
     klient:gs('klient'),opis:gs('opis'),
     // Margins
-    mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,
+    mk:gv('mk'),mp:gv('mp'),mg:gv('mg'),ml:gv('ml'),md:gv('md')||1.5,ms:gv('ms')||2.0,
     cenaSaunyOverride:0,
     // Totals
     netto:netto,brutto:brutto,totalK:totalK,zysk:zysk+dol,dol:dol,nkw:nkw,minm:gv('minm')||12000,
@@ -2878,6 +3016,16 @@ function loadToCalc(s){
       if(parseFloat(el.options[i].value)===parseFloat(val)){el.selectedIndex=i;return;}
     }
   }
+  // Pozycja z listy: najpierw po cenie (pewna kwota), potem doprecyzowanie po nazwie.
+  // Nazwa wygrywa tylko wtedy, gdy nie zmienia ceny — inaczej wracamy do dopasowania po cenie.
+  function ssoCenaNazwa(id,val,name){
+    var el=document.getElementById(id);if(!el)return;
+    sso(id,val);
+    if(!name)return;
+    var poprz=el.selectedIndex;
+    ssoByName(id,name);
+    if(Math.abs((parseFloat(el.value)||0)-(parseFloat(val)||0))>0.01)el.selectedIndex=poprz;
+  }
   function ssoByName(id,name){
     if(!name||name.indexOf('wybierz')>=0)return;
     var el=document.getElementById(id);if(!el)return;
@@ -2920,6 +3068,7 @@ function loadToCalc(s){
 
   // Margins
   sso('mk',s.mk||2.0);sso('mp',s.mp||2.0);sso('mg',s.mg||2.0);sso('ml',s.ml||2.0);sso('md',s.md||1.5);
+  sso('ms',s.ms||2.0);   // marza szklenia: starsze wyceny jej nie maja, wiec zostaje 100%
 
   // Section 1 - Boazeria wewnętrzna
   if(s.b1&&s.b1.name)ssoByName('b1m',s.b1.name);sv('b1q',s.b1?s.b1.q:0);
@@ -3031,24 +3180,29 @@ function loadToCalc(s){
       }
     }
     if(typeof onSterModel==='function')onSterModel();
+    // onSterModel wpisuje dzisiejsza cene modelu — wycena ma liczyc po swojej
+    if(s.sterVal>0)sv('ster-val',s.sterVal);
   }
   sc('awifi',s.wifi);sc('abt',s.bt);sc('asty',s.sty);sc('asty3',s.sty3);
   sc('aaw',s.aw);sc('apbez',s.pbez);sc('acpir-g2',s.cpirG2);sc('acpir-g4',s.cpirG4);
 
   // Section 6 - LED
-  sso('ledt',s.ledtVal||0);sv('ledq',s.ledq||0);sv('profq',s.profq||0);
-  sso('zast',s.zasilVal||0);sv('zastq',s.zastq||1);
-  sso('lstt',s.lsttVal||0);sv('lsttq',s.lsttq||1);
+  ssoCenaNazwa('ledt',s.ledtVal||0,s.ledt);sv('ledq',s.ledq||0);sv('profq',s.profq||0);
+  ssoCenaNazwa('zast',s.zasilVal||0,s.zast);sv('zastq',s.zastq||1);
+  ssoCenaNazwa('lstt',s.lsttVal||0,s.lstt);sv('lsttq',s.lsttq||1);
+  sv('ledpilot',s.ledpilot||0);sv('ledpilotq',s.ledpilotq||1);
   sv('kabq-led',s.kabLed||0);sv('led-barwa',s.ledBarwa||'');
   var _ledM=s.ledMiejsce||'';
   ['led-m1','led-m2','led-m3','led-m4','led-m5','led-m6'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.checked=_ledM.indexOf(el.value)>=0;
   });
-  var profAutoEl=document.getElementById('profauto');if(profAutoEl)profAutoEl.checked=!!(s.profAuto);
+  var profAutoEl=document.getElementById('profauto');
+  if(profAutoEl)profAutoEl.checked=(s.profAuto!==undefined)?!!s.profAuto:((+s.profq||0)===(+s.ledq||0));
 
   // Section 7 - Audio
-  sso('audt',s.audtVal||0);sv('audtq',s.audtq||2);sv('btkt',s.btkt||0);
+  ssoCenaNazwa('audt',s.audtVal||0,s.audio);sv('audtq',s.audtq||2);
+  ssoCenaNazwa('btkt',s.btkt||0,s.btktTxt);if(s.btktq!==undefined)sv('btktq',s.btktq);
 
   // Section 8 - Dodatkowe
   sv('prysz-c',s.pryszC||0);sv('sol-c',s.solC||0);sv('star-c',s.starC||0);sv('arom-c',s.aromC||0);sv('akc-c',s.akcC||0);sv('klep-c',s.klepC||0);
@@ -3099,7 +3253,10 @@ function loadToCalc(s){
     if(s.pr3m){var e=document.getElementById('pr3m');if(e)e.value=s.pr3m;}
     if(s.pr5m){var e=document.getElementById('pr5m');if(e)e.value=s.pr5m;}
     if(s.pr7m){var e=document.getElementById('pr7m');if(e)e.value=s.pr7m;}
+    ZAMROZONA = s; RUSZONE = false;
+    var zmiany = przypnijCenyWyceny(s);
     r();
+    pokazPasekZamrozenia(s, zmiany);
   }
   setTimeout(function(){_reapply(s);},200);
   setTimeout(function(){_reapply(s);},800);
@@ -3292,7 +3449,7 @@ async function updateQuote(){
   // 1) AKTUALIZACJA LOKALNA
   try{
     var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
-    var variants_snap={}; ['A','B','C'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));});
+    var variants_snap={}; ['A','B','C','D','E'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));});
     var targetId=_loadedQuote.localId;
     var idx=targetId!=null?hist.findIndex(function(e){return e.id===targetId;}):-1;
     var entry={
@@ -3335,11 +3492,13 @@ async function updateQuote(){
 }
 
 async function saveQuote(){
+  // zapis to zawsze biezacy stan, wiec wycena przestaje byc "ta z historii"
+  ZAMROZONA = null; RUSZONE = false; ukryjPasekZamrozenia();
   var s=STATE;
   if(!s||!s.klient){alert('Wpisz imie i nazwisko klienta przed zapisem.');return;}
   try{
     var hist=JSON.parse(localStorage.getItem('abm_history')||'[]');
-    var variants_snap={}; ['A','B','C'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));}); var entry={id:Date.now(),date:new Date().toLocaleDateString('pl-PL'),klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,isZ:s.isZ,typ:s.typ,state:JSON.stringify(s),variants:variants_snap};
+    var variants_snap={}; ['A','B','C','D','E'].forEach(function(v){if(VARIANTS[v])variants_snap[v]=JSON.parse(JSON.stringify(VARIANTS[v]));}); var entry={id:Date.now(),date:new Date().toLocaleDateString('pl-PL'),klient:s.klient,opis:s.opis||'',netto:s.netto,brutto:s.brutto,vat:s.vat,isZ:s.isZ,typ:s.typ,state:JSON.stringify(s),variants:variants_snap};
     hist.unshift(entry);if(hist.length>100)hist=hist.slice(0,100);
     localStorage.setItem('abm_history',JSON.stringify(hist));
   }catch(e){}
@@ -3999,8 +4158,79 @@ function glassNum(id, dom){
   return isNaN(v) ? dom : v;
 }
 
+// wycena wczytana z historii: jej wlasne stawki maja pierwszenstwo nad cennikiem
+var ZAMROZONA = null;
+var RUSZONE = false;   // czy uzytkownik cos zmienil po wczytaniu wyceny
+
+// Po wczytaniu wyceny pierwsza reczna zmiana oznacza, ze liczymy juz po dzisiejszych cenach.
+document.addEventListener('change', function(e){
+  if(!ZAMROZONA || RUSZONE) return;
+  var t = e.target;
+  if(!t || !t.id || /^p-|^pp-|^add-/.test(t.id)) return;
+  if(t.closest && t.closest('#tab-prices')) return;
+  RUSZONE = true;
+  var ht = document.getElementById('pasek-zamrozenia-txt');
+  if(ht) ht.textContent = 'Zmieniłeś pozycję, więc kwota przeliczyła się na nowo — nadal po cenach z dnia zapisu wyceny. '+
+    'Chcesz policzyć po dzisiejszym cenniku, użyj guzika obok. Zapisz wycenę na nowo, jeśli ta kwota ma iść do klienta.';
+  if(typeof r === 'function') setTimeout(r, 0);
+}, true);
+
+// Szklenie wyceny, ktora nie zapisala stawek obrobki: sama szyba liczy sie z jej ceny,
+// a koszt obrobki odtwarzamy z zapisanej kwoty, zeby wyszlo tyle co wtedy.
+// Suma sekcji z wczytanej wyceny. Obowiazuje do pierwszej zmiany w formularzu,
+// potem liczymy normalnie po dzisiejszych cenach.
+function sumaZWyceny(klucz, policzona){
+  if(!ZAMROZONA || RUSZONE) return policzona;
+  var zap = +ZAMROZONA[klucz];
+  return (zap > 0) ? zap : policzona;
+}
+
+function kosztSzklenia(mS){
+  var szyba = gv('szkm')*gv('szkt');
+  if(ZAMROZONA && !ZAMROZONA.stawkiSzkla && ZAMROZONA.szkP > 0 && mS > 0){
+    var szybaZ = (+ZAMROZONA.szkm||0)*(+ZAMROZONA.szkt||0);
+    var praca = ZAMROZONA.szkP/mS - szybaZ;
+    // tylko gdy szyba sie nie zmienila; po zmianie liczymy normalnie, po cenniku
+    if(praca >= 0 && Math.abs(szyba - szybaZ) < 0.01) return szyba + praca;
+  }
+  var gR = glassRates();
+  return szyba + gv('szlq')*gR.szlif + gv('otwq')*gR.otwZaw + gv('otwq2')*gR.otw;
+}
+
+// Profil LED ma cene zaszyta w kodzie i ta cena zmieniala sie w czasie.
+// Wczytana wycena liczy po swojej: zapisanej wprost albo odtworzonej z jej kwot.
+var PROFIL_LED_DZIS = 12.45;
+function cenaProfiluLED(){
+  if(!ZAMROZONA) return PROFIL_LED_DZIS;
+  if(ZAMROZONA.profc > 0) return ZAMROZONA.profc;
+  var z = ZAMROZONA, q = +z.profq || 0, mL = +z.ml || 1.4;
+  if(!(q > 0) || !(z.ledP > 0)) return PROFIL_LED_DZIS;
+  // ledP = ledMat*mL + profQ*cena*mL + kabLed*7.9*mL
+  var ledMat = (+z.ledq||0)*(+z.ledtVal||0) + (+z.zasilVal||0)*(+z.zastq||1) +
+               (+z.lsttVal||0)*(+z.lsttq||1) + (+z.ledpilot||0)*(+z.ledpilotq||1);
+  var kabP = (+z.kabLed||0)*7.9*mL;
+  var cena = (z.ledP - ledMat*mL - kabP) / (q*mL);
+  return (cena > 0 && cena < 200) ? cena : PROFIL_LED_DZIS;   // bez zaokraglania, zeby kwota zgadzala sie co do grosza
+}
+
+// Stawki zaszyte w kodzie, po ktorych liczy sie biezaca wycena.
+// Dzisiejsze wartosci trzymamy w jednym miejscu, zeby zapis wyceny mogl je zapamietac.
+var STAWKI_DZIS = {
+  kat:30, fol:4, tas:20, welW:8.5, welZ:38.59, kab:20, bsh:36.25, cnc:700,
+  zaw:240, kamd:50, kams:130,
+  wifi:400, bt:300, sty:100, sty3:250, aw:600, pbez:220, cpirG2:350, cpirG4:400,
+  kabLed:7.9
+};
+
+// Wczytana wycena liczy po swoich stawkach, dopoki jej swiadomie nie odmrozimy.
+function stw(klucz){
+  if(ZAMROZONA && ZAMROZONA.stawki && +ZAMROZONA.stawki[klucz] > 0) return +ZAMROZONA.stawki[klucz];
+  return STAWKI_DZIS[klucz];
+}
+
 // aktualne stawki obrobki szkla, z cennika albo domyslne
 function glassRates(){
+  if(ZAMROZONA && ZAMROZONA.stawkiSzkla) return ZAMROZONA.stawkiSzkla;
   var r = {szlif:10, otwZaw:40, otw:10};
   try{
     var sp = JSON.parse(localStorage.getItem('abm_glass_prices') || 'null');

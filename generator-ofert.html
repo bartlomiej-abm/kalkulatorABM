@@ -232,6 +232,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <div class="fld"><label for="pUpper" id="upLbl">Ława górna</label><input type="number" id="pUpper" value="550" step="10"></div>
       <div class="fld"><label for="pLower" id="lowLbl">Ława dolna</label><input type="number" id="pLower" value="280" step="10"></div>
     </div>
+    <div class="fld"><label for="benchSpan">Długość ław wzdłuż ściany</label>
+      <div class="range"><input type="range" id="benchSpan" min="30" max="100" step="5" value="100"><span class="rv" id="benchSpanV">cała ściana</span></div>
+      <div class="note" id="benchSpanNote" style="margin-top:4px"></div>
+    </div>
     <div class="g2" id="ramiePionowe">
       <div class="fld"><label for="pUpperV" id="upLblV">Ława górna B</label><input type="number" id="pUpperV" value="550" step="10"></div>
       <div class="fld"><label for="pLowerV">Ława dolna B</label><input type="number" id="pLowerV" value="280" step="10"></div>
@@ -406,7 +410,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 </div>
 
 <!-- ====== KLUCZ SUPABASE ====== wstawiany przy wgrywaniu pliku, patrz uwaga na dole -->
-<script>window.ABM_SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1eG54dnp3aHZqbGN4ZWd0b3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzcxNzgsImV4cCI6MjA5MDYxMzE3OH0.qu4nd6Rv9rZxnSdJd1scnBLEMs01eFJrX8gzb6WfDdc";</script>
+<script>window.ABM_SUPA_KEY = window.ABM_SUPA_KEY || "";</script>
 
 <script>
 (function(){
@@ -414,7 +418,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 
 /* ============ konfiguracja ============ */
 var SUPA_URL = "https://uuxnxvzwhvjlcxegtozk.supabase.co";
-var SUPA_KEY = window.ABM_SUPA_KEY || "";   // ustawiany w <script> tuż nad tym blokiem
+// Klucz: najpierw ten wpisany w pliku, a jak go nie ma — zapamietany w tej przegladarce.
+var SUPA_KEY = window.ABM_SUPA_KEY || (function(){
+  try{ return localStorage.getItem("abm_supa_key") || ""; }catch(e){ return ""; }
+})();
 var supa = null;
 
 var $ = function(id){return document.getElementById(id);};
@@ -445,7 +452,7 @@ var P = {   // rzut
   depth:2300, wall:100,
   modules:[{type:"sauna",width:2100}],
   benchMode:"L", benchWalls:"gora-prawa", benchLevels:"2",
-  upper:550, lower:280, upperV:550, lowerV:280,
+  upper:550, lower:280, upperV:550, lowerV:280, benchSpan:100,
   piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
   doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
   // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
@@ -471,9 +478,30 @@ function msg(kind, text){
 }
 
 /* ============ Supabase ============ */
+// Bez klucza nie ma wycen. Pytamy raz i zapamietujemy w przegladarce, zeby podmiana
+// pliku generatora nie kasowala klucza.
+function poprosOKlucz(){
+  var k = "";
+  try{ k = (window.prompt("Wklej klucz anon Supabase (ten sam, co w kalkulatorze). Zapiszę go w tej przeglądarce.", "") || "").trim(); }catch(e){ k = ""; }
+  if(!k){
+    msg("err","Brak klucza Supabase. Kliknij „Odśwież wyceny” i wklej klucz anon — ten sam, którego używa kalkulator.");
+    return false;
+  }
+  SUPA_KEY = k;
+  try{ localStorage.setItem("abm_supa_key", k); }catch(e){}
+  return true;
+}
+
+function zapomnijKlucz(){
+  try{ localStorage.removeItem("abm_supa_key"); }catch(e){}
+  SUPA_KEY = ""; supa = null;
+  msg("ok","Klucz usunięty z tej przeglądarki.");
+}
+window.zapomnijKlucz = zapomnijKlucz;
+
 async function connect(){
   if(!window.supabase){ msg("err","Nie wczytała się biblioteka Supabase — sprawdź połączenie."); return false; }
-  if(!SUPA_KEY){ msg("err","Brak klucza Supabase. Wklej go do zmiennej SUPA_KEY na dole pliku (ten sam, którego używa kalkulator)."); return false; }
+  if(!SUPA_KEY && !poprosOKlucz()) return false;
   supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
   return true;
 }
@@ -1149,7 +1177,8 @@ function pageUklad(){
   ];
   P.modules.forEach(function(m){ rows.push([TYPES[m.type].label, fmt(m.width)+" mm"]); });
   var poziomy = P.benchLevels==="1" ? "jeden poziom" : "dwa poziomy";
-  rows.push(["Ławy", (P.benchMode==="L" ? "w literę L, " : "proste, ")+poziomy]);
+  rows.push(["Ławy", (P.benchMode==="L" ? "w literę L, " : "proste, ")+poziomy+
+             (+P.benchSpan < 100 ? ", na "+P.benchSpan+"% długości ściany" : "")]);
   if(P.piecShape==="brak") rows.push(["Piec", "bez pieca, sauna infrared"]);
   else rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
   rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
@@ -1373,6 +1402,9 @@ function pageRealizacje(){
 /* ============ rzut ============ */
 var MYc = 600, lastPiec = null;
 function saunaIdx(){ for(var i=0;i<P.modules.length;i++) if(P.modules[i].type==="sauna") return i; return -1; }
+// ile sciany zajmuja lawy: 1.0 = cala sciana
+function spanLaw(){ var v = +P.benchSpan; return (v > 0 && v < 100) ? v/100 : 1; }
+
 function freeRect(x0,w){
   var iy = MYc+P.wall, iy2 = iy+P.depth;
   var jeden = P.benchLevels === "1";
@@ -1415,38 +1447,48 @@ function benches(x0,w){
     o.push('<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" fill="'+fill+'" stroke="#2A211C" stroke-width="14"></rect>');
     o.push(slats(bx,bx+bw,by,by+bh,step,sc,vert));
   }
+  // podpis wpisany w dlugosc paska, zeby nie wychodzil poza lawe
+  function podpis(cx, cy, txt, box, max, obroc){
+    var fs = fitF(txt, box-40, max);
+    o.push(T(cx, cy + fs*0.34, txt, fs, "#6B5849",
+             obroc ? ' transform="rotate(-90 '+cx+' '+cy+')"' : ""));
+  }
   var jeden = P.benchLevels === "1";
+  var k = spanLaw();
   if(P.benchMode==="proste"){
-    strip(x0,iy,w,up,"#F3EDE7","#B9A797",130,true);
+    var bw = Math.round(w*k), bx = x0 + (P.saunaDoorWall === "lewa" ? w-bw : 0);
+    strip(bx,iy,bw,up,"#F3EDE7","#B9A797",130,true);
     if(jeden){
-      o.push(T(x0+w/2, iy+up/2+36, "ŁAWA · "+fmt(up)+" mm", 105, "#6B5849"));
+      podpis(bx+bw/2, iy+up/2, "ŁAWA · "+fmt(up)+" mm", bw, 105);
       return o.join("");
     }
     var d2=low>0?low:420;
-    strip(x0,iy+up,w,d2,"#FAF6F1","#C8B9AB",130,true);
-    o.push(T(x0+w/2, iy+up/2+36, "ŁAWA GÓRNA · "+fmt(up)+" mm", 105, "#6B5849"));
-    o.push(T(x0+w/2, iy+up+d2/2+34, "ŁAWA DOLNA · "+fmt(d2)+" mm", 100, "#6B5849"));
+    strip(bx,iy+up,bw,d2,"#FAF6F1","#C8B9AB",130,true);
+    podpis(bx+bw/2, iy+up/2, "ŁAWA GÓRNA · "+fmt(up)+" mm", bw, 105);
+    podpis(bx+bw/2, iy+up+d2/2, "ŁAWA DOLNA · "+fmt(d2)+" mm", bw, 100);
     return o.join("");
   }
   var top = P.benchWalls.indexOf("gora")===0, right = P.benchWalls.indexOf("prawa")>-1;
   var upV = P.upperV || up, lowV = P.lowerV || 0;
-  var hy = top?iy:iy2-up, vx = right?x0+w-upV:x0, hx0 = right?x0:x0+upV, hw = w-upV;
-  strip(vx,iy,upV,P.depth,"#F3EDE7","#B9A797",130,false);        // ramię przy ścianie bocznej
+  var hy = top?iy:iy2-up, vx = right?x0+w-upV:x0, hwPelne = w-upV;
+  // oba ramiona skracamy od strony wolnej, naroznik w ktorym sie stykaja zostaje na miejscu
+  var hw = Math.round(hwPelne*k), vh = Math.round(P.depth*k);
+  var hx0 = right ? x0+hwPelne-hw : x0+upV;
+  var vy  = top ? iy : iy2-vh;
+  strip(vx,vy,upV,vh,"#F3EDE7","#B9A797",130,false);             // ramię przy ścianie bocznej
   strip(hx0,hy,hw,up,"#F3EDE7","#B9A797",130,true);              // ramię przy ścianie górnej/dolnej
-  if(lowV>0) strip(right?vx-lowV:vx+upV, top?iy+up:iy, lowV, P.depth-up, "#FAF6F1","#C8B9AB",100,false);
+  if(lowV>0) strip(right?vx-lowV:vx+upV, top?iy+up:vy, lowV, vh-up, "#FAF6F1","#C8B9AB",100,false);
   if(low>0){
     var fy = top?iy+up:iy2-up-low;
-    strip(right?x0:x0+upV+lowV, fy, hw-lowV, low, "#FAF6F1","#C8B9AB",100,true);
-    o.push(T(hx0+hw/2, fy+low/2+32, "ŁAWA DOLNA A · "+fmt(low)+" mm", 97, "#6B5849"));
+    strip(right?hx0:hx0+lowV, fy, hw-lowV, low, "#FAF6F1","#C8B9AB",100,true);
+    podpis((right?hx0:hx0+lowV)+(hw-lowV)/2, fy+low/2, "ŁAWA DOLNA A · "+fmt(low)+" mm", hw-lowV, 97);
   }
-  o.push(T(hx0+hw/2, hy+up/2+34, (jeden?"ŁAWA A · ":"ŁAWA GÓRNA A · ")+fmt(up)+" mm", 105, "#6B5849"));
-  var cy = iy + P.depth/2, bx = vx + upV/2;
-  o.push(T(bx, cy+34, (jeden?"ŁAWA B · ":"ŁAWA GÓRNA B · ")+fmt(upV)+" mm", 105, "#6B5849",
-           ' transform="rotate(-90 '+bx+' '+cy+')"'));
+  podpis(hx0+hw/2, hy+up/2, (jeden?"ŁAWA A · ":"ŁAWA GÓRNA A · ")+fmt(up)+" mm", hw, 105);
+  var cy = vy + vh/2, bx = vx + upV/2;
+  podpis(bx, cy, (jeden?"ŁAWA B · ":"ŁAWA GÓRNA B · ")+fmt(upV)+" mm", vh, 105, true);
   if(lowV>0){
-    var lx = (right ? vx-lowV/2 : vx+upV+lowV/2);
-    o.push(T(lx, cy+30, "ŁAWA DOLNA B · "+fmt(lowV)+" mm", 92, "#6B5849",
-             ' transform="rotate(-90 '+lx+' '+cy+')"'));
+    var lx = (right ? vx-lowV/2 : vx+upV+lowV/2), ly = (top?iy+up:vy)+(vh-up)/2;
+    podpis(lx, ly, "ŁAWA DOLNA B · "+fmt(lowV)+" mm", vh-up, 92, true);
   }
   return o.join("");
 }
@@ -1469,8 +1511,11 @@ function piec(x0,w){
     st.push('<circle cx="'+jx+'" cy="'+gy+'" r="'+(26+(st.length%3)*3)+'"></circle>');
   }
   o.push('<g fill="#8A7A6C">'+st.join("")+'</g>');
-  var iy2=MYc+P.wall+P.depth;
-  var ly = (b.y+b.h+150 < iy2-30) ? b.y+b.h+150 : b.y-60;
+  var iy2=MYc+P.wall+P.depth, frP=freeRect(x0,w);
+  // podpis pod piecem tylko wtedy, gdy zmiesci sie w wolnym polu — inaczej nad piecem,
+  // zeby nie wchodzil na lawy
+  var dol = Math.min(iy2-30, frP.y+frP.h-10);
+  var ly = (b.y+b.h+150 < dol) ? b.y+b.h+150 : b.y-60;
   var lab = round?("PIEC Ø "+fmt(b.w)):("PIEC "+fmt(b.w)+" × "+fmt(b.h));
   var half = lab.length*32;
   var lx = Math.max(x0+half+40, Math.min(x0+w-half-40, b.x+b.w/2));
@@ -1852,6 +1897,11 @@ function syncPlan(){
   P.doorW=+$("pDoorW").value||700; P.doorPos=+$("doorPos").value;
   P.piecD=+$("piecD").value||500; P.piecW=+$("piecW").value||420; P.piecH=+$("piecH").value||470;
   $("doorPosV").textContent = P.doorPos===50 ? "środek" : (P.doorPos<50 ? "bliżej początku" : "bliżej końca");
+  P.benchSpan = +$("benchSpan").value || 100;
+  $("benchSpanV").textContent = P.benchSpan >= 100 ? "cała ściana" : P.benchSpan+"% ściany";
+  $("benchSpanNote").textContent = P.benchSpan >= 100 ? "" :
+    (P.benchMode==="L" ? "Oba ramiona krótsze o tyle samo, narożnik ław zostaje na miejscu."
+                       : "Ława odsunięta od ściany z drzwiami.");
   var jeden = P.benchLevels === "1";
   $("wallsFld").style.display = P.benchMode==="L" ? "" : "none";
   $("upLbl").textContent  = P.benchMode==="L" ? (jeden ? "Ława A" : "Ława górna A") : (jeden ? "Ława" : "Ława górna");
@@ -1881,7 +1931,7 @@ var ETYKIETY = ["", "Premium", "Standard", "Klasyka", "Basic", "Ciepły odcień"
 });
 
 /* ============ zdarzenia ============ */
-["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos"].forEach(function(id){
+["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos","benchSpan"].forEach(function(id){
   $(id).addEventListener("input", function(){ syncPlan(); render(); });
 });
 $("editMode").onclick = function(){ setEdit(!EDIT); };
@@ -2469,7 +2519,12 @@ ladujBaze().then(function(){ ladujRealizacje(); render(); return loadQuotes(); }
       <script>window.ABM_SUPA_KEY = "eyJhbGciOi...";</script>
 
   To ten sam ciąg, który masz w kalkulatorze w stałej SUPA_KEY.
-  Celowo go tu nie wpisałem, żeby nie kopiować Waszego klucza do pliku, który przechodzi przez czat.
+  Celowo go tu nie wpisuję, żeby nie kopiować Waszego klucza do pliku, który przechodzi przez czat.
+
+  Nie musisz go wklejać do pliku: przy pierwszym wejściu generator sam zapyta o klucz
+  i zapamięta go w przeglądarce (localStorage, pozycja "abm_supa_key"). Po podmianie
+  pliku klucz zostaje, więc pytanie pojawi się tylko raz.
+  Żeby go skasować, wpisz w konsoli: zapomnijKlucz()
 -->
 </body>
 </html>
