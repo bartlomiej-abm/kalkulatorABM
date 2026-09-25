@@ -200,6 +200,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 
     <div class="sec">Strony</div>
     <div class="pglist" id="pglist"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <span class="note" id="zapisStan" style="flex:1"></span>
+      <button class="btn ghost" id="zapisReset" type="button" title="Wróć do układu podpowiedzianego z wyceny">Wyczyść zapis</button>
+    </div>
 
     <div class="sec">Układ sauny</div>
     <div class="g2">
@@ -505,6 +509,122 @@ function msg(kind, text){
   $("msg").innerHTML = text ? '<div class="msg '+kind+'">'+esc(text)+'</div>' : "";
 }
 
+/* ============ zapamietywanie ustawien ============ */
+// Ustawienia oferty siedza przy wycenie (kolumna "oferta"), a dane opiekuna i domyslne
+// zdjecia raz dla calego generatora. Gdy bazie brakuje kolumny, zapisujemy w przegladarce.
+var KOL_OFERTA = null;     // null = jeszcze nie wiemy, false = bazie brakuje kolumny
+var PRZYKLAD_DO_USTAWIENIA = "";   // realizacja z zapisanych ustawien, gdy lista jeszcze sie ladowala
+var WCZYTYWANIE = false;   // w trakcie wczytywania nie zapisujemy z powrotem
+var czekaZapis = null;
+
+function stanZapisu(txt){ var e = $("zapisStan"); if(e) e.textContent = txt || ""; }
+
+function ustawieniaZPanelu(){
+  var strony = {}; PAGES.forEach(function(p,i){ strony[p.id] = {on:p.on, i:i}; });
+  return {
+    v: 1,
+    plan: JSON.parse(JSON.stringify(P)),
+    strony: strony,
+    tagi: [($("tag0")||{}).value||"", ($("tag1")||{}).value||"", ($("tag2")||{}).value||""],
+    warunki: {gwar:$("wGwar").value, gwarU:$("wGwarU").value, termin:$("wTermin").value,
+              plat:$("wPlat").value, transp:$("wTransp").value},
+    waznaDo: $("mWaz").value || "",
+    data: $("mData").value || "",
+    przyklad: ($("przykladSel")||{}).value || "",
+    zdjecia: {baza:$("imgBase").value, real:$("imgReal").value}
+  };
+}
+
+function wstawUstawienia(u){
+  if(!u || !u.plan) return false;
+  WCZYTYWANIE = true;
+  try{
+    Object.keys(u.plan).forEach(function(k){ P[k] = u.plan[k]; });
+    if(!P.prom) P.prom = [];
+    if(u.strony){
+      PAGES.forEach(function(p){ if(u.strony[p.id]) p.on = !!u.strony[p.id].on; });
+      PAGES.sort(function(a,b){
+        var ia = u.strony[a.id] ? u.strony[a.id].i : 99, ib = u.strony[b.id] ? u.strony[b.id].i : 99;
+        return ia - ib;
+      });
+      drawPages();
+    }
+    if(u.tagi) ["tag0","tag1","tag2"].forEach(function(id,i){ if($(id)) $(id).value = u.tagi[i]||""; });
+    if(u.warunki){
+      $("wGwar").value = u.warunki.gwar||""; $("wGwarU").value = u.warunki.gwarU||"";
+      $("wTermin").value = u.warunki.termin||""; $("wPlat").value = u.warunki.plat||"";
+      $("wTransp").value = u.warunki.transp||"";
+    }
+    if(u.waznaDo !== undefined) $("mWaz").value = u.waznaDo;
+    if(u.data) $("mData").value = u.data;
+    if(u.zdjecia){ $("imgBase").value = u.zdjecia.baza||""; $("imgReal").value = u.zdjecia.real||""; }
+    if(u.przyklad && $("przykladSel")){
+      $("przykladSel").value = u.przyklad;
+      // lista realizacji moze jeszcze sie ladowac — wtedy ustawimy ja, gdy dojdzie
+      if($("przykladSel").value !== u.przyklad) PRZYKLAD_DO_USTAWIENIA = u.przyklad;
+    }
+    // pola rzutu w panelu musza pokazac to, co wlasnie wczytalismy
+    [["pDepth","depth"],["pWall","wall"],["pUpper","upper"],["pLower","lower"],
+     ["pUpperV","upperV"],["pLowerV","lowerV"],["pDoorW","doorW"],["piecD","piecD"],
+     ["piecW","piecW"],["piecH","piecH"],["doorPos","doorPos"],["benchSpan","benchSpan"]].forEach(function(a){
+      var el = $(a[0]); if(el && P[a[1]] !== undefined) el.value = P[a[1]];
+    });
+    var ps = $("promShow"); if(ps) ps.checked = P.promShow !== false;
+    drawSzkl();
+  }catch(e){}
+  WCZYTYWANIE = false;
+  return true;
+}
+
+function kluczLokalny(id){ return "abm_of_ust_" + id; }
+
+function czytajLokalnie(id){
+  try{ return JSON.parse(localStorage.getItem(kluczLokalny(id)) || "null"); }catch(e){ return null; }
+}
+
+async function zapiszUstawienia(){
+  if(!cur || WCZYTYWANIE) return;
+  var u = ustawieniaZPanelu(), id = cur.id;
+  var tekst = JSON.stringify(u);
+  if(cur._ustTekst === tekst) return;          // nic sie nie zmienilo, nie ma co zapisywac
+  cur._ustTekst = tekst;
+  try{ localStorage.setItem(kluczLokalny(id), tekst); }catch(e){}
+  cur._ust = u;
+  if(!supa || KOL_OFERTA === false){ stanZapisu("Ustawienia zapisane w tej przeglądarce."); return; }
+  try{
+    var res = await supa.from("quotes").update({oferta:u}).eq("id", id);
+    if(res.error){
+      KOL_OFERTA = false;
+      stanZapisu("Ustawienia zapisane w tej przeglądarce (baza nie ma jeszcze kolumny „oferta”).");
+      return;
+    }
+    KOL_OFERTA = true;
+    stanZapisu("Ustawienia zapisane przy wycenie ✓");
+  }catch(e){
+    stanZapisu("Ustawienia zapisane w tej przeglądarce (baza nie odpowiedziała).");
+  }
+}
+
+function zapiszPozniej(){
+  if(!cur || WCZYTYWANIE) return;
+  stanZapisu("Zapisywanie…");
+  clearTimeout(czekaZapis);
+  czekaZapis = setTimeout(zapiszUstawienia, 1200);
+}
+
+// dane opiekuna i domyslne zdjecia — raz dla calego generatora
+var POLA_STALE = ["mOp","mStan","mMail","mTel","imgBase","imgReal"];
+function zapiszStale(){
+  var o = {}; POLA_STALE.forEach(function(id){ if($(id)) o[id] = $(id).value; });
+  try{ localStorage.setItem("abm_of_stale", JSON.stringify(o)); }catch(e){}
+}
+function wczytajStale(){
+  var o = null;
+  try{ o = JSON.parse(localStorage.getItem("abm_of_stale") || "null"); }catch(e){}
+  if(!o) return;
+  POLA_STALE.forEach(function(id){ if($(id) && o[id] !== undefined) $(id).value = o[id]; });
+}
+
 /* ============ Supabase ============ */
 // Bez klucza nie ma wycen. Pytamy raz i zapamietujemy w przegladarce, zeby podmiana
 // pliku generatora nie kasowala klucza.
@@ -586,10 +706,19 @@ function drawQuotes(){
 async function hydrate(q){
   if(q._hydrated) return q;
   if(!supa && !(await connect())) return q;
-  var res = await supa.from("quotes").select("data,variants").eq("id", q.id).limit(1);
+  // kolumny "oferta" moze jeszcze nie byc w bazie — wtedy pytamy bez niej
+  var res = KOL_OFERTA === false ? null
+          : await supa.from("quotes").select("data,variants,oferta").eq("id", q.id).limit(1);
+  // baza bez kolumny "oferta" odpowiada bledem albo wierszem bez tresci — w obu razach pytamy bez niej
+  if(res && (res.error || !((res.data||[])[0]||{}).data)){ KOL_OFERTA = false; res = null; }
+  if(!res) res = await supa.from("quotes").select("data,variants").eq("id", q.id).limit(1);
+  else KOL_OFERTA = true;
   if(res.error) throw res.error;
   var row = (res.data||[])[0] || {};
   q.data = row.data; q.variants = row.variants; q._hydrated = true;
+  var u = row.oferta;
+  if(typeof u === "string"){ try{ u = JSON.parse(u); }catch(e){ u = null; } }
+  q._ust = u || czytajLokalnie(q.id);
   return q;
 }
 
@@ -616,6 +745,14 @@ async function pick(q){
   if(cur._s.typ === "I") P.piecShape = "brak";
   else if(P.piecShape === "brak") P.piecShape = "prostokatny";
   if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
+  // zapisany układ tej oferty ma pierwszeństwo nad podpowiedzią z wyceny
+  var zapisane = q._ust || czytajLokalnie(q.id);
+  if(zapisane){
+    wstawUstawienia(zapisane);
+    stanZapisu("Wczytano zapisane ustawienia tej oferty.");
+  } else {
+    stanZapisu("Zmiany zapiszą się przy tej wycenie same.");
+  }
   syncPlan(); drawQuotes(); render();
   // zdjęcia z bazy tylko dla urządzeń z tej wyceny — reszta zostaje nietknięta
   ladujFoto(slugiWyceny()).then(function(bylo){ if(bylo && cur === q) render(); });
@@ -1865,6 +2002,7 @@ function render(){
   }).join("");
   zmiescKarty();
   applyZoom();
+  zapiszPozniej();
   var m = meta();
   $("tinfo").innerHTML = "<b>"+esc(m.klient)+"</b> · "+on.length+" stron · "+cur._v.length+" wariant"+(cur._v.length>1?"y":"")+
     (zaGesto ? ' · <span style="color:#8A4A32">zestawienie wariantów nie mieści się na stronie, rozważ mniej wariantów</span>' : "");
@@ -2135,6 +2273,15 @@ $("editMode").onclick = function(){ setEdit(!EDIT); };
 ["mTel","mStan","mMail","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","wTransp","imgBase","imgReal"].forEach(function(id){
   $(id).addEventListener("input", render);
 });
+POLA_STALE.forEach(function(id){ if($(id)) $(id).addEventListener("input", zapiszStale); });
+$("zapisReset").onclick = function(){
+  if(!cur){ stanZapisu("Najpierw wybierz wycenę."); return; }
+  try{ localStorage.removeItem(kluczLokalny(cur.id)); }catch(e){}
+  cur._ust = null;
+  if(supa && KOL_OFERTA !== false){ try{ supa.from("quotes").update({oferta:null}).eq("id", cur.id); }catch(e){} }
+  var q = cur; cur = null; pick(q);
+  stanZapisu("Wyczyszczone — układ wrócił do podpowiedzi z wyceny.");
+};
 $("pEntr").addEventListener("change", function(){ P.entrance=+$("pEntr").value; render(); });
 $("search").addEventListener("input", drawQuotes);
 $("reload").onclick = loadQuotes;
@@ -2501,6 +2648,12 @@ function rysujWyborRealizacji(){
     Object.keys(REAL).sort(function(a,b){ return String(REAL[a].tytul).localeCompare(String(REAL[b].tytul), "pl"); })
       .map(function(id){ return '<option value="'+esc(id)+'">'+esc(REAL[id].tytul)+'</option>'; }).join("");
   if(obecna && REAL[obecna]) sel.value = obecna;
+  // realizacja z zapisanych ustawien, ktorej nie bylo jeszcze na liscie przy wczytywaniu
+  if(PRZYKLAD_DO_USTAWIENIA && REAL[PRZYKLAD_DO_USTAWIENIA]){
+    sel.value = PRZYKLAD_DO_USTAWIENIA; PRZYKLAD_DO_USTAWIENIA = "";
+    PAGES.forEach(function(p){ if(p.id === "przyklad") p.on = true; });
+    drawPages();
+  }
 }
 
 // wybór sauny włącza stronę; „bez realizacji” ją wyłącza
@@ -2702,6 +2855,7 @@ $("rPlik").onchange = function(){ if(this.files && this.files[0]) wgrajZdjecieRe
 
 /* ============ start ============ */
 $("mData").value = new Date().toISOString().slice(0,10);
+wczytajStale();
 drawPages(); drawSzkl(); syncPlan(); render();
 ladujBaze().then(function(){ ladujRealizacje(); render(); return loadQuotes(); });
 
