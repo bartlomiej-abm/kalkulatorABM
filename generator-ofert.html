@@ -288,6 +288,18 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="fld"><label for="doorPos">Położenie drzwi</label>
       <div class="range"><input type="range" id="doorPos" min="0" max="100" value="70"><span class="rv" id="doorPosV">środek</span></div>
     </div>
+    <div class="fld"><label>Promienniki IR (170 × 860 mm)</label>
+      <label class="note" style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;cursor:pointer">
+        <input type="checkbox" id="promShow" checked> pokaż na rzucie
+      </label>
+      <div class="g2">
+        <div class="fld"><label for="promGdzie">Gdzie</label><select id="promGdzie"></select></div>
+        <div class="fld"><label for="promIle">Ile sztuk</label><input type="number" id="promIle" value="2" min="1" max="12"></div>
+      </div>
+      <button class="btn ghost wide" id="promAdd" type="button">+ rozstaw równomiernie</button>
+      <div class="pglist" id="promList" style="margin-top:6px"></div>
+      <div class="note" id="promUwaga" style="margin-top:4px"></div>
+    </div>
     <div class="fld"><label>Przeszklenia ścian sauny</label>
       <div id="szklPanel"></div>
       <div class="note" id="szklUwaga" style="margin-top:6px"></div>
@@ -468,6 +480,7 @@ var P = {   // rzut
   benchMode:"L", benchWalls:"gora-prawa", benchLevels:"2",
   upper:550, lower:280, upperV:550, lowerV:280, benchSpan:100,
   upArms:"AB", lowArms:"AB",   // ktore ramiona ma dany poziom: obie sciany, tylko A albo tylko B
+  promShow:true, prom:[],      // promienniki IR: {m:miejsce, p:polozenie w %}
   piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
   doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
   // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
@@ -1203,6 +1216,8 @@ function pageUklad(){
   if(P.piecShape==="brak") rows.push(["Piec", "bez pieca, sauna infrared"]);
   else rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
   rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
+  var promIle = P.promShow ? promWidoczne() : 0;
+  if(promIle) rows.push(["Promienniki IR", promIle+" szt. · 170 × 860 mm"]);
   if(b.szklo && b.szklo.length) rows.push(["Przeszklenia", b.szklo.join(", ")]);
   var list = rows.map(function(r){
     // dłuższe wartości (np. lista przeszkleń) nie mieszczą się w jednej linijce obok etykiety
@@ -1221,9 +1236,15 @@ function pageUklad(){
       '</div>'+
       '<div style="flex:1;background:#FFF;padding:14px;display:flex;flex-direction:column;min-width:0">'+
         '<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">'+b.svg+'</div>'+
-        (b.szklo && b.szklo.length
-          ? '<div style="display:flex;align-items:center;gap:8px;padding-top:6px;font-size:11px;color:#8A6A55">'+
-              legendaSzkla()+'<span>przeszklenie</span></div>'
+        ((b.szklo && b.szklo.length) || promIle
+          ? '<div style="display:flex;align-items:center;gap:14px;padding-top:6px;font-size:11px;color:#8A6A55">'+
+              (b.szklo && b.szklo.length
+                ? '<span style="display:flex;align-items:center;gap:8px">'+legendaSzkla()+'<span>przeszklenie</span></span>' : '')+
+              (promIle
+                ? '<span style="display:flex;align-items:center;gap:8px">'+
+                  '<span style="width:26px;height:9px;border-radius:2px;background:#F2C500;border:1px solid #2A211C"></span>'+
+                  '<span>promiennik IR 170 × 860 mm</span></span>' : '')+
+            '</div>'
           : '')+
       '</div>'+
     '</div>'+
@@ -1421,7 +1442,7 @@ function pageRealizacje(){
 }
 
 /* ============ rzut ============ */
-var MYc = 600, lastPiec = null;
+var MYc = 600, lastPiec = null, lastLawy = {kraw:{}};
 function saunaIdx(){ for(var i=0;i<P.modules.length;i++) if(P.modules[i].type==="sauna") return i; return -1; }
 // ile sciany zajmuja lawy: 1.0 = cala sciana
 function spanLaw(){ var v = +P.benchSpan; return (v > 0 && v < 100) ? v/100 : 1; }
@@ -1471,6 +1492,7 @@ function fitF(str,box,max){ return Math.max(70, Math.min(max||150, box/(String(s
 
 function benches(x0,w){
   var iy=MYc+P.wall, iy2=iy+P.depth, up=P.upper, low=P.lower, o=[];
+  lastLawy = {kraw:{}};   // krawędzie ław, na których można posadzić promienniki
   function strip(bx,by,bw,bh,fill,sc,step,vert){
     o.push('<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" fill="'+fill+'" stroke="#2A211C" stroke-width="14"></rect>');
     o.push(slats(bx,bx+bw,by,by+bh,step,sc,vert));
@@ -1487,10 +1509,13 @@ function benches(x0,w){
     var bw = Math.round(w*k), bx = x0 + (P.saunaDoorWall === "lewa" ? w-bw : 0);
     strip(bx,iy,bw,up,"#F3EDE7","#B9A797",130,true);
     if(jeden){
+      lastLawy.kraw["A-przod"] = {os:"h", y:iy+up, a:bx, b:bx+bw};
       podpis(bx+bw/2, iy+up/2, "ŁAWA · "+fmt(up)+" mm", bw, 105);
       return o.join("");
     }
     var d2=low>0?low:420;
+    lastLawy.kraw["A-stopien"] = {os:"h", y:iy+up,    a:bx, b:bx+bw};
+    lastLawy.kraw["A-przod"]   = {os:"h", y:iy+up+d2, a:bx, b:bx+bw};
     strip(bx,iy+up,bw,d2,"#FAF6F1","#C8B9AB",130,true);
     podpis(bx+bw/2, iy+up/2, "ŁAWA GÓRNA · "+fmt(up)+" mm", bw, 105);
     podpis(bx+bw/2, iy+up+d2/2, "ŁAWA DOLNA · "+fmt(d2)+" mm", bw, 100);
@@ -1520,6 +1545,18 @@ function benches(x0,w){
     strip(lowHx, fy, lowHw, low, "#FAF6F1","#C8B9AB",100,true);
     podpis(lowHx+lowHw/2, fy+low/2, (upA?"ŁAWA DOLNA A · ":"ŁAWA A · ")+fmt(low)+" mm", lowHw, 97);
   }
+  if(upA || lowA){
+    var aA = lowA ? lowHx : hx0, aB = lowA ? lowHx+lowHw : hx0+hw;
+    if(upA && lowA) lastLawy.kraw["A-stopien"] = {os:"h", y: top?iy+up:iy2-up, a:aA, b:aB};
+    lastLawy.kraw["A-przod"] = {os:"h", a:aA, b:aB,
+      y: top ? iy+pasGornaA+(lowA?low:0) : iy2-pasGornaA-(lowA?low:0)};
+  }
+  if(upB || lowB){
+    var bA = lowB ? (top?iy+pasGornaA:vy) : vy, bB = lowB ? bA+(vh-pasGornaA) : vy+vh;
+    if(upB && lowB) lastLawy.kraw["B-stopien"] = {os:"v", x: right?sciana-upV:sciana+upV, a:bA, b:bB};
+    lastLawy.kraw["B-przod"] = {os:"v", a:bA, b:bB,
+      x: right ? (lowB?lowVx:sciana-upV) : (lowB?lowVx+lowV:sciana+upV)};
+  }
   if(upA) podpis(hx0+hw/2, hy+up/2, (jeden||!lowA?"ŁAWA A · ":"ŁAWA GÓRNA A · ")+fmt(up)+" mm", hw, 105);
   var cy = vy + vh/2, bx = vx + upV/2;
   if(upB) podpis(bx, cy, (jeden||!lowB?"ŁAWA B · ":"ŁAWA GÓRNA B · ")+fmt(upV)+" mm", vh, 105, true);
@@ -1529,6 +1566,65 @@ function benches(x0,w){
   }
   return o.join("");
 }
+// Miejsca, w ktore mozna wstawic promiennik. Sciany sa zawsze, krawedzie law
+// pojawiaja sie zaleznie od tego, jak ustawione sa lawy.
+var PROM_SCIANY = [["sciana-tyl","Ściana tylna"],["sciana-przod","Ściana przednia"],
+                   ["sciana-lewa","Ściana lewa"],["sciana-prawa","Ściana prawa"]];
+var PROM_LAWY = [["lawa-A-przod","Ława A · front"],["lawa-A-stopien","Ława A · stopień"],
+                 ["lawa-B-przod","Ława B · front"],["lawa-B-stopien","Ława B · stopień"]];
+
+function promMiejsca(){
+  var lista = PROM_SCIANY.slice();
+  PROM_LAWY.forEach(function(t){
+    if(lastLawy.kraw[t[0].replace("lawa-","")]) lista.push(t);
+  });
+  return lista;
+}
+function promNazwa(klucz){
+  var w = promMiejsca().concat(PROM_LAWY).filter(function(t){ return t[0]===klucz; });
+  return w.length ? w[0][1] : klucz;
+}
+
+// Promiennik ma 170 × 860 mm. W ścianie wisi pionowo, więc z góry widać 170 mm;
+// we wsporniku ławy leży poziomo, więc widać 860 mm.
+// ile promiennikow faktycznie ma gdzie stanac przy obecnym ustawieniu law
+function promWidoczne(){
+  if(!P.prom) return 0;
+  return P.prom.filter(function(pr){
+    var m = String(pr.m||"");
+    return m.indexOf("lawa-") !== 0 || !!lastLawy.kraw[m.replace("lawa-","")];
+  }).length;
+}
+
+function promienniki(x0,w){
+  if(!P.promShow || !P.prom || !P.prom.length) return "";
+  var iy=MYc+P.wall, iy2=iy+P.depth, gr=70, o=[];
+  function bar(bx,by,bw,bh){
+    o.push('<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" rx="12" '+
+           'fill="#F2C500" stroke="#2A211C" stroke-width="10"></rect>');
+  }
+  function wzdluz(a,b,dl,p){            // srodek promiennika na odcinku a..b
+    var lo = a+dl/2, hi = b-dl/2;
+    if(hi < lo) return (a+b)/2;
+    return lo + (hi-lo)*(Math.max(0,Math.min(100,+p||0))/100);
+  }
+  P.prom.forEach(function(pr){
+    var m = String(pr.m||""), naLawie = m.indexOf("lawa-")===0, dl = naLawie ? 860 : 170;
+    if(naLawie){
+      var k = lastLawy.kraw[m.replace("lawa-","")];
+      if(!k) return;
+      if(k.os === "h"){ var cx = wzdluz(k.a,k.b,dl,pr.p); bar(cx-dl/2, k.y-gr/2, dl, gr); }
+      else            { var cy = wzdluz(k.a,k.b,dl,pr.p); bar(k.x-gr/2, cy-dl/2, gr, dl); }
+      return;
+    }
+    if(m === "sciana-tyl")   { var c1 = wzdluz(x0,x0+w,dl,pr.p);  bar(c1-dl/2, iy, dl, gr); }
+    if(m === "sciana-przod") { var c2 = wzdluz(x0,x0+w,dl,pr.p);  bar(c2-dl/2, iy2-gr, dl, gr); }
+    if(m === "sciana-lewa")  { var c3 = wzdluz(iy,iy2,dl,pr.p);   bar(x0, c3-dl/2, gr, dl); }
+    if(m === "sciana-prawa") { var c4 = wzdluz(iy,iy2,dl,pr.p);   bar(x0+w-gr, c4-dl/2, gr, dl); }
+  });
+  return o.join("");
+}
+
 function piecBox(x0,w){
   var fr=freeRect(x0,w), m=90, c=P.piecCorner;
   var pw = P.piecShape==="okragly"?P.piecD:P.piecW, ph = P.piecShape==="okragly"?P.piecD:P.piecH;
@@ -1669,7 +1765,8 @@ function buildPlan(){
       s.push(T(cx, iy+depth*0.44+130, fmt(w)+" mm", 104, "#9A8371"));
     }
     if(m.type==="sauna"){
-      s.push(benches(x0,w)); if(P.piecShape !== "brak") s.push(piec(x0,w));
+      s.push(benches(x0,w)); s.push(promienniki(x0,w));
+      if(P.piecShape !== "brak") s.push(piec(x0,w));
       var fr=freeRect(x0,w), pl=P.piecCorner==="ld"||P.piecCorner==="lg";
       var lx=pl?fr.x+fr.w*0.62:fr.x+fr.w*0.38;
       var ly=(P.piecCorner==="ld"||P.piecCorner==="pd")?fr.y+fr.h*0.34:fr.y+fr.h*0.72;
@@ -1842,6 +1939,45 @@ function drawMods(){
     host.appendChild(row);
   });
 }
+function drawProm(){
+  var sel = $("promGdzie"), host = $("promList");
+  if(!sel || !host) return;
+  var miejsca = promMiejsca(), byly = sel.value;
+  sel.innerHTML = miejsca.map(function(t){
+    return '<option value="'+t[0]+'">'+esc(t[1])+'</option>';
+  }).join("");
+  if(byly && miejsca.some(function(t){ return t[0]===byly; })) sel.value = byly;
+
+  host.innerHTML = "";
+  P.prom.forEach(function(pr,i){
+    var row = document.createElement("div"); row.className="pg"; row.style.gridTemplateColumns="1fr 62px auto";
+    var s2 = document.createElement("select");
+    s2.innerHTML = miejsca.map(function(t){
+      return '<option value="'+t[0]+'"'+(t[0]===pr.m?" selected":"")+'>'+esc(t[1])+'</option>';
+    }).join("");
+    if(!miejsca.some(function(t){ return t[0]===pr.m; })){
+      var brak=document.createElement("option"); brak.value=pr.m; brak.selected=true;
+      brak.textContent = promNazwa(pr.m)+" (brak takiej ławy)"; s2.appendChild(brak);
+    }
+    s2.style.height="28px"; s2.style.fontSize="12px";
+    s2.onchange=function(){ pr.m=s2.value; syncPlan(); render(); };
+    var inp = document.createElement("input");
+    inp.type="number"; inp.min=0; inp.max=100; inp.step=5; inp.value=pr.p;
+    inp.title="położenie wzdłuż ściany lub ławy, w procentach";
+    inp.style.height="28px"; inp.style.fontSize="12px";
+    inp.oninput=function(){ pr.p=Math.max(0,Math.min(100,parseInt(inp.value,10)||0)); drawPlanPrev(); render(); };
+    var btns=document.createElement("div"); btns.style.display="flex"; btns.style.gap="3px";
+    btns.appendChild(mkIb("✕", false, function(){ P.prom.splice(i,1); syncPlan(); render(); }));
+    row.appendChild(s2); row.appendChild(inp); row.appendChild(btns);
+    host.appendChild(row);
+  });
+  var poza = P.prom.length - promWidoczne();
+  $("promUwaga").textContent = !P.prom.length
+    ? "Wybierz miejsce, podaj liczbę sztuk i kliknij „rozstaw równomiernie”."
+    : "Liczba w kratce to położenie w procentach: 0 = początek ściany lub ławy, 100 = koniec."+
+      (poza ? " Uwaga: "+poza+" szt. nie ma gdzie stanąć przy obecnym ustawieniu ław — zmień im miejsce albo usuń." : "");
+}
+
 function drawEntr(){
   var sel=$("pEntr"); sel.innerHTML="";
   // sauna ma własne drzwi, taras jest otwarty — żadne z nich nie bierze osobnego wejścia
@@ -1960,8 +2096,10 @@ function syncPlan(){
   $("piecRound").style.display = P.piecShape==="okragly" ? "" : "none";
   $("piecRect").style.display = (P.piecShape==="prostokatny") ? "" : "none";
   $("piecCornerFld").style.display = P.piecShape==="brak" ? "none" : "";
+  P.promShow = !!$("promShow").checked;
   drawMods(); drawEntr();
-  drawPlanPrev();
+  drawPlanPrev();      // rysunek ustawia krawędzie ław, więc lista miejsc idzie po nim
+  drawProm();
   chips("benchMode","benchMode"); chips("benchWalls","benchWalls");
   chips("benchLevels","benchLevels");
   chips("benchUpArms","upArms"); chips("benchLowArms","lowArms");
@@ -1982,6 +2120,15 @@ var ETYKIETY = ["", "Premium", "Standard", "Klasyka", "Basic", "Ciepły odcień"
 ["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos","benchSpan"].forEach(function(id){
   $(id).addEventListener("input", function(){ syncPlan(); render(); });
 });
+$("promShow").addEventListener("change", function(){ syncPlan(); render(); });
+$("promAdd").onclick = function(){
+  var gdzie = $("promGdzie").value, ile = Math.max(1, Math.min(12, parseInt($("promIle").value,10)||1));
+  // rozstawiamy rowno: przy jednej sztuce na srodku, przy kilku od brzegu do brzegu
+  for(var i=0;i<ile;i++){
+    P.prom.push({m:gdzie, p: ile===1 ? 50 : Math.round(i*100/(ile-1))});
+  }
+  syncPlan(); render();
+};
 $("editMode").onclick = function(){ setEdit(!EDIT); };
 ["mTel","mStan","mMail","mData","mOp","mWaz","wGwar","wGwarU","wTermin","wPlat","wTransp","imgBase","imgReal"].forEach(function(id){
   $(id).addEventListener("input", render);
