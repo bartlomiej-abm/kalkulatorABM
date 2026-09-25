@@ -2661,7 +2661,10 @@ function fC(val){
   return Math.round(val).toLocaleString('pl')+' zł';
 }
 
+// czy wiersze z cena maja sie doliczac do podsumowania wyposazenia
+var liczWypos = false;
 function buildVariantHTML(s,vkey){
+  liczWypos = false;
   if(!s)return '';
   var html='';
   var mG=s.mg||1.4, mL=s.ml||1.4;
@@ -2676,7 +2679,11 @@ function buildVariantHTML(s,vkey){
       html+='<div class="v-row-yn"><span class="v-label">'+label+'</span><span class="v-yn v-yn-n">'+(LANG==='EN'?'NO':'NIE')+'</span></div>';
     }
   }
-  function vrowPrice(label,price){html+='<div class="v-row"><span class="v-label">'+label+'</span><span class="v-val" style="color:var(--mbm-primary)">'+fC(price)+'</span></div>';}
+  function vrowPrice(label,price){
+    // podsumowanie wyposazenia ma byc suma tego, co klient widzi — liczymy po zaokragleniu,
+    // czyli dokladnie te kwoty, ktore sa wydrukowane w kolumnie
+    if(liczWypos) sumaWypos += Math.round(price||0);
+    html+='<div class="v-row"><span class="v-label">'+label+'</span><span class="v-val" style="color:var(--mbm-primary)">'+fC(price)+'</span></div>';}
   function vsubt(label,price,editable,vkey){
     if(editable&&vkey){
       html+='<div class="v-subtotal" style="cursor:default">'
@@ -2721,11 +2728,10 @@ function buildVariantHTML(s,vkey){
   }
 
     // Cena sauny = netto minus wyposazenie (zawiera logistyke, marze min, nkw)
-  var cenaWyposCalc=(s.grzP||0)+(s.ledP||0)+(s.audP||0)+(s.dodP||0);
-  var cenaSaunyAuto=(s.netto||0)-cenaWyposCalc;
-  var cenaSauny=s.cenaSaunyOverride>0?s.cenaSaunyOverride:cenaSaunyAuto;
-  var cenaWypos=cenaWyposCalc;
-  vsubt(tr('cena_sauny'),cenaSauny,true,vkey);
+  // Cene sauny znamy dopiero wtedy, gdy wiemy, ile naprawde skladaja sie widoczne pozycje
+  // wyposazenia, wiec wyposazenie skladamy najpierw obok i dopiero potem wstawiamy w calosc.
+  var htmlDoWypos = html; html = '';
+  var sumaWypos = 0; liczWypos = true;
 
   // WYPOSAŻENIE SAUNY (ogrzewanie + sciana + dekoracje z ceną)
   vsec(tr('wyposazenie'));
@@ -2780,6 +2786,14 @@ function buildVariantHTML(s,vkey){
   if(s.aromC>0)vrowPrice('Aromaterapia',s.aromC*mDv);
   else vrowYN(tr('aroma'),false);
 
+  liczWypos = false;
+  var htmlWypos = html; html = htmlDoWypos;
+  var cenaWypos = sumaWypos;
+  var cenaSauny = s.cenaSaunyOverride>0 ? s.cenaSaunyOverride : ((s.netto||0)-cenaWypos);
+  vsubt(tr('cena_sauny'),cenaSauny,true,vkey);
+  html += htmlWypos;
+  // zapamietujemy, zeby reczna zmiana ceny sauny liczyla sie po tej samej kwocie
+  if(vkey && VARIANTS[vkey]) VARIANTS[vkey]._wyposPokaz = cenaWypos;
   if(cenaWypos>0) vsubt(tr('cena_wypos'),cenaWypos);
 
   // LOGISTYKA I DODATKI (tylko TAK/NIE, bez cen - transport, cebrzyk, klepsydra)
@@ -3275,7 +3289,8 @@ function overrideCenaSauny(vkey,val){
   var v=parseFloat(val)||0;
   VARIANTS[vkey].cenaSaunyOverride=v;
   // update total displays without full rebuild
-  var cenaWypos=VARIANTS[vkey].grzP+VARIANTS[vkey].ledP+VARIANTS[vkey].audP+(VARIANTS[vkey].dodP||0);
+  var w = VARIANTS[vkey];
+  var cenaWypos=(w._wyposPokaz!=null)?w._wyposPokaz:(w.grzP+w.ledP+w.audP+(w.dodP||0));
   var netto=v+cenaWypos;
   var brutto=netto*(1+(VARIANTS[vkey].vat||8)/100);
   VARIANTS[vkey].netto=netto;

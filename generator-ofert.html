@@ -647,7 +647,11 @@ function rowsFor(s){
   // id spina ten sam wiersz między wariantami, kb to etykieta gdy wariant pozycji nie ma
   function sec(t){ out.push({id:"sec:"+t, sec:t}); }
   function mat(k,v,id){ out.push(v ? {id:id||k, k:k, v:v, t:"mat"} : {id:id||k, k:k, t:"no"}); }
-  function pri(k,v,id,kb){ out.push({id:id||k, k:k, kb:kb||k, v:zl(v), t:"mat"}); }
+  // pozycje z cena same skladaja sie na podsumowanie wyposazenia — po zaokragleniu,
+  // czyli dokladnie tak, jak klient je widzi na kartce
+  var sumaWypos = 0, liczWypos = false;
+  function pri(k,v,id,kb){ if(liczWypos) sumaWypos += Math.round(v||0);
+    out.push({id:id||k, k:k, kb:kb||k, v:zl(v), t:"mat"}); }
   function yn(k,ok,txt,id){ out.push(ok ? {id:id||k, k:k, v:txt||"Tak", t:"yes"} : {id:id||k, k:k, t:"no"}); }
   function sub(k,v){ out.push({id:"sub:"+k, sub:k, v:zl(v)}); }
 
@@ -670,11 +674,12 @@ function rowsFor(s){
     yn("Płyta XPS", (s.styq||0)>0);
   }
 
-  var wypos = (s.grzP||0)+(s.ledP||0)+(s.audP||0)+(s.dodP||0);
-  var sauna = s.cenaSaunyOverride>0 ? s.cenaSaunyOverride : (s.netto||0) - wypos;
-  sub("Cena sauny", sauna);
+  // cene sauny znamy dopiero po policzeniu widocznych pozycji wyposazenia,
+  // wiec zostawiamy jej miejsce w kolejnosci i wracamy tu nizej
+  var iSauna = out.length; out.push(null);
 
   sec("Wyposażenie sauny");
+  liczWypos = true;
   if(s.typ!=="I" && s.piec && s.piec.cena>0) pri("Piec · "+bezM(String(s.piec.name||"").split("--")[0].trim()), s.piec.cena*mG, "piec", "Piec");
   else yn("Piec", false, null, "piec");
   if(s.kamd>0) pri("Kamienie Diabez ("+(s.kamd*20)+" kg)", s.kamd*50*mG, "kamd", "Kamienie Diabez");
@@ -709,6 +714,10 @@ function rowsFor(s){
   if(s.solC>0) pri("Ściana solna", s.solC*mD, "sol"); else yn("Ściana solna", false, null, "sol");
   if(s.starC>0) pri("Sufit Starlight", s.starC*mD, "star");
   if(s.aromC>0) pri("Aromaterapia", s.aromC*mD, "arom"); else yn("Aromaterapia", false, null, "arom");
+  liczWypos = false;
+  var wypos = sumaWypos;
+  var sauna = s.cenaSaunyOverride>0 ? s.cenaSaunyOverride : (s.netto||0) - wypos;
+  out[iSauna] = {id:"sub:Cena sauny", sub:"Cena sauny", v:zl(sauna)};
   sub("Cena wyposażenia", wypos);
 
   sec("Akcesoria");
