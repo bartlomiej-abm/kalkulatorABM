@@ -1653,15 +1653,8 @@ function piec(x0,w){
     st.push('<circle cx="'+jx+'" cy="'+gy+'" r="'+(26+(st.length%3)*3)+'"></circle>');
   }
   o.push('<g fill="#8A7A6C">'+st.join("")+'</g>');
-  var iy2=MYc+P.wall+P.depth, frP=freeRect(x0,w);
-  // podpis pod piecem tylko wtedy, gdy zmiesci sie w wolnym polu — inaczej nad piecem,
-  // zeby nie wchodzil na lawy
-  var dol = Math.min(iy2-30, frP.y+frP.h-10);
-  var ly = (b.y+b.h+150 < dol) ? b.y+b.h+150 : b.y-60;
-  var lab = round?("PIEC Ø "+fmt(b.w)):("PIEC "+fmt(b.w)+" × "+fmt(b.h));
-  var half = lab.length*32;
-  var lx = Math.max(x0+half+40, Math.min(x0+w-half-40, b.x+b.w/2));
-  o.push(T(lx, ly, lab, 96, "#6B5849"));
+  // Wymiar pieca jest w tabelce obok rzutu, wiec na samym rysunku go nie powtarzamy —
+  // w malych saunach ten podpis wchodzil na napis SAUNA.
   return o.join("");
 }
 
