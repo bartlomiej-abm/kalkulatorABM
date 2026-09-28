@@ -265,6 +265,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
         <button class="chip" type="button" data-v="brak">Bez pieca (infrared)</button>
       </div>
     </div>
+    <div class="note" id="piecUwaga" style="margin:-4px 0 6px"></div>
     <div class="fld" id="piecRound"><label for="piecD">Średnica (mm)</label><input type="number" id="piecD" value="500" step="10"></div>
     <div class="g2" id="piecRect">
       <div class="fld"><label for="piecW">Szer. pieca</label><input type="number" id="piecW" value="420" step="10"></div>
@@ -741,9 +742,6 @@ async function pick(q){
   P.modules = (cur._s.isZ) ? [{type:"taras",width:2600},{type:"przedsionek",width:1200},{type:"sauna",width:2100}]
                            : [{type:"sauna",width:2100}];
   P.entrance = P.modules.length>1 ? 1 : 0;
-  // wycena infrared nie ma pieca, więc rzut też nie powinien go pokazywać
-  if(cur._s.typ === "I") P.piecShape = "brak";
-  else if(P.piecShape === "brak") P.piecShape = "prostokatny";
   if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
   // zapisany układ tej oferty ma pierwszeństwo nad podpowiedzią z wyceny
   var zapisane = q._ust || czytajLokalnie(q.id);
@@ -753,9 +751,19 @@ async function pick(q){
   } else {
     stanZapisu("Zmiany zapiszą się przy tej wycenie same.");
   }
+  // Rodzaj sauny decyduje o piecu i jest silniejszy niz zapisany uklad: wycena przerobiona
+  // z fińskiej na infrared nie moze zostac z piecem na rzucie (i odwrotnie).
+  dopasujPiecDoWyceny();
   syncPlan(); drawQuotes(); render();
   // zdjęcia z bazy tylko dla urządzeń z tej wyceny — reszta zostaje nietknięta
   ladujFoto(slugiWyceny()).then(function(bylo){ if(bylo && cur === q) render(); });
+}
+
+// Piec na rzucie idzie za rodzajem sauny z wyceny — infrared go nie ma, pozostale maja.
+function dopasujPiecDoWyceny(){
+  var typ = (cur && cur._s) ? cur._s.typ : "";
+  if(typ === "I"){ if(P.piecShape !== "brak") P.piecShape = "brak"; }
+  else if(P.piecShape === "brak"){ P.piecShape = "prostokatny"; }
 }
 
 function variantsOf(q){
@@ -2236,6 +2244,11 @@ function syncPlan(){
   $("piecRound").style.display = P.piecShape==="okragly" ? "" : "none";
   $("piecRect").style.display = (P.piecShape==="prostokatny") ? "" : "none";
   $("piecCornerFld").style.display = P.piecShape==="brak" ? "none" : "";
+  var typWyc = (cur && cur._s) ? cur._s.typ : "";
+  var pu = $("piecUwaga");
+  if(pu) pu.textContent = (typWyc === "I")
+    ? "Wycena jest na saunę infrared, więc rzut startuje bez pieca."
+    : (typWyc ? "Wycena jest na saunę z piecem." : "");
   P.promShow = !!$("promShow").checked;
   drawMods(); drawEntr();
   drawPlanPrev();      // rysunek ustawia krawędzie ław, więc lista miejsc idzie po nim
