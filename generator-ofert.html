@@ -1112,8 +1112,10 @@ function krotkiOpis(o){
 // urządzenia jednego wariantu wyceny
 function urzadzeniaWariantu(s){
   var out = [];
-  if(s.piec && s.piec.cena > 0){
-    var pn = String(s.piec.name||"").split("--")[0].trim();
+  // Sauna infrared nie ma pieca, a wycena potrafi nosic po nim resztke ceny po zmianie
+  // typu w kalkulatorze. Karty bez nazwy tez nie robimy — wyszlaby pusta ramka.
+  var pn = String((s.piec && s.piec.name) || "").split("--")[0].trim();
+  if(s.typ !== "I" && s.piec && s.piec.cena > 0 && pn){
     out.push({typ:"piec", lbl:"Piec", nm:bezM(pn), dir:"piece", key:s.piec.name, opis:opisFor("wyp", pn)});
   }
   if(s.sterVal > 0){
