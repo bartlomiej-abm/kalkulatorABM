@@ -330,6 +330,20 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
     <div class="fld"><label for="przykladSel">Sauna do pokazania</label><select id="przykladSel"><option value="">bez przykładowej realizacji</option></select></div>
     <button class="btn ghost wide" id="realBtn" type="button">Zarządzaj realizacjami</button>
 
+    <div class="sec">Link dla klienta</div>
+    <div class="fld"><label for="linkBaza">Adres, pod którym wrzucasz oferty</label>
+      <input id="linkBaza" value="https://abmsauny.pl/oferta/" placeholder="https://abmsauny.pl/oferta/"></div>
+    <div class="fld"><label for="imgWWW">Adres zdjęć na serwerze</label>
+      <input id="imgWWW" value="https://abmsauny.pl/zdjecia/" placeholder="https://abmsauny.pl/zdjecia/"></div>
+    <button class="btn ghost wide" id="linkBtn" type="button">Zrób link do oferty</button>
+    <div class="fld" style="margin-top:8px"><label for="linkGotowy">Adres tej oferty</label>
+      <input id="linkGotowy" readonly placeholder="jeszcze nie zrobiony"></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn ghost" id="linkKopiuj" type="button" style="flex:1">Kopiuj adres</button>
+      <button class="btn ghost" id="linkNowy" type="button" style="flex:1" title="Nowy adres — stary przestanie pasować do pliku, który wrzucisz">Nowy adres</button>
+    </div>
+    <div class="note" id="linkUwaga" style="margin-top:6px"></div>
+
     <div class="sec">Zdjęcia</div>
     <div class="fld"><label for="imgBase">Folder ze zdjęciami (ścieżka lub URL)</label><input id="imgBase" value="zdjecia/" placeholder="zdjecia/"></div>
     <div class="fld"><label for="imgReal">Realizacje · nazwy plików, po przecinku</label><textarea id="imgReal" placeholder="realizacje/zuber-1.jpg, ...">realizacje/zuber-1.jpg, realizacje/przychodzen-1.jpg, realizacje/sosnowiecka-6.jpg, realizacje/strona-1.jpg, realizacje/zieleniec-6.jpg, realizacje/stanko-1.jpg, realizacje/zieleniec-7.jpg</textarea></div>
@@ -515,6 +529,7 @@ function msg(kind, text){
 // zdjecia raz dla calego generatora. Gdy bazie brakuje kolumny, zapisujemy w przegladarce.
 var KOL_OFERTA = null;     // null = jeszcze nie wiemy, false = bazie brakuje kolumny
 var PRZYKLAD_DO_USTAWIENIA = "";   // realizacja z zapisanych ustawien, gdy lista jeszcze sie ladowala
+var LINK_TOKEN = "";               // losowy adres linku tej oferty
 var WCZYTYWANIE = false;   // w trakcie wczytywania nie zapisujemy z powrotem
 var czekaZapis = null;
 
@@ -532,6 +547,7 @@ function ustawieniaZPanelu(){
     waznaDo: $("mWaz").value || "",
     data: $("mData").value || "",
     przyklad: ($("przykladSel")||{}).value || "",
+    link: LINK_TOKEN || "",
     zdjecia: {baza:$("imgBase").value, real:$("imgReal").value}
   };
 }
@@ -559,6 +575,7 @@ function wstawUstawienia(u){
     if(u.waznaDo !== undefined) $("mWaz").value = u.waznaDo;
     if(u.data) $("mData").value = u.data;
     if(u.zdjecia){ $("imgBase").value = u.zdjecia.baza||""; $("imgReal").value = u.zdjecia.real||""; }
+    LINK_TOKEN = u.link || "";
     if(u.przyklad && $("przykladSel")){
       $("przykladSel").value = u.przyklad;
       // lista realizacji moze jeszcze sie ladowac — wtedy ustawimy ja, gdy dojdzie
@@ -614,7 +631,7 @@ function zapiszPozniej(){
 }
 
 // dane opiekuna i domyslne zdjecia — raz dla calego generatora
-var POLA_STALE = ["mOp","mStan","mMail","mTel","imgBase","imgReal"];
+var POLA_STALE = ["mOp","mStan","mMail","mTel","imgBase","imgReal","linkBaza","imgWWW"];
 function zapiszStale(){
   var o = {}; POLA_STALE.forEach(function(id){ if($(id)) o[id] = $(id).value; });
   try{ localStorage.setItem("abm_of_stale", JSON.stringify(o)); }catch(e){}
@@ -745,6 +762,7 @@ async function pick(q){
   if(!$("mData").value) $("mData").value = new Date().toISOString().slice(0,10);
   // zapisany układ tej oferty ma pierwszeństwo nad podpowiedzią z wyceny
   var zapisane = q._ust || czytajLokalnie(q.id);
+  LINK_TOKEN = "";
   if(zapisane){
     wstawUstawienia(zapisane);
     stanZapisu("Wczytano zapisane ustawienia tej oferty.");
@@ -754,6 +772,8 @@ async function pick(q){
   // Rodzaj sauny decyduje o piecu i jest silniejszy niz zapisany uklad: wycena przerobiona
   // z fińskiej na infrared nie moze zostac z piecem na rzucie (i odwrotnie).
   dopasujPiecDoWyceny();
+  pokazLink();
+  $("linkUwaga").textContent = LINK_TOKEN ? "Ta oferta ma już swój adres." : "";
   syncPlan(); drawQuotes(); render();
   // zdjęcia z bazy tylko dla urządzeń z tej wyceny — reszta zostaje nietknięta
   ladujFoto(slugiWyceny()).then(function(bylo){ if(bylo && cur === q) render(); });
@@ -1916,11 +1936,14 @@ function buildPlan(){
     if(m.type==="sauna"){
       s.push(benches(x0,w)); s.push(promienniki(x0,w));
       if(P.piecShape !== "brak") s.push(piec(x0,w));
-      var fr=freeRect(x0,w), pl=P.piecCorner==="ld"||P.piecCorner==="lg";
-      var lx=pl?fr.x+fr.w*0.62:fr.x+fr.w*0.38;
-      var ly=(P.piecCorner==="ld"||P.piecCorner==="pd")?fr.y+fr.h*0.34:fr.y+fr.h*0.72;
-      s.push(T(lx, ly, "SAUNA", fitF("SAUNA",fr.w*0.9,150), "#2A211C"));
-      s.push(T(lx, ly+130, fmt(w)+" × "+fmt(depth)+" mm", 100, "#9A8371"));
+      // Wymiary i tak stoja w tabelce obok rzutu, wiec na rysunku ich nie powtarzamy.
+      // Sam napis SAUNA zostaje tylko wtedy, gdy obok sa inne pomieszczenia i trzeba je rozroznic.
+      if(P.modules.length > 1){
+        var fr=freeRect(x0,w), pl=P.piecCorner==="ld"||P.piecCorner==="lg";
+        var lx=pl?fr.x+fr.w*0.62:fr.x+fr.w*0.38;
+        var ly=(P.piecCorner==="ld"||P.piecCorner==="pd")?fr.y+fr.h*0.34:fr.y+fr.h*0.72;
+        s.push(T(lx, ly, "SAUNA", fitF("SAUNA",fr.w*0.9,150), "#2A211C"));
+      }
     }
   });
 
@@ -2289,6 +2312,19 @@ $("editMode").onclick = function(){ setEdit(!EDIT); };
   $(id).addEventListener("input", render);
 });
 POLA_STALE.forEach(function(id){ if($(id)) $(id).addEventListener("input", zapiszStale); });
+$("linkBtn").onclick = function(){ zrobLinkOferty(); };
+$("linkNowy").onclick = function(){
+  if(!cur){ $("linkUwaga").textContent = "Najpierw wybierz wycenę."; return; }
+  LINK_TOKEN = losowyAdres(); pokazLink(); zapiszPozniej();
+  $("linkUwaga").textContent = "Nowy adres gotowy — zrób plik na nowo i wrzuć go na serwer. Stary plik możesz skasować.";
+};
+$("linkKopiuj").onclick = function(){
+  var a = $("linkGotowy").value;
+  if(!a){ $("linkUwaga").textContent = "Najpierw zrób link."; return; }
+  try{ navigator.clipboard.writeText(a); $("linkUwaga").textContent = "Adres skopiowany."; }
+  catch(e){ $("linkGotowy").select(); $("linkUwaga").textContent = "Skopiuj zaznaczony adres (Ctrl+C)."; }
+};
+["linkBaza","imgWWW"].forEach(function(id){ $(id).addEventListener("input", function(){ pokazLink(); zapiszStale(); }); });
 $("zapisReset").onclick = function(){
   if(!cur){ stanZapisu("Najpierw wybierz wycenę."); return; }
   try{ localStorage.removeItem(kluczLokalny(cur.id)); }catch(e){}
@@ -2867,6 +2903,136 @@ Array.prototype.forEach.call(document.querySelectorAll("#realMod .zrzutnia"), fu
   });
 });
 $("rPlik").onchange = function(){ if(this.files && this.files[0]) wgrajZdjecieReal(realCel, this.files[0]); };
+
+/* ============ link dla klienta ============ */
+// Adres jest losowy i nie do zgadniecia: 12 znakow z generatora losowego przegladarki.
+function losowyAdres(){
+  var znaki = "abcdefghijkmnpqrstuvwxyz23456789", out = "";
+  try{
+    var t = new Uint8Array(12); crypto.getRandomValues(t);
+    for(var i=0;i<t.length;i++) out += znaki[t[i] % znaki.length];
+  }catch(e){
+    for(var j=0;j<12;j++) out += znaki[Math.floor(Math.random()*znaki.length)];
+  }
+  return out;
+}
+
+function adresOferty(){
+  var b = ($("linkBaza").value||"").trim();
+  if(b && b.slice(-1) !== "/") b += "/";
+  return b + (LINK_TOKEN || "") + ".html";
+}
+
+function pokazLink(){
+  $("linkGotowy").value = LINK_TOKEN ? adresOferty() : "";
+}
+
+// Zdjecia w ofercie leza obok generatora, a strona dla klienta stoi na serwerze,
+// wiec kazdy adres wzgledny przepisujemy na pelny.
+function naPelneAdresy(html){
+  var www = ($("imgWWW").value||"").trim();
+  if(www && www.slice(-1) !== "/") www += "/";
+  var baza = ($("imgBase").value||"").trim();
+  function pelny(src){
+    src = String(src||"");
+    if(!src || /^(https?:|data:|\/\/)/.test(src)) return src;
+    if(baza && src.indexOf(baza) === 0) src = src.slice(baza.length);
+    return www + src.replace(/^\.?\//, "");
+  }
+  var kosz = document.createElement("div");
+  kosz.innerHTML = html;
+  Array.prototype.forEach.call(kosz.querySelectorAll("img"), function(im){
+    if(im.getAttribute("src")) im.setAttribute("src", pelny(im.getAttribute("src")));
+    var c = im.getAttribute("data-c");
+    if(c) im.setAttribute("data-c", c.split("|").map(pelny).join("|"));
+  });
+  return kosz.innerHTML;
+}
+
+// Znak wodny: nazwisko klienta i data, delikatnie, po skosie, przez cala strone.
+function znakWodny(tekst){
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="460" height="300">' +
+    '<text x="10" y="210" transform="rotate(-24 10 210)" font-family="Jost, Helvetica, sans-serif" ' +
+    'font-size="21" fill="#FFFFFF">' + esc(tekst) + '</text></svg>';
+  return "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg).replace(/'/g, "%27") + "\")";
+}
+
+function stronaDlaKlienta(){
+  var m = meta();
+  var dzis = new Date().toLocaleDateString("pl-PL");
+  var podpis = m.klient + " · " + (m.data ? new Date(m.data).toLocaleDateString("pl-PL") : dzis);
+  var style = "";
+  Array.prototype.forEach.call(document.querySelectorAll("style"), function(st){ style += st.textContent + "\n"; });
+  var arkusze = naPelneAdresy($("scaler").innerHTML);
+  var tytul = "Oferta ABM Sauny · " + m.klient;
+
+  return '<!doctype html>\n<html lang="pl">\n<head>\n<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+    '<meta name="robots" content="noindex, nofollow, noarchive">\n' +
+    '<title>' + esc(tytul) + '</title>\n' +
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap">\n' +
+    '<style>\n' + style + '\n' +
+    'body{background:#EDE7DF;margin:0;padding:22px 0 40px}\n' +
+    '.widok{display:flex;flex-direction:column;align-items:center;gap:22px}\n' +
+    '.pasek{font-family:Jost,sans-serif;font-size:12.5px;color:#6B5849;text-align:center;padding:0 16px 4px}\n' +
+    '.pasek b{color:#2A211C;font-weight:500}\n' +
+    '.sheet{transform-origin:top center}\n' +
+    // znak wodny w trybie "roznica": na ciemnej okladce rozjasnia, na jasnych stronach przyciemnia
+    '.sheet::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;opacity:.085;' +
+      'mix-blend-mode:difference;background-image:' + znakWodny(podpis) + ';background-repeat:repeat}\n' +
+    '@media print{body{background:#FFF;padding:0}.pasek{display:none}' +
+      '.widok{gap:0}.sheet{transform:none!important;box-shadow:none;break-after:page}}\n' +
+    '</style>\n' +
+    '<script>\n' +
+    'window.ABMimg = function(el){\n' +
+    '  var list = (el.getAttribute("data-c")||"").split("|").filter(Boolean);\n' +
+    '  var i = parseInt(el.getAttribute("data-i")||"0",10) + 1;\n' +
+    '  if(list.length && i < list.length){ el.setAttribute("data-i", String(i)); el.src = list[i]; return; }\n' +
+    '  var box = el.parentNode; box.className = "slot";\n' +
+    '  box.style.border = ""; box.style.background = ""; box.style.padding = "";\n' +
+    '  box.textContent = box.getAttribute("data-alt") || "";\n' +
+    '};\n' +
+    '<\/script>\n</head>\n<body>\n' +
+    '<div class="pasek">Oferta przygotowana dla <b>' + esc(m.klient) + '</b> · ' + esc(podpis.split(" · ")[1] || dzis) +
+      ' · ABM Sauny</div>\n' +
+    '<div class="widok" id="widok">' + arkusze + '</div>\n' +
+    '<script>\n' +
+    'function dopasuj(){\n' +
+    '  var w = document.getElementById("widok");\n' +
+    '  var dost = Math.min(document.documentElement.clientWidth - 24, 1123);\n' +
+    '  var sk = dost / 1123;\n' +
+    '  Array.prototype.forEach.call(w.querySelectorAll(".sheet"), function(a){\n' +
+    '    a.style.transform = "scale(" + sk + ")";\n' +
+    '    a.style.marginBottom = (794 * sk - 794) + "px";\n' +
+    '  });\n' +
+    '}\n' +
+    'window.addEventListener("resize", dopasuj); dopasuj();\n' +
+    'setTimeout(dopasuj, 300);\n' +
+    '<\/script>\n</body>\n</html>';
+}
+
+async function zrobLinkOferty(){
+  if(!cur){ $("linkUwaga").textContent = "Najpierw wybierz wycenę."; return; }
+  if(EDIT) setEdit(false);
+  render();
+  if(!LINK_TOKEN) LINK_TOKEN = losowyAdres();
+  var html = stronaDlaKlienta();
+  var plik = LINK_TOKEN + ".html";
+  try{
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([html], {type:"text/html;charset=utf-8"}));
+    a.download = plik;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+  }catch(e){
+    $("linkUwaga").textContent = "Nie udało się pobrać pliku: " + (e.message||e);
+    return;
+  }
+  pokazLink();
+  $("linkUwaga").innerHTML = "Plik <b>" + esc(plik) + "</b> wylądował w pobranych. Wrzuć go na serwer do folderu, " +
+    "który wpisałeś wyżej — i tyle, adres zaczyna działać. Znak wodny z nazwiskiem klienta jest już w środku.";
+  zapiszPozniej();
+}
 
 /* ============ start ============ */
 $("mData").value = new Date().toISOString().slice(0,10);
