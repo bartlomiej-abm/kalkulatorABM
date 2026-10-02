@@ -328,6 +328,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 
     <div class="sec">Przykładowa realizacja</div>
     <div class="fld"><label for="przykladSel">Sauna do pokazania</label><select id="przykladSel"><option value="">bez przykładowej realizacji</option></select></div>
+    <div class="note" id="realStan" style="margin:-4px 0 6px"></div>
     <button class="btn ghost wide" id="realBtn" type="button">Zarządzaj realizacjami</button>
 
     <div class="sec">Link dla klienta</div>
@@ -546,7 +547,9 @@ function ustawieniaZPanelu(){
               plat:$("wPlat").value, transp:$("wTransp").value},
     waznaDo: $("mWaz").value || "",
     data: $("mData").value || "",
-    przyklad: ($("przykladSel")||{}).value || "",
+    // gdy lista realizacji jeszcze sie laduje, select jest pusty — wtedy trzymamy
+    // to, co bylo zapisane, zeby autozapis nie skasowal wyboru
+    przyklad: (($("przykladSel")||{}).value || PRZYKLAD_DO_USTAWIENIA || ""),
     link: LINK_TOKEN || "",
     zdjecia: {baza:$("imgBase").value, real:$("imgReal").value}
   };
@@ -625,8 +628,15 @@ async function zapiszUstawienia(){
 
 function zapiszPozniej(){
   if(!cur || WCZYTYWANIE) return;
-  stanZapisu("Zapisywanie…");
   clearTimeout(czekaZapis);
+  // dopoki baza realizacji nie odpowie, nie zapisujemy — inaczej zapis trafilby w pusty
+  // wybor realizacji i skasowal to, co bylo w ofercie
+  if(!REAL_GOTOWE){
+    stanZapisu("Czekam na bazę realizacji, potem zapiszę…");
+    czekaZapis = setTimeout(zapiszPozniej, 600);
+    return;
+  }
+  stanZapisu("Zapisywanie…");
   czekaZapis = setTimeout(zapiszUstawienia, 1200);
 }
 
@@ -2662,6 +2672,7 @@ polaPunktow([]);
 
 /* ============ przykładowe realizacje ============ */
 var REAL = {};         // id -> {tytul, elewacja, wnetrze, piec, wymiar, proporcje}
+var REAL_GOTOWE = false;   // czy baza realizacji zdazyla odpowiedziec
 var REAL_FOTO = {};    // id -> [foto1, foto2, foto3]
 var realId = null;     // edytowana w oknie
 var realBlad = "";
@@ -2678,6 +2689,7 @@ async function ladujRealizacje(){
       ? "Nie widzę tabeli „realizacje” w bazie. Wklej plik realizacje.sql w Supabase, SQL Editor, i odśwież stronę."
       : "Nie udało się połączyć z bazą realizacji: " + (e.message || e);
   }
+  REAL_GOTOWE = true;
   rysujWyborRealizacji();
 }
 
@@ -2705,6 +2717,22 @@ function rysujWyborRealizacji(){
     PAGES.forEach(function(p){ if(p.id === "przyklad") p.on = true; });
     drawPages();
   }
+  stanRealizacji();
+}
+
+// Krotka informacja pod wyborem: ile realizacji widzi generator i czy ta zapisana w ofercie
+// jest wsrod nich. Bez tego znikniecie realizacji wyglada jak "samo sie skasowalo".
+function stanRealizacji(){
+  var pole = $("realStan"); if(!pole) return;
+  var ile = Object.keys(REAL).length;
+  if(realBlad){ pole.textContent = realBlad; return; }
+  if(!ile){ pole.textContent = "Baza realizacji jeszcze się wczytuje albo jest pusta — dodaj pierwszą w „Zarządzaj realizacjami”."; return; }
+  if(PRZYKLAD_DO_USTAWIENIA){
+    pole.textContent = "Ta oferta ma zapisaną realizację „" + PRZYKLAD_DO_USTAWIENIA +
+      "”, ale nie ma jej w bazie (" + ile + " zapisanych). Wybierz inną albo dodaj ją z powrotem.";
+    return;
+  }
+  pole.textContent = "W bazie: " + ile + " realizacji.";
 }
 
 // wybór sauny włącza stronę; „bez realizacji” ją wyłącza
