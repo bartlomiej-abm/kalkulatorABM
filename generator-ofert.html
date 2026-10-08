@@ -271,6 +271,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <div class="fld"><label for="piecW">Szer. pieca</label><input type="number" id="piecW" value="420" step="10"></div>
       <div class="fld"><label for="piecH">Głęb. pieca</label><input type="number" id="piecH" value="470" step="10"></div>
     </div>
+    <div class="fld" id="piecTrybFld"><label>Ustawienie pieca</label>
+      <div class="chips" id="piecTryb">
+        <button class="chip" type="button" data-v="naroznik">W narożniku</button>
+        <button class="chip" type="button" data-v="wymiary">Wymiarami od ścian</button>
+      </div>
+    </div>
     <div class="fld" id="piecCornerFld"><label>Narożnik pieca</label>
       <div class="chips" id="piecCorner">
         <button class="chip" type="button" data-v="ld">Lewy dolny</button>
@@ -278,6 +284,26 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
         <button class="chip" type="button" data-v="lg">Lewy górny</button>
         <button class="chip" type="button" data-v="pg">Prawy górny</button>
       </div>
+    </div>
+    <div id="piecWymiaryFld">
+      <div class="fld"><label>Odstęp w bok · od której ściany</label>
+        <div class="chips" id="piecOdX">
+          <button class="chip" type="button" data-v="lewa">Od lewej</button>
+          <button class="chip" type="button" data-v="prawa">Od prawej</button>
+        </div>
+      </div>
+      <div class="fld"><label for="piecDx">Odstęp w bok (mm)</label><input type="number" id="piecDx" value="150" step="10" min="0"></div>
+      <div class="fld"><label>Odstęp w głąb · od której ściany</label>
+        <div class="chips" id="piecOdY">
+          <button class="chip" type="button" data-v="tyl">Od tylnej</button>
+          <button class="chip" type="button" data-v="przod">Od przedniej</button>
+        </div>
+      </div>
+      <div class="fld"><label for="piecDy">Odstęp w głąb (mm)</label><input type="number" id="piecDy" value="150" step="10" min="0"></div>
+      <label class="note" style="display:flex;align-items:center;gap:6px;margin:-2px 0 6px;cursor:pointer">
+        <input type="checkbox" id="piecKoty" checked> pokaż te odstępy na rysunku
+      </label>
+      <div class="note" id="piecWymUwaga"></div>
     </div>
     <div class="fld"><label>Drzwi sauny · ściana</label>
       <div class="chips" id="saunaDoorWall">
@@ -502,6 +528,8 @@ var P = {   // rzut
   upArms:"AB", lowArms:"AB",   // ktore ramiona ma dany poziom: obie sciany, tylko A albo tylko B
   promShow:true, prom:[],      // promienniki IR: {m:miejsce, p:polozenie w %}
   piecShape:"prostokatny", piecD:500, piecW:420, piecH:470, piecCorner:"pd",
+  // piec: albo w narozniku wolnego pola, albo wprost wymiarami od dwoch scian
+  piecTryb:"naroznik", piecOdX:"lewa", piecOdY:"tyl", piecDx:150, piecDy:150, piecKoty:true,
   doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
   // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
   szkl:{ przod:{tryb:"drewno", mm:1200, od:"start"},
@@ -1400,7 +1428,15 @@ function pageUklad(){
              (jednoRamie.length ? ", "+jednoRamie.join(", ") : "")+
              (+P.benchSpan < 100 ? ", na "+P.benchSpan+"% długości ściany" : "")]);
   if(P.piecShape==="brak") rows.push(["Piec", "bez pieca, sauna infrared"]);
-  else rows.push(["Piec", P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm"]);
+  else {
+    var opisPieca = P.piecShape==="okragly" ? "Ø "+fmt(P.piecD)+" mm" : fmt(P.piecW)+" × "+fmt(P.piecH)+" mm";
+    if(P.piecTryb === "wymiary"){
+      var od = lastOdstepy || {dx:P.piecDx, dy:P.piecDy};
+      opisPieca += " · " + fmt(od.dx) + " mm od " + (P.piecOdX==="prawa" ? "prawej" : "lewej") +
+                   ", " + fmt(od.dy) + " mm od " + (P.piecOdY==="przod" ? "przedniej" : "tylnej");
+    }
+    rows.push(["Piec", opisPieca]);
+  }
   rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
   var promIle = P.promShow ? promWidoczne() : 0;
   if(promIle) rows.push(["Promienniki IR", promIle+" szt. · 170 × 860 mm"]);
@@ -1628,7 +1664,7 @@ function pageRealizacje(){
 }
 
 /* ============ rzut ============ */
-var MYc = 600, lastPiec = null, lastLawy = {kraw:{}};
+var MYc = 600, lastPiec = null, lastLawy = {kraw:{}}, lastOdstepy = null;
 function saunaIdx(){ for(var i=0;i<P.modules.length;i++) if(P.modules[i].type==="sauna") return i; return -1; }
 // ile sciany zajmuja lawy: 1.0 = cala sciana
 function spanLaw(){ var v = +P.benchSpan; return (v > 0 && v < 100) ? v/100 : 1; }
@@ -1812,9 +1848,63 @@ function promienniki(x0,w){
 }
 
 function piecBox(x0,w){
-  var fr=freeRect(x0,w), m=90, c=P.piecCorner;
   var pw = P.piecShape==="okragly"?P.piecD:P.piecW, ph = P.piecShape==="okragly"?P.piecD:P.piecH;
+  if(P.piecTryb === "wymiary"){
+    // odstepy liczymy od wewnetrznej strony scian do krawedzi pieca
+    var iy = MYc+P.wall, iy2 = iy+P.depth;
+    var dx = Math.max(0, +P.piecDx || 0), dy = Math.max(0, +P.piecDy || 0);
+    var x = (P.piecOdX === "prawa") ? (x0+w-dx-pw) : (x0+dx);
+    var y = (P.piecOdY === "przod") ? (iy2-dy-ph)  : (iy+dy);
+    // piec nie moze wyjsc poza wnetrze sauny
+    x = Math.max(x0, Math.min(x0+w-pw, x));
+    y = Math.max(iy, Math.min(iy2-ph, y));
+    // tabelka obok rzutu ma pokazywac to, co naprawde widac na rysunku
+    lastOdstepy = {dx: Math.round(P.piecOdX==="prawa" ? (x0+w)-(x+pw) : x-x0),
+                   dy: Math.round(P.piecOdY==="przod" ? iy2-(y+ph)   : y-iy)};
+    return {x:x, y:y, w:pw, h:ph};
+  }
+  var fr=freeRect(x0,w), m=90, c=P.piecCorner;
   return {x:(c==="ld"||c==="lg")?fr.x+m:fr.x+fr.w-m-pw, y:(c==="ld"||c==="pd")?fr.y+fr.h-m-ph:fr.y+m, w:pw, h:ph};
+}
+
+// Odstepy pieca od scian, narysowane przy nim — tak jak na Waszych rysunkach warsztatowych.
+function kotyPieca(x0,w,b){
+  if(P.piecTryb !== "wymiary" || !P.piecKoty) return "";
+  var iy = MYc+P.wall, iy2 = iy+P.depth, o = [], kreska = '#8A7A6C';
+  function linia(x1,y1,x2,y2){
+    o.push('<path d="M '+x1+' '+y1+' L '+x2+' '+y2+'" stroke="'+kreska+'" stroke-width="8" fill="none"></path>');
+  }
+  function strzalki(x1,y1,x2,y2,poziom){
+    var r = 26;
+    [[x1,y1],[x2,y2]].forEach(function(p){
+      o.push(poziom
+        ? '<path d="M '+p[0]+' '+(p[1]-r)+' L '+p[0]+' '+(p[1]+r)+'" stroke="'+kreska+'" stroke-width="8"></path>'
+        : '<path d="M '+(p[0]-r)+' '+p[1]+' L '+(p[0]+r)+' '+p[1]+'" stroke="'+kreska+'" stroke-width="8"></path>');
+    });
+  }
+  function opisKoty(tx, ty, txt, obroc){
+    var fs = 86, szer = txt.length*fs*0.56 + 34, wys = fs*1.1;
+    var g = obroc ? ' transform="rotate(-90 '+tx+' '+ty+')"' : '';
+    o.push('<g'+g+'><rect x="'+(tx-szer/2)+'" y="'+(ty-wys/2-fs*0.36)+'" width="'+szer+'" height="'+wys+'" rx="10" '+
+           'fill="#F6F1EA" fill-opacity="0.92"></rect>'+
+           '<text x="'+tx+'" y="'+ty+'" text-anchor="middle" font-family="Jost, sans-serif" font-size="'+fs+'" fill="#6B5849">'+esc(txt)+'</text></g>');
+  }
+  var cy = b.y + b.h/2, cx = b.x + b.w/2;
+  // w bok
+  var xs = (P.piecOdX === "prawa") ? [b.x+b.w, x0+w] : [x0, b.x];
+  var dxMm = Math.round(Math.abs(xs[1]-xs[0]));
+  if(dxMm > 60){
+    linia(xs[0], cy, xs[1], cy); strzalki(xs[0], cy, xs[1], cy, true);
+    opisKoty((xs[0]+xs[1])/2, cy-40, fmt(dxMm)+" mm", false);
+  }
+  // w glab
+  var ys = (P.piecOdY === "przod") ? [b.y+b.h, iy2] : [iy, b.y];
+  var dyMm = Math.round(Math.abs(ys[1]-ys[0]));
+  if(dyMm > 60){
+    linia(cx, ys[0], cx, ys[1]); strzalki(cx, ys[0], cx, ys[1], false);
+    opisKoty(cx-40, (ys[0]+ys[1])/2, fmt(dyMm)+" mm", true);
+  }
+  return o.join("");
 }
 function piec(x0,w){
   var b=piecBox(x0,w); lastPiec=b;
@@ -1945,7 +2035,7 @@ function buildPlan(){
     }
     if(m.type==="sauna"){
       s.push(benches(x0,w)); s.push(promienniki(x0,w));
-      if(P.piecShape !== "brak") s.push(piec(x0,w));
+      if(P.piecShape !== "brak"){ s.push(piec(x0,w)); s.push(kotyPieca(x0,w,lastPiec)); }
       // Wymiary i tak stoja w tabelce obok rzutu, wiec na rysunku ich nie powtarzamy.
       // Sam napis SAUNA zostaje tylko wtedy, gdy obok sa inne pomieszczenia i trzeba je rozroznic.
       if(P.modules.length > 1){
@@ -2278,7 +2368,22 @@ function syncPlan(){
   $("upLblV").textContent = jeden ? "Ława B" : "Ława górna B";
   $("piecRound").style.display = P.piecShape==="okragly" ? "" : "none";
   $("piecRect").style.display = (P.piecShape==="prostokatny") ? "" : "none";
-  $("piecCornerFld").style.display = P.piecShape==="brak" ? "none" : "";
+  var bezPieca = P.piecShape === "brak";
+  P.piecDx = Math.max(0, +$("piecDx").value || 0);
+  P.piecDy = Math.max(0, +$("piecDy").value || 0);
+  P.piecKoty = !!$("piecKoty").checked;
+  $("piecTrybFld").style.display = bezPieca ? "none" : "";
+  $("piecCornerFld").style.display = (bezPieca || P.piecTryb === "wymiary") ? "none" : "";
+  $("piecWymiaryFld").style.display = (!bezPieca && P.piecTryb === "wymiary") ? "" : "none";
+  if(!bezPieca && P.piecTryb === "wymiary"){
+    var pw = P.piecShape==="okragly" ? P.piecD : P.piecW;
+    var ph = P.piecShape==="okragly" ? P.piecD : P.piecH;
+    var si = saunaIdx(), szer = si>=0 ? P.modules[si].width : 0;
+    var zaSzeroko = P.piecDx + pw > szer, zaGleboko = P.piecDy + ph > P.depth;
+    $("piecWymUwaga").textContent = (zaSzeroko || zaGleboko)
+      ? "Przy tych odstępach piec nie mieści się w saunie — rysunek dosuwa go do ściany."
+      : "Odstępy liczone od ściany do krawędzi pieca.";
+  }
   var typWyc = (cur && cur._s) ? cur._s.typ : "";
   var pu = $("piecUwaga");
   if(pu) pu.textContent = (typWyc === "I")
@@ -2292,6 +2397,7 @@ function syncPlan(){
   chips("benchLevels","benchLevels");
   chips("benchUpArms","upArms"); chips("benchLowArms","lowArms");
   chips("piecShape","piecShape"); chips("piecCorner","piecCorner"); chips("saunaDoorWall","saunaDoorWall");
+  chips("piecTryb","piecTryb"); chips("piecOdX","piecOdX"); chips("piecOdY","piecOdY");
 }
 
 /* ============ etykiety wariantów ============ */
@@ -2305,10 +2411,11 @@ var ETYKIETY = ["", "Premium", "Standard", "Klasyka", "Basic", "Ciepły odcień"
 });
 
 /* ============ zdarzenia ============ */
-["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos","benchSpan"].forEach(function(id){
+["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos","benchSpan","piecDx","piecDy"].forEach(function(id){
   $(id).addEventListener("input", function(){ syncPlan(); render(); });
 });
 $("promShow").addEventListener("change", function(){ syncPlan(); render(); });
+$("piecKoty").addEventListener("change", function(){ syncPlan(); render(); });
 $("promAdd").onclick = function(){
   var gdzie = $("promGdzie").value, ile = Math.max(1, Math.min(12, parseInt($("promIle").value,10)||1));
   // rozstawiamy rowno: przy jednej sztuce na srodku, przy kilku od brzegu do brzegu
