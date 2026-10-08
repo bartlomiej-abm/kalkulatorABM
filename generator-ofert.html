@@ -316,6 +316,21 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
       <div class="fld"><label for="pDoorW">Szer. drzwi</label><input type="number" id="pDoorW" value="700" step="10"></div>
       <div class="fld"><label for="pEntr">Wejście</label><select id="pEntr"></select></div>
     </div>
+    <div id="wejscieFld">
+      <div class="g2">
+        <div class="fld"><label for="pEntrW">Szer. drzwi wejściowych</label><input type="number" id="pEntrW" value="900" step="10" min="400"></div>
+        <div class="fld"><label>Zawias</label>
+          <div class="chips" id="entrHinge" style="margin:0">
+            <button class="chip" type="button" data-v="prawy">Z prawej</button>
+            <button class="chip" type="button" data-v="lewy">Z lewej</button>
+          </div>
+        </div>
+      </div>
+      <div class="fld"><label for="entrPos">Położenie drzwi wejściowych</label>
+        <div class="range"><input type="range" id="entrPos" min="0" max="100" value="50"><span class="rv" id="entrPosV">środek</span></div>
+      </div>
+      <div class="note" id="wejscieUwaga"></div>
+    </div>
     <div class="fld"><label for="doorPos">Położenie drzwi</label>
       <div class="range"><input type="range" id="doorPos" min="0" max="100" value="70"><span class="rv" id="doorPosV">środek</span></div>
     </div>
@@ -531,6 +546,8 @@ var P = {   // rzut
   // piec: albo w narozniku wolnego pola, albo wprost wymiarami od dwoch scian
   piecTryb:"naroznik", piecOdX:"lewa", piecOdY:"tyl", piecDx:150, piecDy:150, piecKoty:true,
   doorW:700, entrance:0, saunaDoorWall:"lewa", doorPos:70,
+  // drzwi wejsciowe do przedsionka / strefy relaksu: wlasna szerokosc, polozenie i strona zawiasu
+  entrW:900, entrPos:50, entrHinge:"prawy",
   // ściany sauny: tryb "drewno" | "cale" | "fragment"; przy fragmencie szerokość w mm i narożnik odniesienia
   szkl:{ przod:{tryb:"drewno", mm:1200, od:"start"},
          tyl:  {tryb:"drewno", mm:1200, od:"start"},
@@ -1438,6 +1455,9 @@ function pageUklad(){
     rows.push(["Piec", opisPieca]);
   }
   rows.push(["Drzwi sauny", fmt(P.doorW)+" mm"]);
+  var wejMod = (P.entrance>=0 && P.entrance<P.modules.length) ? P.modules[P.entrance] : null;
+  if(wejMod && wejMod.type !== "sauna")
+    rows.push(["Drzwi wejściowe", fmt(Math.max(400, Math.min(+P.entrW||900, wejMod.width-200)))+" mm · "+TYPES[wejMod.type].label.toLowerCase()]);
   var promIle = P.promShow ? promWidoczne() : 0;
   if(promIle) rows.push(["Promienniki IR", promIle+" szt. · 170 × 860 mm"]);
   if(b.szklo && b.szklo.length) rows.push(["Przeszklenia", b.szklo.join(", ")]);
@@ -1986,7 +2006,8 @@ function buildPlan(){
   var hasEntr = P.entrance>=0 && P.entrance<n && P.modules[P.entrance].type!=="sauna";
   var leftExt = sdw==="lewa" && si===0, rightExt = sdw==="prawa" && si===n-1;
   var MX = leftExt?dw+500:460, MY=600, MR = rightExt?dw+300:220;
-  var MB = (hasEntr || sdw==="przod") ? dw+520 : 300;
+  var szerWej = hasEntr ? Math.max(400, Math.min(+P.entrW || 900, P.modules[P.entrance].width-200)) : 0;
+  var MB = (hasEntr || sdw==="przod") ? Math.max(dw, szerWej)+520 : 300;
   MYc = MY;
   var extW=innerW+2*wall, extH=depth+2*wall, vbW=MX+extW+MR, vbH=MY+extH+MB;
   var ix=MX+wall, iy=MY+wall, iy2=iy+depth, s=[];
@@ -2072,8 +2093,13 @@ function buildPlan(){
   if(si!==-1 && leftExt)  drzwi.push(doorV(MX, sdY(), dw, -1, "top"));
   if(si!==-1 && rightExt) drzwi.push(doorV(ix+innerW, sdY(), dw, 1, "top"));
   if(hasEntr){
-    var em=P.modules[P.entrance], ew=Math.min(dw, em.width-200), edx=xs[P.entrance]+(em.width-ew)/2;
-    drzwi.push(doorH(edx, iy2, ew, 1, "right"));
+    var em = P.modules[P.entrance];
+    var ew = Math.max(400, Math.min(+P.entrW || 900, em.width-200));
+    // suwak przesuwa drzwi po calej scianie tego pomieszczenia, zostawiajac 100 mm zapasu
+    var elo = xs[P.entrance]+100, ehi = xs[P.entrance]+em.width-ew-100;
+    var edx = (ehi < elo) ? xs[P.entrance]+(em.width-ew)/2
+                          : elo + (ehi-elo)*(Math.max(0,Math.min(100,+P.entrPos||0))/100);
+    drzwi.push(doorH(edx, iy2, ew, 1, P.entrHinge === "lewy" ? "left" : "right"));
     drzwi.push(T(edx+ew/2, iy2+ew+330, "WEJŚCIE "+fmt(ew)+" mm", 110, "#2A211C"));
   }
   s.push(drzwi.join(""));
@@ -2251,6 +2277,20 @@ function drawProm(){
       (poza ? " Uwaga: "+poza+" szt. nie ma gdzie stanąć przy obecnym ustawieniu ław — zmień im miejsce albo usuń." : "");
 }
 
+// dokad prowadza drzwi wejsciowe — w dopelniaczu, zeby zdanie brzmialo po polsku
+var DOKAD = {przedsionek:"przedsionka", prysznic:"prysznica", taras:"tarasu", sauna:"sauny"};
+
+function odswiezWejscie(){
+  var pole = $("wejscieFld"); if(!pole) return;
+  var maWejscie = P.entrance>=0 && P.entrance<P.modules.length && P.modules[P.entrance].type!=="sauna";
+  pole.style.display = maWejscie ? "" : "none";
+  if(!maWejscie) return;
+  var m = P.modules[P.entrance], maxW = m.width-200;
+  $("wejscieUwaga").textContent = (P.entrW > maxW)
+    ? "W tym pomieszczeniu (" + fmt(m.width) + " mm) zmieszczą się drzwi do " + fmt(maxW) + " mm — rysunek je zwęża."
+    : "Drzwi do " + (DOKAD[m.type] || "pomieszczenia") + ", niezależne od drzwi sauny.";
+}
+
 function drawEntr(){
   var sel=$("pEntr"); sel.innerHTML="";
   // sauna ma własne drzwi, taras jest otwarty — żadne z nich nie bierze osobnego wejścia
@@ -2343,6 +2383,10 @@ function syncPlan(){
   P.doorW=+$("pDoorW").value||700; P.doorPos=+$("doorPos").value;
   P.piecD=+$("piecD").value||500; P.piecW=+$("piecW").value||420; P.piecH=+$("piecH").value||470;
   $("doorPosV").textContent = P.doorPos===50 ? "środek" : (P.doorPos<50 ? "bliżej początku" : "bliżej końca");
+  P.entrW = +$("pEntrW").value || 900;
+  P.entrPos = +$("entrPos").value;
+  $("entrPosV").textContent = P.entrPos===50 ? "środek" : (P.entrPos<50 ? "bliżej lewej" : "bliżej prawej");
+
   P.benchSpan = +$("benchSpan").value || 100;
   $("benchSpanV").textContent = P.benchSpan >= 100 ? "cała ściana" : P.benchSpan+"% ściany";
   $("benchSpanNote").textContent = P.benchSpan >= 100 ? "" :
@@ -2391,6 +2435,7 @@ function syncPlan(){
     : (typWyc ? "Wycena jest na saunę z piecem." : "");
   P.promShow = !!$("promShow").checked;
   drawMods(); drawEntr();
+  odswiezWejscie();        // dopiero drawEntr wie, które pomieszczenie jest wejściem
   drawPlanPrev();      // rysunek ustawia krawędzie ław, więc lista miejsc idzie po nim
   drawProm();
   chips("benchMode","benchMode"); chips("benchWalls","benchWalls");
@@ -2398,6 +2443,7 @@ function syncPlan(){
   chips("benchUpArms","upArms"); chips("benchLowArms","lowArms");
   chips("piecShape","piecShape"); chips("piecCorner","piecCorner"); chips("saunaDoorWall","saunaDoorWall");
   chips("piecTryb","piecTryb"); chips("piecOdX","piecOdX"); chips("piecOdY","piecOdY");
+  chips("entrHinge","entrHinge");
 }
 
 /* ============ etykiety wariantów ============ */
@@ -2411,7 +2457,7 @@ var ETYKIETY = ["", "Premium", "Standard", "Klasyka", "Basic", "Ciepły odcień"
 });
 
 /* ============ zdarzenia ============ */
-["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos","benchSpan","piecDx","piecDy"].forEach(function(id){
+["pDepth","pWall","pUpper","pLower","pUpperV","pLowerV","pDoorW","piecD","piecW","piecH","doorPos","benchSpan","piecDx","piecDy","pEntrW","entrPos"].forEach(function(id){
   $(id).addEventListener("input", function(){ syncPlan(); render(); });
 });
 $("promShow").addEventListener("change", function(){ syncPlan(); render(); });
@@ -2450,7 +2496,7 @@ $("zapisReset").onclick = function(){
   var q = cur; cur = null; pick(q);
   stanZapisu("Wyczyszczone — układ wrócił do podpowiedzi z wyceny.");
 };
-$("pEntr").addEventListener("change", function(){ P.entrance=+$("pEntr").value; render(); });
+$("pEntr").addEventListener("change", function(){ P.entrance=+$("pEntr").value; odswiezWejscie(); render(); });
 $("search").addEventListener("input", drawQuotes);
 $("reload").onclick = loadQuotes;
 $("addMod").onclick = function(){ P.modules.splice(Math.max(0,P.modules.length-1),0,{type:"przedsionek",width:1200}); syncPlan(); render(); };
